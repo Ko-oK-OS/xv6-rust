@@ -18,6 +18,7 @@ mod sbi;
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
-pub extern "C" fn main() {
-    loop{}
+pub extern "C" fn start() {
+    println!("Hello World!\n");
+    // loop{}
 }
