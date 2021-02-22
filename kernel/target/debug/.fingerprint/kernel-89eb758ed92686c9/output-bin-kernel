@@ -1,3 +1,0 @@
-{"message":"language item required, but not found: `eh_personality`","code":null,"level":"error","spans":[],"children":[],"rendered":"\u001b[0m\u001b[1m\u001b[38;5;9merror\u001b[0m\u001b[0m\u001b[1m: language item required, but not found: `eh_personality`\u001b[0m\n\n"}
-{"message":"`#[panic_handler]` function required, but not found","code":null,"level":"error","spans":[],"children":[],"rendered":"\u001b[0m\u001b[1m\u001b[38;5;9merror\u001b[0m\u001b[0m\u001b[1m: `#[panic_handler]` function required, but not found\u001b[0m\n\n"}
-{"message":"aborting due to 2 previous errors","code":null,"level":"error","spans":[],"children":[],"rendered":"\u001b[0m\u001b[1m\u001b[38;5;9merror\u001b[0m\u001b[0m\u001b[1m: aborting due to 2 previous errors\u001b[0m\n\n"}
