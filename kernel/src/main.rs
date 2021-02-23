@@ -18,7 +18,8 @@ mod sbi;
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
-pub extern "C" fn start() {
-    println!("Hello World!\n");
+pub extern "C" fn main() {
+    println!("Hello xv6!");
+    panic!("end of rust_main")
     // loop{}
 }
