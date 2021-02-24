@@ -1,5 +1,5 @@
 [build]
-target = "riscv64imac-unknown-none-elf"
+target = "riscv64gc-unknown-none-elf"
 
 # 使用我们的 kernel script 来进行链接
 [target.riscv64imac-unknown-none-elf]

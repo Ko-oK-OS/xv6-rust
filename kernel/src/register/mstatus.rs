@@ -26,6 +26,3 @@ pub unsafe fn set_mpp(){
     write(x);
 }
 
-pub unsafe fn mepc(func: usize) {
-    llvm_asm!("csrw mepc, %0" : : "r" (func));
-}

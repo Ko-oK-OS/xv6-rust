@@ -11,7 +11,8 @@
 global_asm!(include_str!("entry.asm"));
 
 #[macro_use]
-mod console;
-
+mod print;
 mod panic;
+
+mod console;
 mod register;

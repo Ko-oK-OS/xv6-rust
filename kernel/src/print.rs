@@ -4,8 +4,8 @@ use core::fmt::{self, Write};
 struct Stdout;
 
 // This function is used to putchar in console
-fn console_putchar(c: u8){
-    console::console_putchar(c);
+pub fn console_putchar(c: u8){
+    console::consputc(c);
 }
 
 impl Write for Stdout {
@@ -35,14 +35,14 @@ pub fn print(args: fmt::Arguments) {
 #[macro_export]
 macro_rules! print {
     (fmt:literal$(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!($fmt(, $($arg)+)?));
+        $crate::print::console_putchar(format_args!($fmt(, $($arg)+)?));
     }
 }
 
 #[macro_export]
 macro_rules! println {
     ($fmt:literal$(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!($fmt, "\n") $(,$($arg)+)?));
+        $crate::print::print(format_args!(concat!($fmt, "\n") $(,$($arg)+)?));
     }
 }
 
