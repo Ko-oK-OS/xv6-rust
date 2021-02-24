@@ -25,3 +25,7 @@ pub unsafe fn set_mpp(){
     x |= MSTATUS_MPP_S;
     write(x);
 }
+
+pub unsafe fn mepc(func: usize) {
+    llvm_asm!("csrw mepc, %0" : : "r" (func));
+}
