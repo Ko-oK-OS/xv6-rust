@@ -8,7 +8,7 @@
 #![feature(panic_info_message)]
 
 
-global_asm!(include_str!("entry.asm"));
+
 
 #[macro_use]
 mod print;
@@ -16,3 +16,5 @@ mod panic;
 
 mod console;
 mod register;
+
+global_asm!(include_str!("entry.asm"));

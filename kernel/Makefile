@@ -13,27 +13,27 @@ build: $(BIN_FILE)
 
 # 通过 Rust 文件中的注释生成 os 的文档
 doc:
-	@cargo doc --document-private-items
+	cargo doc --document-private-items
 
 # 编译 kernel
 kernel:
-	@cargo build
+	cargo build
 
 # 生成 kernel 的二进制文件
 $(BIN_FILE): kernel
-	@$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $@
+	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $@
 
 # 查看反汇编结果
 asm:
-	@$(OBJDUMP) -d $(KERNEL_FILE) | less
+	$(OBJDUMP) -d $(KERNEL_FILE) | less
 
 # 清理编译出的文件
 clean:
-	@cargo clean
+	cargo clean
 
 # 运行 QEMU
 qemu: build
-	@qemu-system-riscv64 \
+	qemu-system-riscv64 \
             -machine virt \
             -nographic \
             -bios none \

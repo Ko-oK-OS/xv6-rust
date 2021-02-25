@@ -4,6 +4,7 @@ const MSTATUS_MPP_S:usize =  1 << 11;
 const MSTATUS_MPP_U:usize =  0 << 11;
 const MSTATUS_MIE:usize =  1 << 3;   // machine-mode interrupt enable.
 
+
 // read register from M mode
 #[inline]
 unsafe fn read() -> usize {
