@@ -7,7 +7,10 @@
 #![allow(dead_code)]
 #![feature(panic_info_message)]
 
+#[macro_use]
+extern crate bitflags;
 
+global_asm!(include_str!("entry.asm"));
 
 
 #[macro_use]
@@ -16,5 +19,8 @@ mod panic;
 
 mod console;
 mod register;
+mod start;
+mod rust_main;
 
-global_asm!(include_str!("entry.asm"));
+
+
