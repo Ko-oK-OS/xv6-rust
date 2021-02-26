@@ -1,5 +1,5 @@
 use crate::register::{
-    mstatus, mepc, sstatus, satp, medeleg, mideleg, sie, mhartid, tp,
+    mstatus, mepc, clint, satp, medeleg, mideleg, sie, mhartid, tp,
 
 };
 
@@ -39,7 +39,15 @@ pub unsafe fn start() -> !{
 // set up to receive timer interrupts in machine mode,
 // which arrive at timervec in kernelvec.S,
 // which turns them into software interrupts for
-// devintr() in trap.c.
-unsafe fn timerinit() -> ! {
-    loop{}
+// devintr() in trap.rs.
+unsafe fn timerinit(){
+    // each CPU has a separate source of timer interrupts.
+    let id = mhartid::read();
+
+    // ask the CLINT for a timer interrupt.
+    let interval = 1000000;// cycles; about 1/10th second in qemu.
+    *(clint::CLINT_MTIMECMP(id) as *mut usize) = *((clint::CLINT_MTIME + interval) as *mut usize);
+
+    
+
 }

@@ -1,8 +1,8 @@
 use core::ptr;
 use core::convert::Into;
 
-// use crate::consts::UART0;
-pub const UART0: usize= 0x10000000;
+use crate::define::memlayout::UART0;
+
 
 macro_rules! Reg {
     ($reg: expr) => {

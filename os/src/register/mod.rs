@@ -19,3 +19,4 @@ pub mod mcounteren;
 pub mod time;
 pub mod sp;
 pub mod ra;
+pub mod clint;

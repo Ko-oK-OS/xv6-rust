@@ -18,3 +18,22 @@ pub unsafe fn read() -> usize {
 pub unsafe fn write(x:usize){
     llvm_asm!("csrw sstatus, $0"::"r"(x)::"volatile");
 }
+
+// enable device interrupts
+#[inline]
+pub unsafe fn intr_on(){
+    write(read() | SSTATUS::SIE as usize);
+}
+
+// disable device interrupts
+#[inline]
+pub unsafe fn intr_off(){
+    write(read() & SSTATUS::SIE as usize);
+}
+
+
+// are device interrupts enabled?
+pub unsafe fn intr_get() -> bool{
+    let x = read();
+    return (x & SSTATUS::SIE as usize) != 0;
+}

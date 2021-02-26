@@ -6,6 +6,7 @@
 #![feature(ptr_internals)]
 #![allow(dead_code)]
 #![feature(panic_info_message)]
+#![allow(non_snake_case)]
 
 #[macro_use]
 extern crate bitflags;
@@ -21,6 +22,8 @@ mod console;
 mod register;
 mod start;
 mod rust_main;
+mod define;
+mod lock;
 
 
 
