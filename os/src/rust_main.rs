@@ -1,5 +1,5 @@
 #[no_mangle]
 pub extern "C" fn rust_main() -> !{
-    print!("Hello, xv6!");
-    loop{}
+    println!("Hello, xv6!");
+    panic!("end of rust main");
 }

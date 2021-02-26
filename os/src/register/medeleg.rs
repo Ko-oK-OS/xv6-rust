@@ -7,5 +7,5 @@ pub unsafe fn read() -> usize {
 
 #[inline]
 pub unsafe fn write(x:usize){
-    llvm_asm!("csrw medelog, $0"::"r"(x)::"volatile");
+    llvm_asm!("csrw medeleg, $0"::"r"(x)::"volatile");
 }

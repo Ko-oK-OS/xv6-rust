@@ -18,5 +18,5 @@ pub unsafe fn read() -> usize {
 }
 
 pub unsafe fn write(x: usize){
-    llvm_asm!("csrr satp, $0"::"r"(x)::"volatile");
+    llvm_asm!("csrw satp, $0"::"r"(x)::"volatile");
 }

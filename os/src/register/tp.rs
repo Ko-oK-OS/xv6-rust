@@ -3,11 +3,11 @@
 #[inline]
 pub unsafe fn read() -> usize {
     let ret:usize;
-    llvm_asm!("csrr $0, tp":"=r"(ret):::"volatile");
+    llvm_asm!("mv $0, tp":"=r"(ret):::"volatile");
     ret
 }
 
 #[inline]
 pub unsafe fn write(x:usize){
-    llvm_asm!("csrw tp, $0"::"r"(x)::"volatile");
+    llvm_asm!("mv tp, $0"::"r"(x)::"volatile");
 }
