@@ -7,6 +7,7 @@
 #![allow(dead_code)]
 #![feature(panic_info_message)]
 #![allow(non_snake_case)]
+#![allow(const_item_mutation)]
 
 #[macro_use]
 extern crate bitflags;

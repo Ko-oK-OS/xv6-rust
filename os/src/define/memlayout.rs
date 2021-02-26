@@ -18,6 +18,7 @@
 // PHYSTOP -- end RAM used by the kernel
 
 // qemu puts UART registers here in physical memory.
+use super::*;
 
 pub const UART0:usize = 0x10000000;
 pub const UART0_IRQ:usize = 10;
@@ -27,12 +28,13 @@ pub const VIRTIO0:usize = 0x10001000;
 pub const VIRTIO0_IRQ:usize = 1;
 
 // core local interruptor (CLINT), which contains the timer.
-pub const CLINT:usize = 0x2000000;
-pub const CLINT_MTIME:usize = CLINT + 0xBFF8;
+pub const CLINT:Address = Address(0x2000000);
+pub const CLINT_MTIME:Address = CLINT.add_addr(0xBFF8);
 
 #[inline]
-pub fn CLINT_MTIMECMP(hartid:usize) -> usize{
-    let ret:usize;
-    ret = CLINT + 0x4000 + 8*hartid;
-    ret
+pub fn CLINT_MTIMECMP(hartid:usize) -> Address{
+    let res = CLINT.add_addr(0x4000 + 8*hartid);
+    res
 }
+
+// qemu puts platform-level interrupt controller (PLIC) here.
