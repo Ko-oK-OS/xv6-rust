@@ -1,8 +1,12 @@
 use crate::register::{
-    mstatus, mepc, satp, medeleg, mideleg, sie, mhartid, tp, clint
+    mstatus, mepc, satp, medeleg, mideleg, sie, mhartid, tp, clint, 
+    mscratch, mtvec, mie
 };
 
 use crate::rust_main::rust_main;
+use crate::define::param::NCPU;
+
+static mut timer_scratch:[[u64; 5]; NCPU] = [[0u64; 5]; NCPU];
 
 #[no_mangle]
 pub unsafe fn start() -> !{
@@ -22,7 +26,7 @@ pub unsafe fn start() -> !{
     sie::write(sie::read() | sie::SIE::SEIE as usize | sie::SIE::STIE as usize | sie::SIE::SSIE as usize);
 
     // ask for clock interrupts.
-    // timerinit();
+    timerinit();
 
     // keep each CPU's hartid in its tp register, for cpuid().
     let id:usize = mhartid::read(); 
@@ -53,6 +57,21 @@ unsafe fn timerinit(){
     // scratch[3] : address of CLINT MTIMECMP register.
     // scratch[4] : desired interval (in cycles) between timer interrupts.
 
-    
+    timer_scratch[id][3] = clint::count_mtiecmp(id) as u64;
+    timer_scratch[id][4] = interval;
+    mscratch::write(timer_scratch[id].as_ptr() as usize);
+
+    // set the machine-mode trap handler.
+    extern "C" {
+        fn timervec();
+    }
+
+    mtvec::write(timervec as usize);
+
+    // enable machine-mode interrupts.
+    mstatus::enable_interrupt();
+
+    // enable machine-mode timer interrupts.
+    mie::write(mie::read() | mie::MIE::MTIE as usize);
 
 }

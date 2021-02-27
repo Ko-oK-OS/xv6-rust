@@ -1,4 +1,4 @@
-pub const LOGO: &'static str = include_str!("logo.txt");
+use crate::logo::LOGO;
 
 #[no_mangle]
 pub extern "C" fn rust_main() -> !{

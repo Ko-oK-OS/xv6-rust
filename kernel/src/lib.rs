@@ -15,19 +15,23 @@
 #[macro_use]
 extern crate bitflags;
 
-global_asm!(include_str!("entry.asm"));
+global_asm!(include_str!("asm/entry.S"));
+global_asm!(include_str!("asm/kernelvec.S"));
 
 
 #[macro_use]
 mod print;
 mod panic;
+mod trap;
 
+mod logo;
 mod console;
 mod register;
 mod start;
 mod rust_main;
 mod define;
 mod lock;
+
 
 
 

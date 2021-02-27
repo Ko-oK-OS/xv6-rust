@@ -1,7 +1,7 @@
 use core::convert::Into;
 use core::ptr;
 
-use crate::define::memlayout::{CLINT, CLINT_MTIME, CLINT_MTIMECMP};
+use crate::define::memlayout::{CLINT_MTIME, CLINT_MTIMECMP, CLINT};
 
 // core local interruptor (CLINT), which contains the timer.
 
@@ -18,6 +18,12 @@ unsafe fn write_mtimecmp(mhartid:usize, value: u64) {
 pub unsafe fn add_mtimecmp(mhartid:usize, interval:u64){
     let value = read_mtime();
     write_mtimecmp(mhartid, value+interval);
+}
+
+pub fn count_mtiecmp(mhartid:usize) -> usize{
+    let ret:usize;
+    ret = Into::<usize>::into(CLINT) + 8*mhartid + 0x4000;
+    ret
 }
 
 

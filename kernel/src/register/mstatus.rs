@@ -27,3 +27,8 @@ pub unsafe fn set_mpp(){
     write(x);
 }
 
+// enable machine-mode interrupts.
+pub unsafe fn enable_interrupt(){
+    write(read() | MSTATUS_MIE);
+}
+
