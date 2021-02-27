@@ -13,6 +13,7 @@ pub mod sepc;
 pub mod stvec;
 pub mod mtvec;
 pub mod sscratch;
+pub mod mscratch;
 pub mod scause;
 pub mod stval;
 pub mod mcounteren;

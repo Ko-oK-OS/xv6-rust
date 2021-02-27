@@ -1,6 +1,5 @@
 use crate::register::{
-    mstatus, mepc, clint, satp, medeleg, mideleg, sie, mhartid, tp,
-
+    mstatus, mepc, satp, medeleg, mideleg, sie, mhartid, tp, clint
 };
 
 use crate::rust_main::rust_main;
@@ -46,7 +45,13 @@ unsafe fn timerinit(){
 
     // ask the CLINT for a timer interrupt.
     let interval = 1000000;// cycles; about 1/10th second in qemu.
-    *(clint::CLINT_MTIMECMP(id) as *mut usize) = *((clint::CLINT_MTIME + interval) as *mut usize);
+    clint::add_mtimecmp(id, interval);
+
+
+    // prepare information in scratch[] for timervec.
+    // scratch[0..2] : space for timervec to save registers.
+    // scratch[3] : address of CLINT MTIMECMP register.
+    // scratch[4] : desired interval (in cycles) between timer interrupts.
 
     
 

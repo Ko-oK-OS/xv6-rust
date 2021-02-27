@@ -5,4 +5,4 @@ clean:
 	@make -C kernel clean
 
 fmt:
-	@cd os && cargo fmt
+	@cd kernel && cargo fmt
