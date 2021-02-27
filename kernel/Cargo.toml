@@ -14,3 +14,9 @@ array-const-fn-init = "0.1.1"
 [features]
 unit_test = []
 
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+

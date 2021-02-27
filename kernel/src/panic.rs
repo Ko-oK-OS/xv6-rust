@@ -7,7 +7,7 @@ use core::panic::PanicInfo;
 /// ### `#[panic_handler]` 属性
 /// 声明此函数是 panic 的回调
 #[panic_handler]
-fn panic_handler(info: &PanicInfo) -> ! {
+fn panic_handler(info: &PanicInfo) -> !{
     // `\x1b[??m` 是控制终端字符输出格式的指令，在支持的平台上可以改变文字颜色等等
     // 参考：https://misc.flogisoft.com/bash/tip_colors_and_formatting
     // 这里使用错误红
@@ -23,6 +23,7 @@ fn panic_handler(info: &PanicInfo) -> ! {
         println!("\x1b[1;31mpanic: '{}'\x1b[0m", info.message().unwrap());
     }
     loop{}
+
 }
 
 /// 终止程序

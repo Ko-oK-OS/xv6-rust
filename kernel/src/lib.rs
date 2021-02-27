@@ -8,6 +8,9 @@
 #![feature(panic_info_message)]
 #![allow(non_snake_case)]
 #![allow(const_item_mutation)]
+#![allow(unused_imports)]
+
+
 
 #[macro_use]
 extern crate bitflags;
