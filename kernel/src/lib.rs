@@ -23,14 +23,15 @@ global_asm!(include_str!("asm/kernelvec.S"));
 mod print;
 mod panic;
 mod trap;
+mod start;
+mod rust_main;
 
 mod logo;
 mod console;
 mod register;
-mod start;
-mod rust_main;
 mod define;
 mod lock;
+mod process;
 
 
 
