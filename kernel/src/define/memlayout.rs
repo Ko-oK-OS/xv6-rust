@@ -34,3 +34,5 @@ pub const CLINT_MTIMECMP:Address = CLINT.add_addr(0x4000);
 
 
 // qemu puts platform-level interrupt controller (PLIC) here.
+pub const PLIC:Address = Address(0x0c000000);
+pub const PLIC_SCLAIM:Address = PLIC.add_addr(0x201004);

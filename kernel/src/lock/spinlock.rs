@@ -6,5 +6,4 @@ pub struct Spinlock<T: ?Sized>{
     locked:AtomicBool,
     name: &'static str,
     data:UnsafeCell<T>,
-    cpu:CPU
 }
