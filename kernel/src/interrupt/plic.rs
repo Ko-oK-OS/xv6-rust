@@ -2,7 +2,8 @@ use core::ptr;
 use core::convert::Into;
 
 use crate::define::memlayout;
-use crate::register::{mhartid};
+use crate::process::{cpu};
+
 
 //
 // the riscv Platform Level Interrupt Controller (PLIC).
@@ -19,11 +20,20 @@ pub unsafe fn plicinit(){
     ptr::write_volatile(addr_2 as *mut u32, 1);
 }
 
-
+// ask the PLIC what interrupt we should serve.
 pub unsafe fn plic_claim() -> u32{
-    let id = mhartid::read();
-    let plic_sclaim = Into::<usize>::into(memlayout::PLIC_SCLAIM.add_addr(8*id));
+    let id = cpu::cpuid();
+    let plic_sclaim = memlayout::plic_sclaim(id);
 
     let irq = ptr::read_volatile(plic_sclaim as *const u32);
     return irq;
+}
+
+
+// tell the PLIC we've served this IRQ.
+pub unsafe fn plic_complete(irq:u32){
+    let id = cpu::cpuid();
+    let plic_sclaim = memlayout::plic_sclaim(id);
+
+    ptr::write_volatile(plic_sclaim as *mut u32, irq);
 }

@@ -19,6 +19,7 @@
 
 // qemu puts UART registers here in physical memory.
 use super::*;
+use core::convert::Into;
 
 pub const UART0:usize = 0x10000000;
 pub const UART0_IRQ:usize = 10;
@@ -36,3 +37,10 @@ pub const CLINT_MTIMECMP:Address = CLINT.add_addr(0x4000);
 // qemu puts platform-level interrupt controller (PLIC) here.
 pub const PLIC:Address = Address(0x0c000000);
 pub const PLIC_SCLAIM:Address = PLIC.add_addr(0x201004);
+
+
+pub fn plic_sclaim(hartid: usize) -> usize{
+    let ret:usize;
+    ret = Into::<usize>::into(PLIC_SCLAIM.add_addr(8*hartid));
+    ret
+}
