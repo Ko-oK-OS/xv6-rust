@@ -13,11 +13,24 @@ use crate::process::{cpu};
 pub unsafe fn plicinit(){
     // set desired IRQ priorities non-zero (otherwise disabled).
     let plic:usize = Into::<usize>::into(memlayout::PLIC);
-    let addr_1 = plic + memlayout::UART0_IRQ*4;
-    ptr::write_volatile(addr_1 as *mut u32, 1);
+    let mut addr = plic + memlayout::UART0_IRQ*4;
+    ptr::write_volatile(addr as *mut u32, 1);
 
-    let addr_2  = plic + memlayout::UART0_IRQ*4;
-    ptr::write_volatile(addr_2 as *mut u32, 1);
+    addr  = plic + memlayout::UART0_IRQ*4;
+    ptr::write_volatile(addr as *mut u32, 1);
+}
+
+pub unsafe fn plicinithart(){
+    let hart = cpu::cpuid();
+
+    // set uart's enable bit for this hart's S-mode. 
+    let plic_senable = memlayout::plic_senable(hart);
+    let value = (1 << memlayout::UART0_IRQ) | (1 << memlayout::VIRTIO0_IRQ);
+    ptr::write_volatile(plic_senable as *mut u32, value);
+
+    // set this hart's S-mode priority threshold to 0.
+    let plic_spriority = memlayout::plic_spriority(hart);
+    ptr::write_volatile(plic_spriority as *mut u32, 0);
 }
 
 // ask the PLIC what interrupt we should serve.
