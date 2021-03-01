@@ -28,12 +28,12 @@ impl<T> Spinlock<T>{
         lock
     }
 
-    pub fn acquire(&self) -> SpiclockGuard<'_, T> {
+    pub fn acquire(&self) -> SpinlockGuard<'_, T> {
         while !self.locked.swap(true, Ordering::AcqRel){
             // Now we signals the processor that it is inside a busy-wait spin-loop 
             spin_loop();
         }
-        SpiclockGuard{spinlock: &self}
+        SpinlockGuard{spinlock: &self}
     }
 
     pub fn release(&self) {
@@ -61,7 +61,7 @@ impl<T> DerefMut for SpinlockGuard<'_, T>{
     }
 }
 
-impl<T> Drop for SpiclockGuard<'_, T>{
+impl<T> Drop for SpinlockGuard<'_, T>{
     fn drop(&mut self){
         self.spinlock.release()
     }
