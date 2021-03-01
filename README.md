@@ -57,6 +57,6 @@ make run
 ```
 
 ## Some Useful Links
-[Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
-[Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   
-[buddy_system_allocator](https://github.com/rcore-os/buddy_system_allocator)
+- [Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
+- [Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   
+- [buddy_system_allocator](https://github.com/rcore-os/buddy_system_allocator)
