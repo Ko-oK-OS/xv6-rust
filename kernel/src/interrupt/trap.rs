@@ -1,13 +1,16 @@
 use crate::register::{
     sepc, sstatus, scause, stval, stvec, sip
 };
+use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::memlayout;
-
 use super::*;
 
+use lazy_static::*;
 
-
+lazy_static! {
+    static ref tickslock:Spinlock<usize> = Spinlock::new(0, "time");
+}
 
 pub unsafe fn trap_init_hart() {
     extern "C" {
@@ -38,17 +41,13 @@ pub unsafe fn kerneltrap() {
     
     which_dev = devintr();
     if which_dev == 0{
-        println!("scause={}\n", scause);
-        println!("sepc={} stval={}\n", sepc::read(), stval::read());
+        println!("scause={}", scause);
+        println!("sepc={} stval={}", sepc::read(), stval::read());
         panic!("kerneltrap");
     }
 
 
     if which_dev == 2{
-        panic!("kerneltrap");
-    }
-
-    if which_dev == 0{
         panic!("kerneltrap");
     }
 
