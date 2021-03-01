@@ -20,7 +20,7 @@ global_asm!(include_str!("asm/kernelvec.S"));
 
 
 #[macro_use]
-mod print;
+mod printf;
 mod panic;
 mod start;
 mod rust_main;

@@ -2,7 +2,6 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use core::hint::spin_loop;
 use core::cell::{Cell, UnsafeCell};
 use core::ops::{Deref, DerefMut};
-use crate::process::cpu::CPU;
 
 #[derive(Debug,Default)]
 pub struct Spinlock<T: ?Sized>{
