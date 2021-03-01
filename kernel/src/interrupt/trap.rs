@@ -6,9 +6,7 @@ use crate::define::memlayout;
 use super::*;
 
 
-pub unsafe fn trap_init() {
-    
-}
+
 
 pub unsafe fn trap_init_hart() {
     extern "C" {
