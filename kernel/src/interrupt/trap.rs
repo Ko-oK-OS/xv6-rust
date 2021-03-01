@@ -11,6 +11,7 @@ use lazy_static::*;
 lazy_static! {
     static ref tickslock:Spinlock<usize> = Spinlock::new(0, "time");
 }
+static mut ticks:usize = 0;
 
 pub unsafe fn trap_init_hart() {
     extern "C" {
@@ -19,6 +20,7 @@ pub unsafe fn trap_init_hart() {
 
     stvec::write(kernelvec as usize);
 }
+
 
 
 

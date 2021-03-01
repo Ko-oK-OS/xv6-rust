@@ -2,6 +2,7 @@ use core::convert::From;
 
 pub mod memlayout;
 pub mod param;
+pub mod virtio;
 
 
 #[repr(C)]
