@@ -31,6 +31,7 @@ pub unsafe fn plicinithart(){
     // set this hart's S-mode priority threshold to 0.
     let plic_spriority = memlayout::plic_spriority(hart);
     ptr::write_volatile(plic_spriority as *mut u32, 0);
+    
 }
 
 // ask the PLIC what interrupt we should serve.
