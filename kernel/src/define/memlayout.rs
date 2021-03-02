@@ -92,6 +92,32 @@ pub fn plic_sclaim(hartid: usize) -> usize{
 pub const KERNBASE:Address =  Address(0x80000000);
 pub const PHYSTOP:Address = KERNBASE.add_addr(128*1024*1024);
 
+pub const PGSIZE:usize = 4096; // bytes per page
+pub const PGSHIFT:usize = 12; // bits of offset within a page
+
+pub const PTE_V:usize = 1 << 0; // valid
+pub const PTE_R:usize = 1 << 1;
+pub const PTE_W:usize = 1 << 2;
+pub const PTE_X:usize = 1 << 3;
+pub const PTE_U:usize = 1 << 4; // 1 -> user can access
+
+
+
+// one beyond the highest possible virtual address.
+// MAXVA is actually one bit less than the max allowed by
+// Sv39, to avoid having to sign-extend virtual addresses
+// that have the high bit set.
+pub const MAXVA:usize =  1 << (9 + 9 + 9 + 12 - 1); 
+
+pub fn pgroundup(sz:usize) -> usize{
+    let ret:usize;
+    ret = (sz+PGSIZE-1) & (!(PGSIZE-1));
+    ret
+}
+
+
+
+
 // map the trampoline page to the highest address,
 // in both user and kernel space.
 

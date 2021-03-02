@@ -1,13 +1,12 @@
 use crate::lock::spinlock::Spinlock;
-pub struct Run{
-    next: Option<Run>
+
+extern "C" {
+    // first address after kernel.
+    // defined by kernel.ld.
+    fn end();
 }
 
-pub struct Kmem{
-    run:Run
-}
 
-static kmem:Spinlock<Kmem> = Spinlock::new(Kmem{run:None}, "mem");
 
 pub fn kinit(){
     extern "C"{
