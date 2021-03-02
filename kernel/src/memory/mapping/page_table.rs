@@ -1,7 +1,13 @@
 use crate::define::memlayout::{
-    PGSIZE, MAXVA
+    PGSIZE, MAXVA, PTE_V
 };
-use super::page_table_entry::PageTableEntry;
+use super::{
+    page_table_entry::PageTableEntry,
+};
+
+use crate::memory::address::{
+    VirtualAddress, PhysicalAddress
+};
 
 extern "C" {
     fn etext();
@@ -35,11 +41,18 @@ impl PageTable{
     //   21..29 -- 9 bits of level-1 index.
     //   12..20 -- 9 bits of level-0 index.
     //    0..11 -- 12 bits of byte offset within the page.
-    
-    fn walk(&self, va:usize, alloc:usize) -> PageTableEntry{
-        if va > MAXVA {
+
+    fn walk(&self, va: VirtualAddress, alloc: usize) -> PageTableEntry{
+        if va.into() > MAXVA {
             panic!("walk");
         }
 
+        for level in (0..2).rev() {
+            let pte = self.entries[va.extract_bit(level)];
+            if pte & PTE_V  {
+
+            }
+        }
+        self.entries[va.extract_bit(0)]
     }
 }
