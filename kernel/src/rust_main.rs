@@ -3,6 +3,10 @@ use crate::interrupt::{
     plic::{plicinit, plicinithart},
     trap::{trap_init_hart}
 };
+use crate::memory::{
+    kalloc::kinit
+};
+
 use crate::process::{cpu};
 
 #[no_mangle]
@@ -15,6 +19,7 @@ pub extern "C" fn rust_main() -> !{
             plicinit(); // set up interrupt controller
             plicinithart(); // ask PLIC for device interrupts
         }
+        kinit();
         // test interrupt
         unsafe {
             llvm_asm!("ebreak"::::"volatile");
