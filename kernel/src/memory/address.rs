@@ -3,7 +3,7 @@ use core::convert::Into;
 use bit_field::BitField;
 
 use crate::define::memlayout::{
-    PGSHIFT
+    PGSHIFT, PGSIZE
 };
 pub struct PhysicalAddress(pub usize);
 
@@ -32,6 +32,10 @@ impl VirtualAddress{
         self.0
     }
 
+    pub fn add_addr(&self, addr:usize) -> Self{
+        Self(self.0+addr)
+    }
+
     pub fn extract_bit(&mut self, level:usize) -> usize{
         let shift = PGSHIFT;
         let mut va:usize = self.into();
@@ -39,6 +43,11 @@ impl VirtualAddress{
         va.set_bits(..9, 0x1FF);
         va
     }
+
+    pub fn page_round_down(&self) -> usize{
+        self.0 & (!(PGSIZE-1))
+    }
+
 }
 
 impl PhysicalAddress{

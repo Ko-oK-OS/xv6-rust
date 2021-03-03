@@ -26,7 +26,11 @@ impl PageTableEntry{
         (self.0 & (PteFlags::V.bits())) > 0
     }
 
-    pub fn pte_to_pt(&self) -> *mut PageTable{
+    pub fn is_user(&self) -> bool {
+        (self.0 & (PteFlags::V.bits())) > 0
+    }
+
+    pub fn to_pagetable(&self) -> *mut PageTable{
         let ret = ((self.0 >> 10) << 12) as *mut PageTable;
         ret
     }
