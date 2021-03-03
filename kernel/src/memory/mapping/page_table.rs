@@ -1,3 +1,4 @@
+
 use crate::define::memlayout::{
     PGSIZE, MAXVA, PTE_V
 };
@@ -42,17 +43,20 @@ impl PageTable{
     //   12..20 -- 9 bits of level-0 index.
     //    0..11 -- 12 bits of byte offset within the page.
 
-    fn walk(&self, va: VirtualAddress, alloc: usize) -> PageTableEntry{
-        if va.into() > MAXVA {
+    fn walk(&self, va: &mut VirtualAddress, alloc: usize) -> PageTableEntry{
+        let mut pagetable = self as *const PageTable;
+        let real_addr:usize = va.into();
+        if real_addr > MAXVA {
             panic!("walk");
         }
-
         for level in (0..2).rev() {
-            let pte = self.entries[va.extract_bit(level)];
-            if pte & PTE_V  {
-
+            let pte = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
+            if pte.is_valid() {
+                pagetable = pte.pte_to_pt();
+            }else{
+                
             }
         }
-        self.entries[va.extract_bit(0)]
+        unsafe{*(&(*pagetable).entries[va.extract_bit(0)])}
     }
 }
