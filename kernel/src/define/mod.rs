@@ -13,6 +13,11 @@ impl Address {
     pub const fn add_addr(&self, x:usize) -> Self {
         Self(self.0 + x)
     }
+
+    pub fn into(&self) -> usize{
+        self.0
+    }
+
 }
 
 impl From<Address> for usize {
