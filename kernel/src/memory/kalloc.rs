@@ -2,8 +2,15 @@ use crate::lock::spinlock::Spinlock;
 use crate::define::memlayout::{PGSIZE, PHYSTOP};
 use super::address::{PhysicalAddress};
 
-use core::ptr::write_volatile;
+use core::ptr::{write_volatile};
 
+pub struct Run{
+    next: Option<*mut Run>
+}
+
+type FreeList = Run;
+
+static kmem:Spinlock<FreeList> = Spinlock::new(FreeList{next: None}, "kmem");
 
 // first address after kernel.
     // defined by kernel.ld.
@@ -13,6 +20,7 @@ use core::ptr::write_volatile;
 
 pub fn kinit(){
     println!("kinit......")
+
 }
 
 // Free the page of physical memory pointed at by v,
@@ -22,9 +30,8 @@ pub fn kinit(){
 
 pub unsafe fn kfree(pa: PhysicalAddress){
     let mut addr:usize = pa.into();
-    // let ptr = addr as *mut u8;
 
-    if (addr % PGSIZE !=0) || (addr > end as usize) || addr > PHYSTOP.into(){
+    if (addr % PGSIZE !=0) || (addr < end as usize) || addr > PHYSTOP.into(){
         panic!("kfree")
     }
 
@@ -32,5 +39,9 @@ pub unsafe fn kfree(pa: PhysicalAddress){
     for i in 0..PGSIZE {
         write_volatile((addr + i) as *mut u8, 1);
     }
+
+    let r = addr as *mut FreeList;
+    let guard = kmem.acquire();
+    (*r).next = Some(&mut *guard);
 }
 
