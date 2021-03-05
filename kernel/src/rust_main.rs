@@ -4,7 +4,8 @@ use crate::interrupt::{
     trap::{trap_init_hart}
 };
 use crate::memory::{
-    kalloc::kinit
+    kalloc::kinit,
+    mapping::{page_table::kvminit}
 };
 
 use crate::process::{cpu};
@@ -14,6 +15,8 @@ pub extern "C" fn rust_main() -> !{
     println!("{}",LOGO);
     println!("xv6 kernel is booting!");
     if unsafe{cpu::cpuid()} == 0{
+        kinit(); // physical page allocator
+        kvminit(); // create kernel page table
         unsafe{ 
             trap_init_hart(); // trap vectors
             plicinit(); // set up interrupt controller

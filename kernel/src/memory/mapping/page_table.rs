@@ -73,9 +73,9 @@ impl PageTable{
     // be page-aligned. Returns 0 on success, -1 if walk() couldn't
     // allocate a needed page-table page.
 
-    fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress) -> bool{
-        let start:usize = va.page_round_down();
-        let end:usize = va.add_addr(PGSIZE -1).page_round_down();
+    // fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress) -> bool{
+    //     let start:usize = va.page_round_down();
+    //     let end:usize = va.add_addr(PGSIZE -1).page_round_down();
 
-    }
+    // }
 }

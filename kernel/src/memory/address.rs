@@ -39,13 +39,17 @@ impl VirtualAddress{
     pub fn extract_bit(&mut self, level:usize) -> usize{
         let shift = PGSHIFT;
         let mut va:usize = self.into();
-        va = va.rotate_right(shift as u32);
+        va = va >> (shift + 9*level);
         va.set_bits(..9, 0x1FF);
         va
     }
 
     pub fn page_round_down(&self) -> usize{
         self.0 & (!(PGSIZE-1))
+    }
+
+    pub fn page_round_up(&self) -> usize{
+        (self.0 + PGSIZE - 1) & (!(PGSIZE-1))
     }
 
 }

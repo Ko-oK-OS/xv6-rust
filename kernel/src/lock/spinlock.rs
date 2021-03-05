@@ -7,7 +7,7 @@ use core::ops::{Deref, DerefMut};
 pub struct Spinlock<T: ?Sized>{
     locked:AtomicBool,
     name: &'static str,
-    cpu_id: usize,
+    cpu_id: isize,
     data:UnsafeCell<T>,
 }
 
@@ -17,11 +17,11 @@ pub struct SpinlockGuard<'a, T>{
 
 impl<T> Spinlock<T>{
 
-    pub fn new(data: T, name: &'static str) -> Spinlock<T> {
+    pub fn new(data: T, name: &'static str) -> Self {
         let lock = Spinlock {
             locked: AtomicBool::new(false),
             name: name,
-            cpu_id:0,
+            cpu_id:-1,
             data: UnsafeCell::new(data)
         };
         lock
