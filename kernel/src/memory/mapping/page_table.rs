@@ -56,7 +56,7 @@ impl PageTable{
         if real_addr > MAXVA {
             panic!("walk");
         }
-        for level in (0..2).rev() {
+        for level in (0..=2).rev() {
             let pte = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
             if pte.is_valid() {
                 pagetable = pte.to_pagetable();

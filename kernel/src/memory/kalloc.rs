@@ -44,13 +44,20 @@ lazy_static!{
         fn end();
     }
 
-pub fn kinit(){
+pub unsafe fn kinit(){
     println!("kinit......");
+    freerange(PhysicalAddress::new(end as usize), PhysicalAddress::new(PHYSTOP.into()));
     println!("kinit done......")
 
 }
 
-fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
+unsafe fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
+    let mut p = pa_start.page_round_up();
+    let end_addr:usize = pa_end.into();
+    while p <= end_addr{
+        kfree(PhysicalAddress::new(p));
+        p += PGSIZE;
+    }
 
 }
 
@@ -76,6 +83,7 @@ pub unsafe fn kfree(pa: PhysicalAddress){
 
     r.as_mut().set_next(guard.get_next());
     guard.set_next(Some(r));
+    drop(guard);
 
     (*KMEM).release();
 
@@ -85,7 +93,24 @@ pub unsafe fn kfree(pa: PhysicalAddress){
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
 
-pub fn kalloc(){
+pub unsafe fn kalloc() -> Option<*mut u8>{
+    let mut guard = (*KMEM).acquire();
+    let r = guard.get_next();
+    if let Some(mut addr) = r{
+        guard.set_next(addr.as_mut().get_next());
+    }
+    drop(guard);
+    (*KMEM).release();
 
+    match r {
+        Some(ptr) => {
+            let addr = ptr.as_ptr() as usize;
+            for i in 0..PGSIZE{
+                write_volatile((addr + i) as *mut u8 , 5);
+            }
+            Some(addr as *mut u8)
+        }
+        None => None
+    }
 }
 

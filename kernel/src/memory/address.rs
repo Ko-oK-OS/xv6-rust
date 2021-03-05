@@ -55,7 +55,20 @@ impl VirtualAddress{
 }
 
 impl PhysicalAddress{
-    fn into(&self) -> usize{
+    pub fn new(value:usize) -> Self{
+        Self(value)
+    }
+    
+    pub fn into(&self) -> usize{
         self.0
     }
+
+    pub fn page_round_down(&self) -> usize{
+        self.0 & (!(PGSIZE-1))
+    }
+
+    pub fn page_round_up(&self) -> usize{
+        (self.0 + PGSIZE - 1) & (!(PGSIZE-1))
+    }
+
 }
