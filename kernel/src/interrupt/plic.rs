@@ -11,6 +11,7 @@ use crate::process::{cpu};
 
 
 pub unsafe fn plicinit(){
+    println!("plic init......");
     // set desired IRQ priorities non-zero (otherwise disabled).
     let plic:usize = Into::<usize>::into(memlayout::PLIC);
     let mut addr = plic + memlayout::UART0_IRQ*4;
@@ -21,6 +22,7 @@ pub unsafe fn plicinit(){
 }
 
 pub unsafe fn plicinithart(){
+    println!("plic init hart......");
     let hart = cpu::cpuid();
 
     // set uart's enable bit for this hart's S-mode. 

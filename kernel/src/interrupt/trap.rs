@@ -14,6 +14,7 @@ lazy_static! {
 static mut ticks:usize = 0;
 
 pub unsafe fn trap_init_hart() {
+    println!("trap init hart......");
     extern "C" {
         fn kernelvec();
     }
