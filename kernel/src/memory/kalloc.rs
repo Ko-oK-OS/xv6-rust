@@ -46,6 +46,7 @@ lazy_static!{
 
 pub unsafe fn kinit(){
     println!("kinit......");
+    println!("kinit: end={:#x}", end as usize);
     freerange(PhysicalAddress::new(end as usize), PhysicalAddress::new(PHYSTOP.into()));
     println!("kinit done......")
 
@@ -56,7 +57,10 @@ unsafe fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
     let mut p = pa_start.page_round_up();
     let end_addr:usize = pa_end.into();
     println!("enter loop......");
-    while p <= end_addr{
+    println!("start addr: {:#x}", p);
+    println!("end addr: {:#x}", end_addr);
+    while p < end_addr{
+        println!("p: {:#x}", p);
         kfree(PhysicalAddress::new(p));
         p += PGSIZE;
     }
