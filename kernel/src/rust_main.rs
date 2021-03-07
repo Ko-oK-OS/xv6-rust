@@ -18,6 +18,7 @@ pub extern "C" fn rust_main() -> !{
     println!("xv6 kernel is booting!");
     if unsafe{cpu::cpuid()} == 0{
         unsafe{kinit()}; // physical page allocator
+        
         // test heap allocator by using Box
         let test:usize = 42;
         match unsafe {Box::new(test)}{
