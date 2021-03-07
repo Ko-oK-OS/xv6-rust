@@ -60,7 +60,7 @@ unsafe fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
     println!("start addr: {:#x}", p);
     println!("end addr: {:#x}", end_addr);
     while p < end_addr{
-        println!("page addr: {:#x}", p);
+        // println!("page addr: {:#x}", p);
         kfree(PhysicalAddress::new(p));
         p += PGSIZE;
     }

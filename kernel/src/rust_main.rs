@@ -13,15 +13,15 @@ use crate::memory::{
 use crate::process::{cpu};
 
 #[no_mangle]
-pub extern "C" fn rust_main() -> !{
+pub unsafe extern "C" fn rust_main() -> !{
     println!("{}",LOGO);
     println!("xv6 kernel is booting!");
-    if unsafe{cpu::cpuid()} == 0{
-        unsafe{kinit()}; // physical page allocator
+    if cpu::cpuid() == 0{
+        kinit(); // physical page allocator
         
         // test heap allocator by using Box
         let test:usize = 42;
-        match unsafe {Box::new(test)}{
+        match Box::new(test){
             Some(m) => {
                 println!("box: {}", *m);
             }
@@ -30,11 +30,10 @@ pub extern "C" fn rust_main() -> !{
             }
         }
         kvminit(); // create kernel page table
-        unsafe{ 
-            trap_init_hart(); // trap vectors
-            plicinit(); // set up interrupt controller
-            plicinithart(); // ask PLIC for device interrupts
-        }
+        trap_init_hart(); // trap vectors
+        plicinit(); // set up interrupt controller
+        plicinithart(); // ask PLIC for device interrupts
+        
         // test interrupt
         // unsafe {
         //     llvm_asm!("ebreak"::::"volatile");
