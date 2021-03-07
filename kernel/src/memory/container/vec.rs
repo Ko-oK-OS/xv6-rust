@@ -19,18 +19,24 @@ impl<T> Vec<T>{
         self.buf.capacity()
     }
 
+    #[inline]
     pub fn as_ptr(&self) -> *const T{
         self.buf.as_ptr()
     }
 
+    #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut T{
         self.buf.as_ptr()
+    }
+
+    pub fn reserve(&mut self, additional:usize){
+        self.buf.reserve(self.len, additional);
     }
 
     #[inline]
     pub fn push(&mut self, value: T){
         if self.len == self.buf.capacity() {
-
+            self.reserve(1);
         }
 
         unsafe {
@@ -39,7 +45,7 @@ impl<T> Vec<T>{
             self.len += 1;
         }
     }
-    
+
     #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.len == 0{
