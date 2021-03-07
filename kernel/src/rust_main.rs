@@ -7,7 +7,7 @@ use crate::interrupt::{
 use crate::memory::{
     kalloc::kinit,
     mapping::{page_table::kvminit},
-    container::boxed::Box
+    container::{boxed::Box, vec::Vec}
 };
 
 use crate::process::{cpu};
@@ -29,6 +29,13 @@ pub unsafe extern "C" fn rust_main() -> !{
                 println!("none");
             }
         }
+
+        //test vec
+        let mut vec:Vec<usize> = Vec::new();
+        vec.push(45);
+        vec.push(46);
+        vec.printf();
+
         kvminit(); // create kernel page table
         trap_init_hart(); // trap vectors
         plicinit(); // set up interrupt controller

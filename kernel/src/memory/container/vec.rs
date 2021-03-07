@@ -1,5 +1,6 @@
 use super::raw_vec::RawVec;
 use core::ptr::{write, read};
+use core::mem::size_of;
 
 pub struct Vec<T>{
     buf: RawVec<T>,
@@ -30,7 +31,7 @@ impl<T> Vec<T>{
     }
 
     pub fn reserve(&mut self, additional:usize){
-        self.buf.reserve(self.len, additional);
+        unsafe{self.buf.reserve(self.len, additional)};
     }
 
     #[inline]
@@ -56,6 +57,15 @@ impl<T> Vec<T>{
             let end  = self.as_mut_ptr().add(self.len);
             let ret = read(end as *const T);
             Some(ret)
+        }
+    }
+
+    #[inline]
+    // only usize
+    pub unsafe fn printf(&self){
+        let ptr = self.buf.as_ptr();
+        for i in 0..self.len{
+            println!("vec value: {}", read((ptr as usize + i * 8) as *const usize));
         }
     }
 }

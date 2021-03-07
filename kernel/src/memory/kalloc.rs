@@ -81,9 +81,9 @@ pub unsafe fn kfree(pa: PhysicalAddress){
     }
 
     // Fill with junk to catch dangling refs.
-    for i in 0..PGSIZE {
-        write_volatile((addr + i) as *mut u8, 1);
-    }
+    // for i in 0..PGSIZE {
+    //     write_volatile((addr + i) as *mut u8, 1);
+    // }
 
     let mut r:NonNull<FreeList> = FreeList::new(addr as *mut u8);
     let mut guard = (*KMEM).acquire();
@@ -112,9 +112,9 @@ pub unsafe fn kalloc() -> Option<*mut u8>{
     match r {
         Some(ptr) => {
             let addr = ptr.as_ptr() as usize;
-            for i in 0..PGSIZE{
-                write_volatile((addr + i) as *mut u8 , 5);
-            }
+            // for i in 0..PGSIZE{
+            //     write_volatile((addr + i) as *mut u8 , 5);
+            // }
             Some(addr as *mut u8)
         }
         None => None
