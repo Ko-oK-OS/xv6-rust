@@ -12,7 +12,7 @@ cd qemu-5.2.0
 ./configure --target-list=riscv32-softmmu,riscv64-softmmu   
 make -j$(nproc)  
 sudo make install  
-```   
+```
 If you find some errors when building, you can slove by following hints:  
 `ERROR: pkg-config binary 'pkg-config' not found` : `sudo apt-get install pkg-config`  
 `ERROR: glib-2.48 gthread-2.0 is required to compile QEMU`: `sudo apt-get install libglib2.0-dev`  
@@ -22,20 +22,20 @@ If you find some errors when building, you can slove by following hints:
 You need download rust to start our env. We suggest you to use offical shell:  
 ```
 curl https://sh.rustup.rs -sSf | sh
-```   
+```
 If you fail because of slow internet speed. You can try this to speed up:   
 ```
 export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static
 export RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
 curl https://sh.rustup.rs -sSf | sh
-```   
+```
 
 If you have finished these, you can test your env by following comand:  
 ```
 source $HOME/.cargo/env  
 rustc --version
 
-```   
+```
 Additionly, we'd better change the package mirror address crates.io used by the package manager cargo to the mirror server of the University of Science and Technology of China to speed up the download of the tripartite library. We open (create a new file if it doesn't exist) ~/.cargo/config and modify the content to:  
 ```
 [source.crates-io]
@@ -43,7 +43,7 @@ registry = "https://github.com/rust-lang/crates.io-index"
 replace-with = 'ustc'
 [source.ustc]
 registry = "git://mirrors.ustc.edu.cn/crates.io-index"
-```  
+```
 Finally, you run this OS on your machine by excuting following commands:  
 ```
 git clone https://github.com/KuangjuX/xv6-rust.git
@@ -63,3 +63,4 @@ make run
 - [Write a OS in Rust](https://os.phil-opp.com)  
 - [rCore Tutorial](https://rcore-os.github.io/rCore-Tutorial-deploy/)  
 - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
+- [xv6-riscv-rust](https://github.com/Jaic1/xv6-riscv-rust)
