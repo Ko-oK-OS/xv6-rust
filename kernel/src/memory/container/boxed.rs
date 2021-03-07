@@ -1,12 +1,12 @@
 use core::ptr::{Unique, write};
 use core::ops::{Deref, DerefMut};
 
-use crate::memory::kalloc;
+use crate::memory::kalloc::kalloc;
 pub struct Box<T: ?Sized>(Unique<T>);
 
 impl<T> Box<T>{
     pub unsafe fn new(x: T) -> Option<Box<T>>{
-        match unsafe{kalloc::kalloc()}{
+        match kalloc(){
             Some(ptr) => {
                 write(ptr as *mut T, x);
                 Some(Self(Unique::new(ptr as *mut T).unwrap()))
