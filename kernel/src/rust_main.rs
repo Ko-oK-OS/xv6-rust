@@ -34,6 +34,8 @@ pub unsafe extern "C" fn rust_main() -> !{
         let mut vec:Vec<usize> = Vec::new();
         vec.push(45);
         vec.push(46);
+        vec.push(47);
+        vec.push(48);
         vec.printf();
 
         kvminit(); // create kernel page table

@@ -64,8 +64,9 @@ impl<T> Vec<T>{
     // only usize
     pub unsafe fn printf(&self){
         let ptr = self.buf.as_ptr();
+        let size = size_of::<T>();
         for i in 0..self.len{
-            println!("vec value: {}", read((ptr as usize + i * 8) as *const usize));
+            println!("vec value: {}", read((ptr as usize + i * size) as *const usize));
         }
     }
 }
