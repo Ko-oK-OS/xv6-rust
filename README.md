@@ -49,7 +49,7 @@ Finally, you run this OS on your machine by excuting following commands:
 git clone https://github.com/KuangjuX/xv6-rust.git
 cd xv6-rust/kernel
 
-rustup target add riscv64imac-unknown-none-elf
+rustup target add riscv64gc-unknown-none-elf
 cargo install cargo-binutils
 rustup component add llvm-tools-preview
 
