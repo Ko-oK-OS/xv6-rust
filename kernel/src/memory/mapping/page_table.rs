@@ -1,4 +1,4 @@
-
+use core::ptr::write;
 use crate::define::memlayout::{
     PGSIZE, MAXVA
 };
@@ -6,9 +6,15 @@ use super::{
     page_table_entry::PageTableEntry,
 };
 
-use crate::memory::address::{
-    VirtualAddress, PhysicalAddress, Addr
+use crate::memory::{
+    address::{
+        VirtualAddress, PhysicalAddress, Addr
+    }, 
+    kalloc::{
+        kalloc
+    }
 };
+
 
 extern "C" {
     fn etext();
@@ -30,10 +36,7 @@ impl PageTable{
         
     // }
 
-    fn to_pte(&self) -> *mut PageTableEntry{
-        let ret =  (((self.entries.as_ptr() as usize) >> 12) << 10) as *mut PageTableEntry;
-        ret
-    }
+
 
     // Return the address of the PTE in page table pagetable
     // that corresponds to virtual address va.  If alloc!=0,
@@ -50,7 +53,7 @@ impl PageTable{
 
 
     // find  the PTE for a virtual address
-    fn walk(&self, va: &mut VirtualAddress) -> Option<&PageTableEntry>{
+     fn walk(&self, va: VirtualAddress, alloc:i32) -> Option<&PageTableEntry>{
         let mut pagetable = self as *const PageTable;
         let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
@@ -59,12 +62,50 @@ impl PageTable{
         for level in (0..=2).rev() {
             let pte = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
             if pte.is_valid() {
-                pagetable = pte.to_pagetable();
+                pagetable = pte.as_pagetable();
             }else{
-                return None
+                if alloc == 0{
+                    return None
+                }
+                match unsafe{kalloc()}{
+                    Some(page_table) => {
+                        let page_addr = page_table as usize;
+                        for i in 0..PGSIZE{
+                            unsafe{write((page_addr + i) as *mut u8, 0)};
+                            unsafe{write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
+                        }
+                    }
+                    None => return None
+                }
+                
             }
         }
         Some(unsafe{&(*pagetable).entries[va.extract_bit(0)]})
+    }
+
+    // Look up a virtual address, return the physical address,
+    // or 0 if not mapped.
+    // Can only be used to look up user pages.
+    pub fn walkaddr(pagetable: PageTable, va: VirtualAddress) -> Option<PhysicalAddress>{
+        let addr = va.as_usize();
+        if addr > MAXVA{
+            return None
+        }
+        match pagetable.walk(va, 0){
+            Some(pte) => {
+                if !pte.is_valid(){
+                    return None
+                }
+                if !pte.is_user(){
+                    return None
+                }
+
+                let pagetable_addr = pte.as_pagetable() as usize;
+                Some(PhysicalAddress::new(pagetable_addr))
+            }
+
+            None => None
+        }
     }
 
 
