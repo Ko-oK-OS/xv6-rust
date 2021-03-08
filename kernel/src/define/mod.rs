@@ -1,5 +1,7 @@
 use core::convert::From;
 
+use crate::memory::address::Addr;
+
 pub mod memlayout;
 pub mod param;
 pub mod virtio;
@@ -9,13 +11,15 @@ pub mod virtio;
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Address(usize);
 
+impl Addr for Address{
+    fn as_usize(&self) -> usize{
+        self.0
+    }
+}
+
 impl Address {
     pub const fn add_addr(&self, x:usize) -> Self {
         Self(self.0 + x)
-    }
-
-    pub fn into(&self) -> usize{
-        self.0
     }
 
 }

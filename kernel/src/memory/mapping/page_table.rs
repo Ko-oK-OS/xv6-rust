@@ -7,7 +7,7 @@ use super::{
 };
 
 use crate::memory::address::{
-    VirtualAddress, PhysicalAddress
+    VirtualAddress, PhysicalAddress, Addr
 };
 
 extern "C" {
@@ -52,7 +52,7 @@ impl PageTable{
     // find  the PTE for a virtual address
     fn walk(&self, va: &mut VirtualAddress) -> Option<&PageTableEntry>{
         let mut pagetable = self as *const PageTable;
-        let real_addr:usize = va.into();
+        let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
             panic!("walk");
         }

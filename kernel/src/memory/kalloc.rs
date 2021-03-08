@@ -1,6 +1,6 @@
 use crate::lock::spinlock::Spinlock;
 use crate::define::memlayout::{PGSIZE, PHYSTOP};
-use super::address::{PhysicalAddress};
+use super::address::{PhysicalAddress, Addr};
 use lazy_static::*;
 
 use core::ptr::{write_volatile, write, NonNull};
@@ -47,7 +47,7 @@ lazy_static!{
 pub unsafe fn kinit(){
     println!("kinit......");
     println!("kinit: end={:#x}", end as usize);
-    freerange(PhysicalAddress::new(end as usize), PhysicalAddress::new(PHYSTOP.into()));
+    freerange(PhysicalAddress::new(end as usize), PhysicalAddress::new(PHYSTOP.as_usize()));
     println!("kinit done......")
 
 }
@@ -55,7 +55,7 @@ pub unsafe fn kinit(){
 unsafe fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
     println!("enter freerange......");
     let mut p = pa_start.page_round_up();
-    let end_addr:usize = pa_end.into();
+    let end_addr:usize = pa_end.as_usize();
     println!("enter loop......");
     println!("start addr: {:#x}", p);
     println!("end addr: {:#x}", end_addr);
@@ -76,7 +76,7 @@ unsafe fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
 pub unsafe fn kfree(pa: PhysicalAddress){
     let addr:usize = pa.into();
 
-    if (addr % PGSIZE !=0) || (addr < end as usize) || addr > PHYSTOP.into(){
+    if (addr % PGSIZE !=0) || (addr < end as usize) || addr > PHYSTOP.as_usize(){
         panic!("kfree")
     }
 
