@@ -73,7 +73,7 @@ impl VirtualAddress{
         Self(self.0+addr)
     }
 
-    pub fn extract_bit(&mut self, level:usize) -> usize{
+    pub fn extract_bit(&self, level:usize) -> usize{
         let shift = PGSHIFT;
         let mut va:usize = self.as_usize();
         va = va >> (shift + 9*level);
