@@ -13,7 +13,9 @@ pub struct PhysicalPageNumber(pub usize);
 
 pub struct VirtualPageNumber(pub usize);
 
-
+pub trait Address{
+    fn into(&self) -> usize;
+}
 
 impl From<PhysicalAddress> for usize{
     fn from(pa: PhysicalAddress) -> Self{
