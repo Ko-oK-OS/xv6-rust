@@ -9,9 +9,9 @@ use super::*;
 use lazy_static::*;
 
 lazy_static! {
-    static ref tickslock:Spinlock<usize> = Spinlock::new(0, "time");
+    static ref TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
 }
-static mut ticks:usize = 0;
+static mut TICKS:usize = 0;
 
 pub unsafe fn trap_init_hart() {
     println!("trap init hart......");
@@ -29,7 +29,6 @@ pub unsafe fn trap_init_hart() {
 // on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kerneltrap() {
-    let mut which_dev = 0;
     let sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
@@ -42,7 +41,7 @@ pub unsafe fn kerneltrap() {
         panic!("kerneltrap: interrupts enabled");
     }
     
-    which_dev = devintr();
+    let which_dev = devintr();
     if which_dev == 0{
         println!("scause={}", scause);
         println!("sepc={} stval={}", sepc::read(), stval::read());

@@ -6,7 +6,7 @@ use crate::register::{
 use crate::rust_main::rust_main;
 use crate::define::param::NCPU;
 
-static mut timer_scratch:[[u64; 5]; NCPU] = [[0u64; 5]; NCPU];
+static mut TIMER_SCRATCH:[[u64; 5]; NCPU] = [[0u64; 5]; NCPU];
 
 #[no_mangle]
 pub unsafe fn start() -> !{
@@ -57,9 +57,9 @@ unsafe fn timerinit(){
     // scratch[3] : address of CLINT MTIMECMP register.
     // scratch[4] : desired interval (in cycles) between timer interrupts.
 
-    timer_scratch[id][3] = clint::count_mtiecmp(id) as u64;
-    timer_scratch[id][4] = interval;
-    mscratch::write(timer_scratch[id].as_ptr() as usize);
+    TIMER_SCRATCH[id][3] = clint::count_mtiecmp(id) as u64;
+    TIMER_SCRATCH[id][4] = interval;
+    mscratch::write(TIMER_SCRATCH[id].as_ptr() as usize);
 
     // set the machine-mode trap handler.
     extern "C" {
