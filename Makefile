@@ -24,7 +24,7 @@ USER_LINKER_SCRIPT=$U/user.ld
 QEMU_BINARY=qemu-system-riscv64
 MACH=virt
 CPU=rv64
-CPUS=4
+CPUS=3
 MEM=128M
 QEMU_DRIVE=hdd.img
 
@@ -33,7 +33,7 @@ all: $(USER_LIB_OUT) $(KERNEL_OUT)
 K_AUTOGEN_FILES = $K/asm/symbols.S $K/symbols/gen.rs $K/syscall/gen.rs
 U_AUTOGEN_FILES = $U/usys.S $U/syscall.h
 
-ASSEMBLY_FILES = $K/asm/boot.S \
+ASSEMBLY_FILES = $K/asm/entry.S \
 				 $K/asm/trampoline.S $K/asm/symbols.S \
 				 $K/asm/swtch.S $K/asm/kernelvec.S
 
