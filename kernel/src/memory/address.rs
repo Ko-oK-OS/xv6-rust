@@ -1,3 +1,4 @@
+use core::cmp::{PartialEq, Eq, Ord, Ordering};
 use core::convert::From;
 use core::convert::Into;
 use bit_field::BitField;
@@ -5,8 +6,11 @@ use bit_field::BitField;
 use crate::define::memlayout::{
     PGSHIFT, PGSIZE
 };
+
+#[derive(Debug, Copy, Clone)]
 pub struct PhysicalAddress(pub usize);
 
+#[derive(Debug, Copy, Clone)]
 pub struct VirtualAddress(pub usize);
 
 pub struct PhysicalPageNumber(pub usize);
@@ -68,6 +72,18 @@ impl Addr for PhysicalAddress{
 }
 
 impl VirtualAddress{
+    pub fn new(addr: usize) -> Self{
+        Self(addr)
+    }
+
+    pub fn compare(&self, other:&Self) -> bool{
+        self.0 > other.0
+    }
+
+    pub fn equal(&self, other: &Self) -> bool{
+        self.0 == self.0
+    }
+
 
     pub fn add_addr(&self, addr:usize) -> Self{
         Self(self.0+addr)
@@ -87,4 +103,22 @@ impl PhysicalAddress{
     pub fn new(value:usize) -> Self{
         Self(value)
     }
+
+    pub fn add_addr(&self, addr:usize) -> Self{
+        Self(self.0+addr)
+    }
 }
+
+// impl PartialEq for VirtualAddress{
+//     fn eq(&self, other:&Self) -> bool{
+//         self.0 == other.0
+//     }
+// }
+
+// impl Eq for VirtualAddress{}
+
+// impl Ord for VirtualAddress{
+//     fn cmp(&self, other: &Self) -> Ordering{
+//         self.as_usize().cmp(&other.as_usize())
+//     }
+// }

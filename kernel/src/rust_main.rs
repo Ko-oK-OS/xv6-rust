@@ -6,7 +6,7 @@ use crate::interrupt::{
 
 use crate::memory::{
     kalloc::kinit,
-    mapping::{page_table::kvminit},
+    mapping::{page_table::{ kvminit, kvminithart}},
     container::{boxed::Box, vec::Vec}
 };
 
@@ -39,6 +39,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         vec.printf();
 
         kvminit(); // create kernel page table
+        kvminithart(); // turn on paging
         trap_init_hart(); // trap vectors
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts

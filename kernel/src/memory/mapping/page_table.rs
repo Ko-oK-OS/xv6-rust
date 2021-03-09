@@ -1,4 +1,6 @@
 use core::ptr::write;
+use lazy_static::*;
+use crate::register::{sfence_vma, satp};
 use crate::define::memlayout::{
     PGSIZE, MAXVA
 };
@@ -18,6 +20,7 @@ use crate::memory::{
 
 extern "C" {
     fn etext();
+    fn trampoline();
 }
 
 // static kernel_page:PageTable = PageTable::kvmmake();
@@ -25,18 +28,34 @@ pub struct PageTable{
     pub entries: [PageTableEntry; PGSIZE/8],
 }
 
+// lazy_static!{
+//     static ref kernel_pagetable:PageTable = PageTable::kvmmake();
+// }
+
 // Initialize the one kernel_pagetable
 pub fn kvminit(){
     println!("kvminit......");
+    // static mut kernel_pagetable:PageTable = PageTable::kvmmake();
+    println!("kvm done......");
+}
+
+// Switch h/w page table register to the kernel's page table,
+// and enable paging.
+pub unsafe fn kvminithart(){
+    // satp::write(satp::make_satp(kernel_pagetable.as_addr()));
+    sfence_vma();
 }
 
 impl PageTable{
+    pub fn as_addr(&self) -> usize{
+        self.entries.as_ptr() as usize
+    }
+
+
     // fn kvmmake() -> PageTable{
-    //     let ret:PageTable;
-        
+    //     let ret:PageTable = PageTable;
+    //     ret
     // }
-
-
 
     // Return the address of the PTE in page table pagetable
     // that corresponds to virtual address va.  If alloc!=0,
@@ -114,9 +133,30 @@ impl PageTable{
     // be page-aligned. Returns 0 on success, -1 if walk() couldn't
     // allocate a needed page-table page.
 
-    // fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress) -> bool{
-    //     let start:usize = va.page_round_down();
-    //     let end:usize = va.add_addr(PGSIZE -1).page_round_down();
+    unsafe fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
+        let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
+        let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 
-    // }
+        loop{
+            match self.walk(start, 1){
+                Some(pte) => {
+                 if !pte.is_valid(){
+                     panic!("remap");
+                 } 
+                 let pa_num = pa.as_usize();
+                //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
+                 write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit());
+
+                 if (start).equal(&end){
+                    break;
+                 }
+                 start = start.add_addr(PGSIZE);
+                 end = end.add_addr(PGSIZE);
+                 
+                }
+                None => return false
+             }
+        }
+        true
+    }
 }

@@ -19,6 +19,9 @@ bitflags!{
 
 
 impl PageTableEntry{
+    pub fn new(addr:usize) -> Self{
+        Self(addr)
+    }
 
     pub fn as_mut_ptr(&self) -> *mut usize{
         let addr = self.as_usize() as *mut usize;
@@ -54,4 +57,6 @@ impl PageTableEntry{
     }
     
 }
+
+
 

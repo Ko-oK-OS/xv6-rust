@@ -21,3 +21,9 @@ pub mod time;
 pub mod sp;
 pub mod ra;
 pub mod clint;
+
+#[inline]
+// flush the TLB.
+pub unsafe fn sfence_vma(){
+    llvm_asm!("sfence.vma zero, zero");
+}
