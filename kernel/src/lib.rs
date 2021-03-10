@@ -18,6 +18,7 @@ extern crate lazy_static;
 
 global_asm!(include_str!("asm/entry.S"));
 global_asm!(include_str!("asm/kernelvec.S"));
+global_asm!(include_str!("asm/trampoline.S"));
 
 
 #[macro_use]
