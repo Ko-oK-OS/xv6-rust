@@ -1,4 +1,4 @@
-use core::{ptr::write};
+use core::{ptr::write, ptr::read};
 use lazy_static::*;
 use crate::{interrupt::trap::kerneltrap, register::{sfence_vma, satp}};
 use crate::define::memlayout::{
@@ -200,6 +200,43 @@ impl PageTable{
     pub unsafe fn kvmmap(&self, va:VirtualAddress, pa:PhysicalAddress, sz:usize, perm:usize){
         if !self.mappages(va, pa, sz, perm){
             panic!("kvmmap");
+        }
+    }
+
+
+    // Create an empty user page table.
+    // return None if out of memory
+    unsafe fn uvmcreate() -> Option<PageTable>{
+        match kalloc() {
+            Some(addr) => {
+                for i in 0..PGSIZE{
+                    write((addr as usize + i) as *mut u8, 0); 
+                }
+                let pagetable = addr as *const PageTable;
+                Some(*pagetable)
+            }
+            None => None
+        }
+    }
+
+    // Load the user initcode into address 0 of pagetable
+    // for the very first process
+    // sz must be less than a page
+
+    pub unsafe fn uvminit(&self, src:*const u8, sz:usize){
+        if sz >= PGSIZE{
+            panic!("inituvm: more than a page");
+        }
+
+        if let Some(mem) = kalloc(){
+            for i in 0..PGSIZE{
+                write(((mem as usize)+i) as *mut u8, 0);
+            }
+            self.mappages(VirtualAddress::new(0), PhysicalAddress::new(mem as usize), PGSIZE, PteFlags::W.bits() | PteFlags::R.bits() | PteFlags::X.bits() | PteFlags::U.bits());
+            for i in 0..PGSIZE{
+                let data = read(((src as usize) + i) as *const u8);
+                write(((mem as usize)+i) as *mut u8, data);
+            }
         }
     }
 }
