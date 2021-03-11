@@ -44,8 +44,11 @@ pub fn kvminit(){
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 pub unsafe fn kvminithart(){
+    println!("kvminithart......");
     satp::write(satp::make_satp(KERNAL_PAGETABLE.as_addr()));
+    println!("test satp write......");
     sfence_vma();
+    println!("kvminithart done......");
 }
 
 impl PageTable{
@@ -57,27 +60,35 @@ impl PageTable{
 
     // Make a direct-map page table for the kernel.
     unsafe fn kvmmake() -> Option<PageTable>{
+        println!("kvmmake start......");
         if let Some(addr) = kalloc(){
             for i in 0..PGSIZE{
                 write((addr as usize + i) as *mut u8, 0);
             }
             let kpgtbl = addr as *mut PageTable;
 
+            println!("uart map......");
+
             // uart registers
             (*kpgtbl).kvmmap(VirtualAddress::new(UART0), PhysicalAddress::new(UART0), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
+            println!("virtio0 map......");
             // virtio mmio disk interface
             (*kpgtbl).kvmmap(VirtualAddress::new(VIRTIO0), PhysicalAddress::new(VIRTIO0), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
+            println!("plic map......");
             // PLIC
             (*kpgtbl).kvmmap(VirtualAddress::new(PLIC.as_usize()), PhysicalAddress::new(PLIC.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
+            println!("text map......");
             // map kernel text exectuable and read-only
             (*kpgtbl).kvmmap(VirtualAddress::new(KERNBASE.as_usize()), PhysicalAddress::new(KERNBASE.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
+            println!("kernel data map......");
             // map kernel data and the physical RAM we'll make use of
             (*kpgtbl).kvmmap(VirtualAddress::new(etext as usize), PhysicalAddress::new(etext as usize), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
+            println!("trampoline map......");
             // map the trampoline for trap entry/exit
             // the highest virtual address in the kernel
             (*kpgtbl).kvmmap(VirtualAddress::new(trampoline as usize), PhysicalAddress::new(trampoline as usize), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
@@ -167,6 +178,7 @@ impl PageTable{
     // allocate a needed page-table page.
 
     unsafe fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
+        println!("start map pages......");
         let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 

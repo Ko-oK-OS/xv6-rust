@@ -1,7 +1,10 @@
 use core::ptr::{Unique, write};
 use core::ops::{Deref, DerefMut};
 
-use crate::memory::kalloc::kalloc;
+use crate::memory::{
+    kalloc::{ kalloc, kfree},
+    address::PhysicalAddress
+};
 pub struct Box<T: ?Sized>(Unique<T>);
 
 impl<T> Box<T>{
@@ -13,6 +16,13 @@ impl<T> Box<T>{
             }
             None => None
         }
+    }
+}
+
+impl<T: ?Sized> Drop for Box<T>{
+    fn drop(&mut self){
+        unsafe{kfree(PhysicalAddress::new((self.0.as_ptr() as *mut u8) as usize))}
+        println!("Box is droped");
     }
 }
 
