@@ -141,13 +141,8 @@ impl PageTable{
                         println!("write memory......");
                         for i in 0..PGSIZE{
                             unsafe{write((page_addr + i) as *mut u8, 0)};
-                            // println!("write page addr......");
-                            // unsafe{write(pte.as_mut_ptr() as *mut usize, PageTableEntry::as_pte(page_addr).add_valid_bit().as_usize())};
-                            // *pte = PageTableEntry::as_pte(page_addr).add_valid_bit();
-    
-                            unsafe{write(((pte as *const _) as usize) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
-                            // println!("end write memory......");
                         }
+                        unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
                     }
                     None => return None
                 }
@@ -267,4 +262,5 @@ impl PageTable{
             }
         }
     }
+
 }
