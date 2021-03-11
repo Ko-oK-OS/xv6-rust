@@ -23,8 +23,8 @@ impl PageTableEntry{
         Self(addr)
     }
 
-    pub fn as_mut_ptr(&self) -> *mut usize{
-        let addr = self.as_usize() as *mut usize;
+    pub fn as_mut_ptr(&self) -> *mut u8{
+        let addr = self.as_usize() as *mut u8;
         addr
     }
 

@@ -81,7 +81,7 @@ impl VirtualAddress{
     }
 
     pub fn equal(&self, other: &Self) -> bool{
-        self.0 == self.0
+        self.0 == other.0
     }
 
 
@@ -93,7 +93,7 @@ impl VirtualAddress{
         let shift = PGSHIFT;
         let mut va:usize = self.as_usize();
         va = va >> (shift + 9*level);
-        va.set_bits(..9, 0x1FF);
+        va &= 0x1FF;
         va
     }
 

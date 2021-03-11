@@ -122,20 +122,31 @@ impl PageTable{
         if real_addr > MAXVA {
             panic!("walk");
         }
-        for level in (0..=2).rev() {
-            let pte = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
+        for level in (1..=2).rev() {
+            println!("extract bits......");
+            let pte:&PageTableEntry = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
+            println!("get pte......");
             if pte.is_valid() {
                 pagetable = pte.as_pagetable();
+                println!("as pagetable......");
             }else{
+                println!("pte is not valid......");
                 if alloc == 0{
                     return None
                 }
                 match unsafe{kalloc()}{
                     Some(page_table) => {
+                        println!("alloc......");
                         let page_addr = page_table as usize;
+                        println!("write memory......");
                         for i in 0..PGSIZE{
                             unsafe{write((page_addr + i) as *mut u8, 0)};
-                            unsafe{write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
+                            // println!("write page addr......");
+                            // unsafe{write(pte.as_mut_ptr() as *mut usize, PageTableEntry::as_pte(page_addr).add_valid_bit().as_usize())};
+                            // *pte = PageTableEntry::as_pte(page_addr).add_valid_bit();
+    
+                            unsafe{write(((pte as *const _) as usize) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
+                            // println!("end write memory......");
                         }
                     }
                     None => return None
@@ -183,14 +194,19 @@ impl PageTable{
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 
         loop{
+            println!("enter loop......");
             match self.walk(start, 1){
+
                 Some(pte) => {
+                 println!("start walk......");
                  if !pte.is_valid(){
                      panic!("remap");
                  } 
                  let pa_num = pa.as_usize();
                 //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
+                 
                  write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit());
+                 println!("write pagetable entry");
 
                  if (start).equal(&end){
                     break;
