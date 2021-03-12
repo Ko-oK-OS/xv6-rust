@@ -38,9 +38,10 @@ pub struct PageTable{
 static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
 
 // Initialize the one kernel_pagetable
-pub fn kvminit(){
+pub unsafe fn kvminit(){
     println!("kvminit......");
-    // static mut kernel_pagetable:PageTable = PageTable::kvmmake();
+    println!("debug......");
+    KERNEL_PAGETABLE = PageTable::kvmmake().unwrap();
     println!("kvm done......");
 }
 
@@ -50,7 +51,7 @@ pub unsafe fn kvminithart(){
     println!("kvminithart......");
     satp::write(satp::make_satp(KERNEL_PAGETABLE.as_addr()));
     println!("test satp write......");
-    // sfence_vma();
+    sfence_vma();
     println!("kvminithart done......");
 }
 
