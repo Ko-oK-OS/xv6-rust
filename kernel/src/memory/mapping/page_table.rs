@@ -1,6 +1,6 @@
 use core::{ptr::write, ptr::read};
 use lazy_static::*;
-use crate::{interrupt::trap::kerneltrap, register::{sfence_vma, satp}};
+use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::define::memlayout::{
     PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE
 };
@@ -30,9 +30,12 @@ pub struct PageTable{
     pub entries: [PageTableEntry; PGSIZE/8],
 }
 
-lazy_static!{
-    static ref KERNAL_PAGETABLE:PageTable = unsafe{PageTable::kvmmake().unwrap()};
-}
+// lazy_static!{
+//     static ref KERNAL_PAGETABLE:PageTable = unsafe{PageTable::kvmmake().unwrap()};
+// }
+
+// static KERNAL_PAGETABLE:PageTable = unsafe{PageTable::kvmmake().unwrap()};
+static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
 
 // Initialize the one kernel_pagetable
 pub fn kvminit(){
@@ -45,9 +48,9 @@ pub fn kvminit(){
 // and enable paging.
 pub unsafe fn kvminithart(){
     println!("kvminithart......");
-    satp::write(satp::make_satp(KERNAL_PAGETABLE.as_addr()));
+    satp::write(satp::make_satp(KERNEL_PAGETABLE.as_addr()));
     println!("test satp write......");
-    sfence_vma();
+    // sfence_vma();
     println!("kvminithart done......");
 }
 
@@ -56,7 +59,11 @@ impl PageTable{
         self.entries.as_ptr() as usize
     }
 
-
+    pub const fn empty() -> Self{
+        Self{
+            entries:[PageTableEntry(0); 512]
+        }
+    }
 
     // Make a direct-map page table for the kernel.
     unsafe fn kvmmake() -> Option<PageTable>{
@@ -123,28 +130,36 @@ impl PageTable{
             panic!("walk");
         }
         for level in (1..=2).rev() {
-            println!("extract bits......");
+            // println!("extract bits......");
             let pte:&PageTableEntry = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
-            println!("get pte......");
+            println!("extract pte address: 0x{:x}", pte.as_usize());
+            // println!("get pte......");
             if pte.is_valid() {
+                println!("pte is valid......");
                 pagetable = pte.as_pagetable();
-                println!("as pagetable......");
+                
+                // println!("as pagetable......");
             }else{
-                println!("pte is not valid......");
+                // println!("pte is not valid......");
                 if alloc == 0{
                     return None
                 }
                 match unsafe{kalloc()}{
                     Some(page_table) => {
-                        println!("alloc......");
+                        println!("alloc memeory for pte");
+                        // println!("alloc......");
                         let page_addr = page_table as usize;
-                        println!("write memory......");
+                        // println!("write memory......");
                         for i in 0..PGSIZE{
                             unsafe{write((page_addr + i) as *mut u8, 0)};
                         }
                         unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
+                        println!("Before: pte address: 0x{:x}", pte.as_usize());
                     }
-                    None => return None
+                    None => {
+                        println!("fail to alloc memory");
+                        return None
+                    }
                 }
                 
             }
@@ -184,24 +199,26 @@ impl PageTable{
     // allocate a needed page-table page.
 
     unsafe fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
-        println!("start map pages......");
+        // println!("start map pages......");
         let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 
         loop{
-            println!("enter loop......");
+            // println!("enter loop......");
             match self.walk(start, 1){
 
                 Some(pte) => {
-                 println!("start walk......");
+                //  println!("start walk......");
+                 println!("After: pte address: 0x{:x}", pte.as_usize());
                  if !pte.is_valid(){
+                    //  println!("pte address: 0x{:x}", pte.as_usize());
                      panic!("remap");
                  } 
                  let pa_num = pa.as_usize();
                 //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
                  
                  write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit());
-                 println!("write pagetable entry");
+                //  println!("write pagetable entry");
 
                  if (start).equal(&end){
                     break;

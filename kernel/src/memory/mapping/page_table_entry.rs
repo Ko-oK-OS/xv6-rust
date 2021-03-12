@@ -4,7 +4,7 @@ use crate::define::memlayout::{
 use super::page_table::PageTable;
 
 #[derive(Debug, Copy, Clone)]
-pub struct PageTableEntry(usize);
+pub struct PageTableEntry(pub usize);
 
 
 bitflags!{

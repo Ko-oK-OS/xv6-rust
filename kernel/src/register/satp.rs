@@ -3,6 +3,7 @@ const SATP_SV39:usize =  8 << 60;
 
 
 pub fn make_satp(pagetable:usize) -> usize{
+    // println!("make satp");
     let ret:usize;
     ret = SATP_SV39 | (pagetable >> 12);
     ret
@@ -18,5 +19,6 @@ pub unsafe fn read() -> usize {
 }
 
 pub unsafe fn write(x: usize){
+    // println!("write satp");
     llvm_asm!("csrw satp, $0"::"r"(x)::"volatile");
 }

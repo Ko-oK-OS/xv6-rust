@@ -1,6 +1,10 @@
 use super::raw_vec::RawVec;
 use core::ptr::{write, read};
 use core::mem::size_of;
+use crate::{memory::{
+    kalloc::{ kfree},
+    address::PhysicalAddress
+}, println};
 
 pub struct Vec<T>{
     buf: RawVec<T>,
@@ -70,4 +74,6 @@ impl<T> Vec<T>{
         }
     }
 }
+
+
 
