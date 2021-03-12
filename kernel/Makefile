@@ -35,7 +35,8 @@ clean:
 qemu: build
 	@qemu-system-riscv64 \
             -machine virt \
-            -nographic \
+            -m 3G -smp 3 \
+			-nographic \
             -bios none \
             -device loader,file=$(BIN_FILE),addr=0x80000000
 

@@ -145,6 +145,7 @@ impl PageTable{
                 if alloc == 0{
                     return None
                 }
+                println!("Before kalloc......");
                 match unsafe{kalloc()}{
                     Some(page_table) => {
                         println!("alloc memeory for pte");
@@ -200,7 +201,7 @@ impl PageTable{
     // allocate a needed page-table page.
 
     unsafe fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
-        // println!("start map pages......");
+        println!("start map pages......");
         let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 
