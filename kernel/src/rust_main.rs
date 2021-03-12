@@ -1,3 +1,5 @@
+use cpu::cpuid;
+
 use crate::logo::LOGO;
 use crate::interrupt::{
     plic::{plicinit, plicinithart},
@@ -14,9 +16,9 @@ use crate::process::{cpu};
 
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() -> !{
-    println!("{}",LOGO);
-    println!("xv6 kernel is booting!");
     if cpu::cpuid() == 0{
+        // println!("{}",LOGO);
+        println!("xv6 kernel is booting!");
         kinit(); // physical page allocator
         
         // test heap allocator by using Box
@@ -49,5 +51,5 @@ pub unsafe extern "C" fn rust_main() -> !{
         //     llvm_asm!("ebreak"::::"volatile");
         // };
     }
-    panic!("end of rust main");
+    panic!("end of rust main, cpu id is {}", cpu::cpuid());
 }

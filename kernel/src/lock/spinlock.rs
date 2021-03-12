@@ -17,7 +17,7 @@ pub struct SpinlockGuard<'a, T>{
 
 impl<T> Spinlock<T>{
 
-    pub fn new(data: T, name: &'static str) -> Self {
+    pub const fn new(data: T, name: &'static str) -> Self {
         let lock = Spinlock {
             locked: AtomicBool::new(false),
             name: name,
@@ -28,7 +28,7 @@ impl<T> Spinlock<T>{
     }
 
     pub fn acquire(&self) -> SpinlockGuard<'_, T> {
-        while !self.locked.swap(true, Ordering::AcqRel){
+        while self.locked.swap(true, Ordering::Acquire){
             // Now we signals the processor that it is inside a busy-wait spin-loop 
             spin_loop();
         }

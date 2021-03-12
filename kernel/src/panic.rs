@@ -22,6 +22,7 @@ fn panic_handler(info: &PanicInfo) -> !{
     } else {
         println!("\x1b[1;31mpanic: '{}'\x1b[0m", info.message().unwrap());
     }
+    // println!("{}", info);
     loop{}
 
 }

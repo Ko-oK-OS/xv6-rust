@@ -1,5 +1,8 @@
 use crate::console;
+use crate::lock::spinlock::Spinlock;
 use core::fmt::{self, Write};
+
+static PR: Spinlock<Stdout> = Spinlock::new(Stdout, "pr");
 
 struct Stdout;
 
@@ -8,13 +11,16 @@ pub fn console_putchar(c: u8){
     console::consputc(c);
 }
 
+impl Stdout {
+    fn print(&self, c: u8) {
+        console::consputc(c);
+    }
+}
+
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        let mut buffer = [0u8; 4];
-        for c in s.chars() {
-            for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
-                console_putchar(*code_point as u8);
-            }
+        for byte in s.bytes() {
+            self.print(byte);
         }
         Ok(())
     }
@@ -25,8 +31,10 @@ impl Write for Stdout {
 /// [`print!`] 和 [`println!`] 宏都将展开成此函数
 ///
 /// [`core::format_args!`]: https://doc.rust-lang.org/nightly/core/macro.format_args.html
-pub fn print(args: fmt::Arguments) {
-    Stdout.write_fmt(args).unwrap();
+pub fn _print(args: fmt::Arguments) {
+    let mut guard = PR.acquire();
+    guard.write_fmt(args).unwrap();
+    drop(guard)
 }
 
 /// implement print and println! macro
@@ -34,16 +42,18 @@ pub fn print(args: fmt::Arguments) {
 /// use [`core::fmt::Write`] trait's [`console::Stdout`]
 #[macro_export]
 macro_rules! print {
-    (fmt:literal$(, $($arg: tt)+)?) => {
-        $crate::printf::console_putchar(format_args!($fmt(, $($arg)+)?));
-    }
+    ($($arg:tt)*) => {
+        $crate::printf::_print(format_args!($($arg)*));
+    };
 }
 
 #[macro_export]
 macro_rules! println {
-    ($fmt:literal$(, $($arg: tt)+)?) => {
-        $crate::printf::print(format_args!(concat!($fmt, "\n") $(,$($arg)+)?));
-    }
+    () => {$crate::print!("\n")};
+    ($fmt:expr) => {$crate::print!(concat!($fmt, "\n"))};
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::print!(concat!($fmt, "\n"), $($arg)*)
+    };
 }
 
 /// 
