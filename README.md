@@ -70,6 +70,20 @@ rustup component add llvm-tools-preview
 make run
 ```
 
+## GDB Usage
+terminal 1:
+```
+./kernel $ make qemu-gdb
+```
+terminal 2:
+```
+./kernel $ riscv64-unknown-elf-gdb
+... (an example)
+(gdb) b kvminit
+(gdb) c
+...
+```
+
 ## Some Useful Links
 - [Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
 - [Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   

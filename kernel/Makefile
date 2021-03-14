@@ -2,9 +2,15 @@ TARGET      := riscv64gc-unknown-none-elf
 MODE        := debug
 KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
+CPUS		:= 3
 
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
+
+QEMU 		:= qemu-system-riscv64
+QEMUOPTS     = -machine virt -bios none -kernel $(KERNEL_FILE) -m 3G -smp $(CPUS) -nographic
+QEMUOPTS    += -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+QEMUGDB 	:= -gdb tcp::26000
 
 
 .PHONY: doc kernel build clean qemu run
@@ -41,7 +47,10 @@ qemu: build
             -bios none \
             -device loader,file=$(BIN_FILE),addr=0x80000000 \
 
-		
+qemu-gdb:
+	@cargo build
+	@echo "*** Now run 'gdb' in another window." 1>&2
+	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
 # 一键运行
 run: build qemu
