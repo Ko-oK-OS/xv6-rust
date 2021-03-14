@@ -14,7 +14,9 @@ ____   ___   _____      ____   ,--.     .______       __    __      _______.____
 
 
 
-This is a try to implement xv6 OS in Rust.
+This is a try to implement xv6 OS in Rust. 
+
+What's more, we are desired to add something new to our OS, like GUI and network.
 
 ## Start  
 ### QEMU
@@ -33,24 +35,23 @@ If you find some errors when building, you can slove by following hints:
 `ERROR: pixman >= 0.21.8 not present`: `sudo apt-get install libpixman-1-dev` 
 
 ### Rust
-You need download rust to start our env. We suggest you to use offical shell:  
+You need download rust to start our environment. We suggest you to use official shell:  
 ```
 curl https://sh.rustup.rs -sSf | sh
 ```
-If you fail because of slow internet speed. You can try this to speed up:   
+If you fail because of slow network speed. You can try this to speed up:   
 ```
 export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static
 export RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-If you have finished these, you can test your env by following comand:  
+If you have finished these, you can test your environment by following commands:  
 ```
 source $HOME/.cargo/env  
 rustc --version
-
 ```
-Additionly, we'd better change the package mirror address crates.io used by the package manager cargo to the mirror server of the University of Science and Technology of China to speed up the download of the tripartite library. We open (create a new file if it doesn't exist) ~/.cargo/config and modify the content to:  
+In addition,  we'd better change the package mirror address crates.io used by the package manager cargo to the mirror server of the University of Science and Technology of China to speed up the download of the tripartite library. We open (create a new file if it doesn't exist) ~/.cargo/config and modify the content to:  
 ```
 [source.crates-io]
 registry = "https://github.com/rust-lang/crates.io-index"
@@ -58,19 +59,24 @@ replace-with = 'ustc'
 [source.ustc]
 registry = "git://mirrors.ustc.edu.cn/crates.io-index"
 ```
-Finally, you run this OS on your machine by excuting following commands:  
-```
-git clone https://github.com/KuangjuX/xv6-rust.git
-cd xv6-rust/kernel
+Besides,  you also update some tools in rust:
 
+```
 rustup target add riscv64gc-unknown-none-elf
 cargo install cargo-binutils
 rustup component add llvm-tools-preview
+```
 
+Finally, you run this OS on your machine by excuteing following commands:  
+
+```
+git clone https://github.com/KuangjuX/xv6-rust.git
+cd xv6-rust/kernel
 make run
 ```
 
 ## GDB Usage
+
 terminal 1:
 ```
 ./kernel $ make qemu-gdb
@@ -84,7 +90,10 @@ terminal 2:
 ...
 ```
 
+You can also use `make debug` .
+
 ## Some Useful Links
+
 - [Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
 - [Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   
 - [buddy_system_allocator](https://github.com/rcore-os/buddy_system_allocator)  
