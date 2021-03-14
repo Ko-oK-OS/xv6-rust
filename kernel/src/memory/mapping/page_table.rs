@@ -31,7 +31,7 @@ pub struct PageTable{
 }
 
 // lazy_static!{
-//     static ref KERNAL_PAGETABLE:PageTable = unsafe{PageTable::kvmmake().unwrap()};
+//     static ref KERNEL_PAGETABLE:PageTable = unsafe{PageTable::kvmmake().unwrap()};
 // }
 
 // static KERNAL_PAGETABLE:PageTable = unsafe{PageTable::kvmmake().unwrap()};
@@ -40,9 +40,16 @@ static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
 // Initialize the one kernel_pagetable
 pub unsafe fn kvminit(){
     println!("kvminit......");
-    println!("debug......");
-    KERNEL_PAGETABLE = PageTable::kvmmake().unwrap();
-    println!("kvm done......");
+    // KERNEL_PAGETABLE = PageTable::kvmmake().unwrap();
+    match PageTable::kvmmake(){
+        Some(kpgtbl) => {
+            KERNEL_PAGETABLE = kpgtbl;
+            println!("kvm done......");
+        }
+        None => {
+            panic!("fail to kvmmake");
+        }
+    }
 }
 
 // Switch h/w page table register to the kernel's page table,
@@ -67,46 +74,49 @@ impl PageTable{
     }
 
     // Make a direct-map page table for the kernel.
-    unsafe fn kvmmake() -> Option<PageTable>{
+    unsafe fn kvmmake() -> Option<PageTable> {
         println!("kvmmake start......");
-        if let Some(addr) = kalloc(){
-            for i in 0..PGSIZE{
-                write((addr as usize + i) as *mut u8, 0);
-            }
-            let kpgtbl = addr as *mut PageTable;
+        match kalloc(){
+            Some(addr) => {
+                for i in 0..PGSIZE{
+                    write((addr as usize + i) as *mut u8, 0);
+                }
+                let kpgtbl = addr as *mut PageTable;
+                // let kpgtbl = PageTable::empty();
 
-            println!("uart map......");
+                // println!("uart map......");
 
-            // uart registers
-            (*kpgtbl).kvmmap(VirtualAddress::new(UART0), PhysicalAddress::new(UART0), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+                // // uart registers
+                // (*kpgtbl).kvmmap(VirtualAddress::new(UART0), PhysicalAddress::new(UART0), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
-            println!("virtio0 map......");
-            // virtio mmio disk interface
-            (*kpgtbl).kvmmap(VirtualAddress::new(VIRTIO0), PhysicalAddress::new(VIRTIO0), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+                // println!("virtio0 map......");
+                // // virtio mmio disk interface
+                // (*kpgtbl).kvmmap(VirtualAddress::new(VIRTIO0), PhysicalAddress::new(VIRTIO0), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
-            println!("plic map......");
-            // PLIC
-            (*kpgtbl).kvmmap(VirtualAddress::new(PLIC.as_usize()), PhysicalAddress::new(PLIC.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+                // println!("plic map......");
+                // // PLIC
+                // (*kpgtbl).kvmmap(VirtualAddress::new(PLIC.as_usize()), PhysicalAddress::new(PLIC.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
-            println!("text map......");
-            // map kernel text exectuable and read-only
-            (*kpgtbl).kvmmap(VirtualAddress::new(KERNBASE.as_usize()), PhysicalAddress::new(KERNBASE.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+                // println!("text map......");
+                // // map kernel text exectuable and read-only
+                // (*kpgtbl).kvmmap(VirtualAddress::new(KERNBASE.as_usize()), PhysicalAddress::new(KERNBASE.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
-            println!("kernel data map......");
-            // map kernel data and the physical RAM we'll make use of
-            (*kpgtbl).kvmmap(VirtualAddress::new(etext as usize), PhysicalAddress::new(etext as usize), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+                // println!("kernel data map......");
+                // // map kernel data and the physical RAM we'll make use of
+                // (*kpgtbl).kvmmap(VirtualAddress::new(etext as usize), PhysicalAddress::new(etext as usize), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
-            println!("trampoline map......");
-            // map the trampoline for trap entry/exit
-            // the highest virtual address in the kernel
-            (*kpgtbl).kvmmap(VirtualAddress::new(trampoline as usize), PhysicalAddress::new(trampoline as usize), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+                // println!("trampoline map......");
+                // // map the trampoline for trap entry/exit
+                // // the highest virtual address in the kernel
+                // (*kpgtbl).kvmmap(VirtualAddress::new(trampoline as usize), PhysicalAddress::new(trampoline as usize), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
-            // TODO: map kernel stacks
-
-            return Some(*kpgtbl)
-
+                // TODO: map kernel stacks
+                
+                println!("Befor return");
+                Some(*kpgtbl)
+            },
+            None => None
         }
-        None
     }
 
     // Return the address of the PTE in page table pagetable
@@ -133,7 +143,7 @@ impl PageTable{
         for level in (1..=2).rev() {
             // println!("extract bits......");
             let pte:&PageTableEntry = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
-            println!("extract pte address: 0x{:x}", pte.as_usize());
+            // println!("extract pte address: 0x{:x}", pte.as_usize());
             // println!("get pte......");
             if pte.is_valid() {
                 println!("pte is valid......");
@@ -141,8 +151,9 @@ impl PageTable{
                 
                 // println!("as pagetable......");
             }else{
-                // println!("pte is not valid......");
+                println!("pte is not valid......");
                 if alloc == 0{
+                    println!("alloc == 0");
                     return None
                 }
                 println!("Before kalloc......");

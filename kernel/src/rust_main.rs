@@ -32,7 +32,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         //     }
         // }
 
-        // //test vec
+        // test vec
         // let mut vec:Vec<usize> = Vec::new();
         // vec.push(45);
         // vec.push(46);

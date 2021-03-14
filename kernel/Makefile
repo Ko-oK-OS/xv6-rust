@@ -6,6 +6,7 @@ BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
+
 .PHONY: doc kernel build clean qemu run
 
 # 默认 build 为输出二进制文件
@@ -35,10 +36,13 @@ clean:
 qemu: build
 	@qemu-system-riscv64 \
             -machine virt \
-            -m 3G -smp 3 \
+			-m 3G -smp 3 \
 			-nographic \
             -bios none \
-            -device loader,file=$(BIN_FILE),addr=0x80000000
+            -device loader,file=$(BIN_FILE),addr=0x80000000 \
+
+		
 
 # 一键运行
 run: build qemu
+
