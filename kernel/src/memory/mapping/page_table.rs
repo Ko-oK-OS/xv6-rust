@@ -135,7 +135,7 @@ impl PageTable{
 
 
     // find  the PTE for a virtual address
-     fn walk(&self, va: VirtualAddress, alloc:i32) -> Option<&PageTableEntry>{
+     fn walk(&mut self, va: VirtualAddress, alloc:i32) -> Option<&PageTableEntry>{
         let mut pagetable = self as *const PageTable;
         let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
@@ -184,7 +184,7 @@ impl PageTable{
     // Look up a virtual address, return the physical address,
     // or 0 if not mapped.
     // Can only be used to look up user pages.
-    pub fn walkaddr(pagetable: PageTable, va: VirtualAddress) -> Option<PhysicalAddress>{
+    pub fn walkaddr(pagetable: &mut PageTable, va: VirtualAddress) -> Option<PhysicalAddress>{
         let addr = va.as_usize();
         if addr > MAXVA{
             return None
@@ -213,7 +213,7 @@ impl PageTable{
     // allocate a needed page-table page.
 
     #[no_mangle]
-    unsafe fn mappages(&self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
+    unsafe fn mappages(&mut self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
         println!("start map pages......");
         let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
@@ -252,7 +252,7 @@ impl PageTable{
     // only used when booting
     // does not flush TLB or enable paging
     
-    pub unsafe fn kvmmap(&self, va:VirtualAddress, pa:PhysicalAddress, sz:usize, perm:usize){
+    pub unsafe fn kvmmap(&mut self, va:VirtualAddress, pa:PhysicalAddress, sz:usize, perm:usize){
         if !self.mappages(va, pa, sz, perm){
             panic!("kvmmap");
         }
@@ -278,7 +278,7 @@ impl PageTable{
     // for the very first process
     // sz must be less than a page
 
-    pub unsafe fn uvminit(&self, src:*const u8, sz:usize){
+    pub unsafe fn uvminit(&mut self, src:*const u8, sz:usize){
         if sz >= PGSIZE{
             panic!("inituvm: more than a page");
         }
