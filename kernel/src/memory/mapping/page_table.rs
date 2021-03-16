@@ -87,29 +87,34 @@ impl PageTable{
 
                 println!("uart map......");
 
+                // debug
+                // println!("Interrupt enable: {}", crate::register::sstatus::intr_get());
+                // println!("PageTable size: {}", core::mem::size_of::<PageTable>());
+                // println!("PageTable align: {}", core::mem::align_of::<PageTable>());
+
                 // uart registers
-                (*kpgtbl).kvmmap(VirtualAddress::new(UART0), PhysicalAddress::new(UART0), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+                KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(UART0), PhysicalAddress::new(UART0), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
                 println!("virtio0 map......");
                 // virtio mmio disk interface
-                (*kpgtbl).kvmmap(VirtualAddress::new(VIRTIO0), PhysicalAddress::new(VIRTIO0), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+                // (*kpgtbl).kvmmap(VirtualAddress::new(VIRTIO0), PhysicalAddress::new(VIRTIO0), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
                 println!("plic map......");
                 // PLIC
-                (*kpgtbl).kvmmap(VirtualAddress::new(PLIC.as_usize()), PhysicalAddress::new(PLIC.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+                // (*kpgtbl).kvmmap(VirtualAddress::new(PLIC.as_usize()), PhysicalAddress::new(PLIC.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
                 println!("text map......");
                 // map kernel text exectuable and read-only
-                (*kpgtbl).kvmmap(VirtualAddress::new(KERNBASE.as_usize()), PhysicalAddress::new(KERNBASE.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+                // (*kpgtbl).kvmmap(VirtualAddress::new(KERNBASE.as_usize()), PhysicalAddress::new(KERNBASE.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
                 println!("kernel data map......");
                 // map kernel data and the physical RAM we'll make use of
-                (*kpgtbl).kvmmap(VirtualAddress::new(etext as usize), PhysicalAddress::new(etext as usize), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+                // (*kpgtbl).kvmmap(VirtualAddress::new(etext as usize), PhysicalAddress::new(etext as usize), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
 
                 println!("trampoline map......");
                 // map the trampoline for trap entry/exit
                 // the highest virtual address in the kernel
-                (*kpgtbl).kvmmap(VirtualAddress::new(trampoline as usize), PhysicalAddress::new(trampoline as usize), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+                // (*kpgtbl).kvmmap(VirtualAddress::new(trampoline as usize), PhysicalAddress::new(trampoline as usize), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
 
                 // TODO: map kernel stacks
                 
@@ -214,7 +219,7 @@ impl PageTable{
 
     #[no_mangle]
     unsafe fn mappages(&mut self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
-        println!("start map pages......");
+        // println!("start map pages......");
         let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 
@@ -224,23 +229,22 @@ impl PageTable{
 
                 Some(pte) => {
                 //  println!("start walk......");
-                 println!("After: pte address: 0x{:x}", pte.as_usize());
-                 if !pte.is_valid(){
+                //  println!("After: pte address: 0x{:x}", pte.as_usize());
+                if pte.is_valid(){
                     //  println!("pte address: 0x{:x}", pte.as_usize());
-                     panic!("remap");
-                 } 
-                 let pa_num = pa.as_usize();
+                    panic!("remap");
+                }
+                let pa_num = pa.as_usize();
                 //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
                  
-                 write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit());
+                write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit());
                 //  println!("write pagetable entry");
 
-                 if (start).equal(&end){
+                if (start).equal(&end){
                     break;
-                 }
-                 start = start.add_addr(PGSIZE);
-                 end = end.add_addr(PGSIZE);
-                 
+                }
+                start = start.add_addr(PGSIZE);
+                end = end.add_addr(PGSIZE);
                 }
                 None => return false
              }

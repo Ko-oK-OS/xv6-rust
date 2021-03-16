@@ -24,7 +24,6 @@ global_asm!(include_str!("asm/trampoline.S"));
 
 #[macro_use]
 mod printf;
-mod panic;
 mod start;
 mod rust_main;
 

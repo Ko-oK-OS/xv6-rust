@@ -1,23 +1,22 @@
+use core::fmt::{self, Write};
+use core::sync::atomic::{AtomicBool, Ordering};
+use core::panic::PanicInfo;
+
 use crate::console;
 use crate::lock::spinlock::Spinlock;
-use core::fmt::{self, Write};
 
-static PR: Spinlock<Stdout> = Spinlock::new(Stdout, "pr");
-
-struct Stdout;
-
-// This function is used to putchar in console
-pub fn console_putchar(c: u8){
-    console::consputc(c);
+struct Pr {
+    locking: AtomicBool,
+    lock: Spinlock<()>,
 }
 
-impl Stdout {
+impl Pr {
     fn print(&self, c: u8) {
         console::consputc(c);
     }
 }
 
-impl Write for Stdout {
+impl fmt::Write for Pr {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
             self.print(byte);
@@ -26,15 +25,26 @@ impl Write for Stdout {
     }
 }
 
+static mut PR: Pr = Pr {
+    locking: AtomicBool::new(true),
+    lock: Spinlock::new((), "pr"),
+};
+
 /// 打印由 [`core::format_args!`] 格式化后的数据
 ///
 /// [`print!`] 和 [`println!`] 宏都将展开成此函数
 ///
 /// [`core::format_args!`]: https://doc.rust-lang.org/nightly/core/macro.format_args.html
 pub fn _print(args: fmt::Arguments) {
-    let mut guard = PR.acquire();
-    guard.write_fmt(args).unwrap();
-    drop(guard)
+    unsafe {
+        if PR.locking.load(Ordering::Relaxed) {
+            let guard = PR.lock.acquire();
+            PR.write_fmt(args).expect("_print: error");
+            drop(guard);
+        } else {
+            PR.write_fmt(args).expect("_print: error");
+        }
+    }
 }
 
 /// implement print and println! macro
@@ -54,6 +64,20 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => {
         $crate::print!(concat!($fmt, "\n"), $($arg)*)
     };
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo<'_>) -> ! {
+    unsafe {
+        PR.locking.store(false, Ordering::Relaxed);
+    }
+    crate::println!("{}", info);
+    loop {}
+}
+
+#[no_mangle]
+fn abort() -> ! {
+    panic!("abort");
 }
 
 /// 
