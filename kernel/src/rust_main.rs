@@ -19,7 +19,7 @@ use crate::process::{cpu};
 pub unsafe extern "C" fn rust_main() -> !{
     if cpu::cpuid() == 0{
         console::consoleinit();
-        // println!("{}",LOGO);
+        println!("{}",LOGO);
         println!("xv6 kernel is booting!");
         kinit(); // physical page allocator
         

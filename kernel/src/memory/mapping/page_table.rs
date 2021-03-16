@@ -11,6 +11,7 @@ use crate::memory::{
 // static kernel_page:PageTable = PageTable::kvmmake();
 
 #[derive(Debug, Clone, Copy)]
+#[repr(C, align(4096))]
 pub struct PageTable{
     pub entries: [PageTableEntry; PGSIZE/8],
 }
@@ -46,50 +47,35 @@ impl PageTable{
 
 
     // find  the PTE for a virtual address
-     fn walk(&mut self, va: VirtualAddress, alloc:i32) -> Option<&PageTableEntry>{
-        let mut pagetable = self as *const PageTable;
+     fn walk(&mut self, va: VirtualAddress, alloc:i32) -> Option<&mut PageTableEntry>{
+        let mut pagetable = self as *mut PageTable;
         let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
             panic!("walk");
         }
         for level in (1..=2).rev() {
-            // println!("extract bits......");
             let pte:&PageTableEntry = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
-            // println!("extract pte address: 0x{:x}", pte.as_usize());
-            // println!("get pte......");
             if pte.is_valid() {
-                // println!("pte is valid......");
                 pagetable = pte.as_pagetable();
-                
-                // println!("as pagetable......");
+    
             }else{
-                // println!("pte is not valid......");
                 if alloc == 0{
-                    // println!("alloc == 0");
                     return None
                 }
-                // println!("Before kalloc......");
                 match unsafe{kalloc()}{
                     Some(page_table) => {
-                        // println!("alloc memeory for pte");
-                        // println!("alloc......");
                         let page_addr = page_table as usize;
-                        // println!("write memory......");
                         for i in 0..PGSIZE{
                             unsafe{write((page_addr + i) as *mut u8, 0)};
                         }
                         unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
-                        // println!("Before: pte address: 0x{:x}", pte.as_usize());
                     }
-                    None => {
-                        // println!("fail to alloc memory");
-                        return None
-                    }
+                    None => return None,
                 }
                 
             }
         }
-        Some(unsafe{&(*pagetable).entries[va.extract_bit(0)]})
+        Some(unsafe{&mut (*pagetable).entries[va.extract_bit(0)]})
     }
 
     // Look up a virtual address, return the physical address,
@@ -124,21 +110,22 @@ impl PageTable{
     // allocate a needed page-table page.
 
     #[no_mangle]
-    unsafe fn mappages(&mut self, va: VirtualAddress, pa: PhysicalAddress, size:usize, perm:usize) -> bool{
-        // println!("start map pages......");
+    unsafe fn mappages(&mut self, mut va: VirtualAddress, mut pa: PhysicalAddress, size:usize, perm:usize) -> bool{
         let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
         let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
 
         loop{
-            // println!("enter loop......");
             match self.walk(start, 1){
 
                 Some(pte) => {
-                //  println!("start walk......");
-                //  println!("After: pte address: 0x{:x}", pte.as_usize());
                 // TODO - is_valid?
                 if pte.is_valid(){
-                    //  println!("pte address: 0x{:x}", pte.as_usize());
+                    println!(
+                        "va: {:#x}, pa: {:#x}, pte: {:#x}",
+                        start.as_usize(),
+                        pa.as_usize(),
+                        pte.0
+                    );
                     panic!("remap");
                 }
                 let pa_usize = pa.as_usize();

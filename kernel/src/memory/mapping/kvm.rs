@@ -36,34 +36,59 @@ unsafe fn kvmmake(){
 
     println!("uart map......");
 
-    // debug
-    // println!("Interrupt enable: {}", crate::register::sstatus::intr_get());
-    // println!("PageTable size: {}", core::mem::size_of::<PageTable>());
-    // println!("PageTable align: {}", core::mem::align_of::<PageTable>());
-
     // uart registers
-    KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(UART0), PhysicalAddress::new(UART0), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(UART0), 
+        PhysicalAddress::new(UART0), 
+        PGSIZE, 
+        PteFlags::R.bits() | PteFlags::W.bits(),
+    );
 
     println!("virtio0 map......");
     // virtio mmio disk interface
-    KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(VIRTIO0), PhysicalAddress::new(VIRTIO0), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(VIRTIO0), 
+        PhysicalAddress::new(VIRTIO0), 
+        PGSIZE, 
+        PteFlags::R.bits() | PteFlags::X.bits()
+    );
 
     println!("plic map......");
     // PLIC
-    KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(PLIC.as_usize()), PhysicalAddress::new(PLIC.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(PLIC.as_usize()), 
+        PhysicalAddress::new(PLIC.as_usize()), 
+        PGSIZE, 
+        PteFlags::R.bits() | PteFlags::X.bits()
+    );
 
     println!("text map......");
     // map kernel text exectuable and read-only
-    KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(KERNBASE.as_usize()), PhysicalAddress::new(KERNBASE.as_usize()), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(KERNBASE.as_usize()), 
+        PhysicalAddress::new(KERNBASE.as_usize()), 
+        PGSIZE, 
+        PteFlags::R.bits() | PteFlags::W.bits()
+    );
 
     println!("kernel data map......");
     // map kernel data and the physical RAM we'll make use of
-    KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(etext as usize), PhysicalAddress::new(etext as usize), PGSIZE, PteFlags::R.bits() | PteFlags::W.bits());
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(etext as usize), 
+        PhysicalAddress::new(etext as usize), 
+        PGSIZE, 
+        PteFlags::R.bits() | PteFlags::W.bits()
+    );
 
     println!("trampoline map......");
     // map the trampoline for trap entry/exit
     // the highest virtual address in the kernel
-    KERNEL_PAGETABLE.kvmmap(VirtualAddress::new(trampoline as usize), PhysicalAddress::new(trampoline as usize), PGSIZE, PteFlags::R.bits() | PteFlags::X.bits());
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(trampoline as usize), 
+        PhysicalAddress::new(trampoline as usize), 
+        PGSIZE, 
+        PteFlags::R.bits() | PteFlags::X.bits()
+    );
 
     // TODO: map kernel stacks
     
