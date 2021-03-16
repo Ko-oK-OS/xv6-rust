@@ -94,6 +94,8 @@ pub const PHYSTOP:Address = KERNBASE.add_addr(128*1024*1024);
 
 pub const PGSIZE:usize = 4096; // bytes per page
 pub const PGSHIFT:usize = 12; // bits of offset within a page
+pub const PGMASKLEN:usize = 9;
+pub const PGMASK:usize = 0x1FF;
 
 pub const PTE_V:usize = 1 << 0; // valid
 pub const PTE_R:usize = 1 << 1;

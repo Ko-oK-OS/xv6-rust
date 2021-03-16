@@ -4,7 +4,7 @@ use core::convert::Into;
 use bit_field::BitField;
 
 use crate::define::memlayout::{
-    PGSHIFT, PGSIZE
+    PGSHIFT, PGSIZE, PGMASKLEN, PGMASK
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -89,12 +89,8 @@ impl VirtualAddress{
         Self(self.0+addr)
     }
 
-    pub fn extract_bit(&self, level:usize) -> usize{
-        let shift = PGSHIFT;
-        let mut va:usize = self.as_usize();
-        va = va >> (shift + 9*level);
-        va &= 0x1FF;
-        va
+    pub fn page_num(&self, level:usize) -> usize{
+        (self.0 >> (PGSHIFT + level * PGMASKLEN)) & PGMASK
     }
 
 }

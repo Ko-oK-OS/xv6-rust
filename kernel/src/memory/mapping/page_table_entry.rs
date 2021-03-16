@@ -1,6 +1,7 @@
 use crate::define::memlayout::{
     PTE_V, PTE_R, PTE_W, PTE_X, PTE_U
 };
+use crate::memory::address::{ PhysicalAddress, Addr};
 use super::page_table::PageTable;
 
 #[derive(Debug, Copy, Clone)]
@@ -54,6 +55,16 @@ impl PageTableEntry{
     // implement PA2PTE
     pub fn as_pte(addr: usize) -> Self{
         Self((addr >> 12) << 10)
+    }
+
+    #[inline]
+    pub fn write_zero(&mut self){
+        self.0 = 0;
+    }
+
+    #[inline]
+    pub fn write_perm(&mut self, pa:PhysicalAddress, perm: PteFlags){
+        self.0 = ((pa.as_usize() >> 12) << 10) | (perm | PteFlags::V).bits()
     }
     
 }

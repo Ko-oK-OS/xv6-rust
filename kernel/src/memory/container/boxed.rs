@@ -1,5 +1,6 @@
 use core::ptr::{Unique, write};
 use core::ops::{Deref, DerefMut};
+use core::mem;
 
 use crate::memory::{
     kalloc::{ kalloc, kfree},
@@ -8,14 +9,20 @@ use crate::memory::{
 pub struct Box<T: ?Sized>(Unique<T>);
 
 impl<T> Box<T>{
-    pub unsafe fn new(x: T) -> Option<Box<T>>{
+    pub unsafe fn new() -> Option<Box<T>>{
         match kalloc(){
             Some(ptr) => {
-                write(ptr as *mut T, x);
+                // write(ptr as *mut T, x);
                 Some(Self(Unique::new(ptr as *mut T).unwrap()))
             }
             None => None
         }
+    }
+
+    pub fn into_raw(self) -> *mut T{
+        let ptr = self.0.as_ptr();
+        mem::forget(self);
+        ptr
     }
 }
 

@@ -4,7 +4,8 @@ use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::memlayout::{ PGSIZE, MAXVA };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
-    kalloc:: kalloc
+    kalloc:: kalloc, 
+    container::boxed::Box,
 };
 
 
@@ -27,6 +28,13 @@ impl PageTable{
     pub const fn empty() -> Self{
         Self{
             entries:[PageTableEntry(0); PGSIZE/8]
+        }
+    }
+
+    #[inline]
+    pub fn clear(&mut self){
+        for pte in self.entries.iter_mut(){
+            pte.write_zero();
         }
     }
 
@@ -54,7 +62,7 @@ impl PageTable{
             panic!("walk");
         }
         for level in (1..=2).rev() {
-            let pte:&PageTableEntry = unsafe{ &(*pagetable).entries[va.extract_bit(level)] };
+            let pte = unsafe{ &mut (*pagetable).entries[va.page_num(level)] };
             if pte.is_valid() {
                 pagetable = pte.as_pagetable();
     
@@ -62,20 +70,27 @@ impl PageTable{
                 if alloc == 0{
                     return None
                 }
-                match unsafe{kalloc()}{
-                    Some(page_table) => {
-                        let page_addr = page_table as usize;
-                        for i in 0..PGSIZE{
-                            unsafe{write((page_addr + i) as *mut u8, 0)};
-                        }
-                        unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
+                match unsafe{Box::<PageTable>::new()}{
+                    Some(mut new_pagetable) => {
+                        println!("Box alloc");
+                        // let page_addr = page_table as usize;
+                        // for i in 0..PGSIZE{
+                        //     unsafe{write((page_addr + i) as *mut u8, 0)};
+                        // }
+                        // unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
+                        new_pagetable.clear();
+                        pagetable = new_pagetable.into_raw();
+                        pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
+                        // println!("Leave walk");
+                        
                     }
                     None => return None,
                 }
                 
             }
         }
-        Some(unsafe{&mut (*pagetable).entries[va.extract_bit(0)]})
+        println!("Leave walk");
+        Some(unsafe{&mut (*pagetable).entries[va.page_num(0)]})
     }
 
     // Look up a virtual address, return the physical address,
@@ -116,7 +131,6 @@ impl PageTable{
 
         loop{
             match self.walk(start, 1){
-
                 Some(pte) => {
                 // TODO - is_valid?
                 if pte.is_valid(){
@@ -152,6 +166,12 @@ impl PageTable{
     // does not flush TLB or enable paging
     
     pub unsafe fn kvmmap(&mut self, va:VirtualAddress, pa:PhysicalAddress, sz:usize, perm:usize){
+        println!(
+            "kvm_map: va={:#x}, pa={:#x}, size={:#x}",
+            va.as_usize(),
+            pa.as_usize(),
+            sz
+        );
         if !self.mappages(va, pa, sz, perm){
             panic!("kvmmap");
         }
