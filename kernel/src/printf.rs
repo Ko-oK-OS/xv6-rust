@@ -5,6 +5,8 @@ use core::panic::PanicInfo;
 use crate::console;
 use crate::lock::spinlock::Spinlock;
 
+static Pr: Spinlock<Stdout> = Spinlock::new(Stdout, "Stdout");
+
 struct Stdout;
 
 // This function is used to putchar in console
@@ -30,7 +32,7 @@ impl Write for Stdout {
 ///
 /// [`core::format_args!`]: https://doc.rust-lang.org/nightly/core/macro.format_args.html
 pub fn print(args: fmt::Arguments) {
-    Stdout.write_fmt(args).unwrap();
+    Pr.acquire().write_fmt(args).unwrap();
 }
 
 /// implement print and println! macro

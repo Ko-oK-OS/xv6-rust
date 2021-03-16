@@ -44,7 +44,10 @@ pub unsafe fn kvminit(){
     // KERNEL_PAGETABLE = PageTable::kvmmake().unwrap();
     match PageTable::kvmmake(){
         Some(kpgtbl) => {
-            KERNEL_PAGETABLE = *kpgtbl;
+            // TODO - stack bomb
+            // solution: just use KERNEL_PAGETABLE to kvmmap,
+            //          no need to alloc a new pagetable
+            // KERNEL_PAGETABLE = *kpgtbl;
             println!("kvm done......");
         }
         None => {
@@ -230,6 +233,7 @@ impl PageTable{
                 Some(pte) => {
                 //  println!("start walk......");
                 //  println!("After: pte address: 0x{:x}", pte.as_usize());
+                // TODO - is_valid?
                 if pte.is_valid(){
                     //  println!("pte address: 0x{:x}", pte.as_usize());
                     panic!("remap");
