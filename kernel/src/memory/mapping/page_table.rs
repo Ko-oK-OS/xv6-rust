@@ -152,20 +152,20 @@ impl PageTable{
             // println!("extract pte address: 0x{:x}", pte.as_usize());
             // println!("get pte......");
             if pte.is_valid() {
-                println!("pte is valid......");
+                // println!("pte is valid......");
                 pagetable = pte.as_pagetable();
                 
                 // println!("as pagetable......");
             }else{
-                println!("pte is not valid......");
+                // println!("pte is not valid......");
                 if alloc == 0{
-                    println!("alloc == 0");
+                    // println!("alloc == 0");
                     return None
                 }
-                println!("Before kalloc......");
+                // println!("Before kalloc......");
                 match unsafe{kalloc()}{
                     Some(page_table) => {
-                        println!("alloc memeory for pte");
+                        // println!("alloc memeory for pte");
                         // println!("alloc......");
                         let page_addr = page_table as usize;
                         // println!("write memory......");
@@ -173,10 +173,10 @@ impl PageTable{
                             unsafe{write((page_addr + i) as *mut u8, 0)};
                         }
                         unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
-                        println!("Before: pte address: 0x{:x}", pte.as_usize());
+                        // println!("Before: pte address: 0x{:x}", pte.as_usize());
                     }
                     None => {
-                        println!("fail to alloc memory");
+                        // println!("fail to alloc memory");
                         return None
                     }
                 }
@@ -234,10 +234,11 @@ impl PageTable{
                     //  println!("pte address: 0x{:x}", pte.as_usize());
                     panic!("remap");
                 }
-                let pa_num = pa.as_usize();
+                let pa_usize = pa.as_usize();
                 //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
                  
-                write(pte.as_mut_ptr() as *mut PageTableEntry, PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit());
+                write(pte.as_mut_ptr() as *mut PageTableEntry,
+                PageTableEntry::new(PageTableEntry::as_pte(pa_usize).as_usize() | perm).add_valid_bit());
                 //  println!("write pagetable entry");
 
                 if (start).equal(&end){
