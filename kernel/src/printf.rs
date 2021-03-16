@@ -54,7 +54,7 @@ macro_rules! println {
 
 #[panic_handler]
 fn panic(info: &PanicInfo<'_>) -> ! {
-    println!("{}", info);
+    println!("\x1b[1;31mpanic: '{}'\x1b[0m", info);
     loop {}
 }
 

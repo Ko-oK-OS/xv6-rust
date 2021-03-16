@@ -9,7 +9,7 @@ use crate::interrupt::{
 
 use crate::memory::{
     kalloc::kinit,
-    mapping::{page_table::{ kvminit, kvminithart}},
+    mapping::{kvm::{ kvminit, kvminithart}},
     container::{boxed::Box, vec::Vec}
 };
 
