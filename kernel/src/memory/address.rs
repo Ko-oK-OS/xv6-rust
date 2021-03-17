@@ -1,25 +1,26 @@
 use core::cmp::{PartialEq, Eq, Ord, Ordering};
 use core::convert::From;
 use core::convert::Into;
+use core::ops::{Add, Sub};
 use bit_field::BitField;
 
 use crate::define::memlayout::{
     PGSHIFT, PGSIZE, PGMASKLEN, PGMASK
 };
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PhysicalAddress(pub usize);
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct VirtualAddress(pub usize);
-
-pub struct PhysicalPageNumber(pub usize);
-
-pub struct VirtualPageNumber(pub usize);
 
 pub trait Addr{
 
     fn as_usize(&self) -> usize;
+
+    fn data_ref(&self) -> &usize;
+
+    fn data_mut(&mut self) -> &mut usize;
 
     #[inline]
     fn as_ptr(&self) -> *const u8{
@@ -32,13 +33,18 @@ pub trait Addr{
     }
 
     #[inline]
-    fn page_round_up(&self) -> usize{
-        (self.as_usize() + PGSIZE - 1) & (!(PGSIZE-1))
+    fn pg_round_up(&mut self) {
+        *self.data_mut() = (*self.data_mut() + PGSIZE - 1) & !(PGSIZE - 1)
     }
 
     #[inline]
-    fn page_round_down(&self) -> usize{
-        self.as_usize() & (!(PGSIZE-1))
+    fn pg_round_down(&mut self) {
+        *self.data_mut() = *self.data_mut() & !(PGSIZE - 1)
+    }
+
+    #[inline]
+    fn add_page(&mut self){
+        *self.data_mut() += PGSIZE;
     }
 }
 
@@ -55,8 +61,19 @@ impl From<VirtualAddress> for usize{
 }
 
 impl Addr for VirtualAddress{
+    #[inline]
     fn as_usize(&self) -> usize{
         self.0
+    }
+
+    #[inline]
+    fn data_ref(&self) -> &usize{
+        &self.0
+    }
+
+    #[inline]
+    fn data_mut(&mut self) -> &mut usize{
+        &mut self.0
     }
 
 
@@ -65,8 +82,19 @@ impl Addr for VirtualAddress{
 impl Addr for PhysicalAddress{
 
 
+    #[inline]
     fn as_usize(&self) -> usize{
         self.0
+    }
+
+    #[inline]
+    fn data_ref(&self) -> &usize{
+        &self.0
+    }
+
+    #[inline]
+    fn data_mut(&mut self) -> &mut usize{
+        &mut self.0
     }
 
 }
@@ -89,6 +117,7 @@ impl VirtualAddress{
         Self(self.0+addr)
     }
 
+
     pub fn page_num(&self, level:usize) -> usize{
         (self.0 >> (PGSHIFT + level * PGMASKLEN)) & PGMASK
     }
@@ -105,16 +134,18 @@ impl PhysicalAddress{
     }
 }
 
-// impl PartialEq for VirtualAddress{
-//     fn eq(&self, other:&Self) -> bool{
-//         self.0 == other.0
-//     }
-// }
+impl Add for VirtualAddress{
+    type Output = Self;
 
-// impl Eq for VirtualAddress{}
+    fn add(self, other: Self) -> Self{
+        Self(self.0 + other.0)
+    }
+}
 
-// impl Ord for VirtualAddress{
-//     fn cmp(&self, other: &Self) -> Ordering{
-//         self.as_usize().cmp(&other.as_usize())
-//     }
-// }
+impl Sub for VirtualAddress{
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self{
+        Self(self.0 - other.0)
+    }
+}

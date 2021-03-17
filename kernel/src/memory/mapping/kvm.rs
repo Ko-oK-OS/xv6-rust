@@ -1,6 +1,7 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE };
+use crate::register::{satp, sfence_vma};
 
 
 static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
@@ -22,9 +23,8 @@ pub unsafe fn kvminit(){
 // and enable paging.
 pub unsafe fn kvminithart(){
     println!("kvminithart......");
-    // satp::write(satp::make_satp(KERNEL_PAGETABLE.as_addr()));
-    println!("test satp write......");
-    // sfence_vma();
+    satp::write(satp::make_satp(KERNEL_PAGETABLE.as_addr()));
+    sfence_vma();
     println!("kvminithart done......");
 }
 
@@ -41,7 +41,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(UART0), 
         PhysicalAddress::new(UART0), 
         PGSIZE, 
-        PteFlags::R.bits() | PteFlags::W.bits(),
+        PteFlags::R| PteFlags::W,
     );
 
     println!("virtio0 map......");
@@ -50,7 +50,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(VIRTIO0), 
         PhysicalAddress::new(VIRTIO0), 
         PGSIZE, 
-        PteFlags::R.bits() | PteFlags::X.bits()
+        PteFlags::R | PteFlags::X
     );
 
     println!("plic map......");
@@ -59,7 +59,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(PLIC.as_usize()), 
         PhysicalAddress::new(PLIC.as_usize()), 
         PGSIZE, 
-        PteFlags::R.bits() | PteFlags::X.bits()
+        PteFlags::R | PteFlags::X
     );
 
     println!("text map......");
@@ -68,7 +68,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(KERNBASE.as_usize()), 
         PhysicalAddress::new(KERNBASE.as_usize()), 
         PGSIZE, 
-        PteFlags::R.bits() | PteFlags::W.bits()
+        PteFlags::R | PteFlags::W
     );
 
     println!("kernel data map......");
@@ -77,7 +77,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(etext as usize), 
         PhysicalAddress::new(etext as usize), 
         PGSIZE, 
-        PteFlags::R.bits() | PteFlags::W.bits()
+        PteFlags::R | PteFlags::W
     );
 
     println!("trampoline map......");
@@ -87,11 +87,10 @@ unsafe fn kvmmake(){
         VirtualAddress::new(trampoline as usize), 
         PhysicalAddress::new(trampoline as usize), 
         PGSIZE, 
-        PteFlags::R.bits() | PteFlags::X.bits()
+        PteFlags::R | PteFlags::X
     );
 
     // TODO: map kernel stacks
     
-    println!("Befor return");
 }
 

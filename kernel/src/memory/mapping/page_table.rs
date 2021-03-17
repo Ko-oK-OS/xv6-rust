@@ -9,8 +9,6 @@ use crate::memory::{
 };
 
 
-// static kernel_page:PageTable = PageTable::kvmmake();
-
 #[derive(Debug, Clone, Copy)]
 #[repr(C, align(4096))]
 pub struct PageTable{
@@ -72,7 +70,6 @@ impl PageTable{
                 }
                 match unsafe{Box::<PageTable>::new()}{
                     Some(mut new_pagetable) => {
-                        println!("Box alloc");
                         // let page_addr = page_table as usize;
                         // for i in 0..PGSIZE{
                         //     unsafe{write((page_addr + i) as *mut u8, 0)};
@@ -81,7 +78,7 @@ impl PageTable{
                         new_pagetable.clear();
                         pagetable = new_pagetable.into_raw();
                         pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
-                        // println!("Leave walk");
+
                         
                     }
                     None => return None,
@@ -89,7 +86,6 @@ impl PageTable{
                 
             }
         }
-        println!("Leave walk");
         Some(unsafe{&mut (*pagetable).entries[va.page_num(0)]})
     }
 
@@ -124,36 +120,41 @@ impl PageTable{
     // be page-aligned. Returns 0 on success, -1 if walk() couldn't
     // allocate a needed page-table page.
 
-    #[no_mangle]
-    unsafe fn mappages(&mut self, mut va: VirtualAddress, mut pa: PhysicalAddress, size:usize, perm:usize) -> bool{
-        let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
-        let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
-
-        loop{
-            match self.walk(start, 1){
+    unsafe fn mappages(
+        &mut self, 
+        mut va: VirtualAddress, 
+        mut pa: PhysicalAddress, 
+        size:usize, 
+        perm:PteFlags
+    ) -> bool{
+        // let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
+        // let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
+        let mut last = VirtualAddress::new(va.as_usize() + size);
+        va.pg_round_down();
+        last.pg_round_up();
+        while va != last{
+            match self.walk(va, 1){
                 Some(pte) => {
                 // TODO - is_valid?
                 if pte.is_valid(){
                     println!(
                         "va: {:#x}, pa: {:#x}, pte: {:#x}",
-                        start.as_usize(),
+                        va.as_usize(),
                         pa.as_usize(),
                         pte.0
                     );
                     panic!("remap");
                 }
-                let pa_usize = pa.as_usize();
+                // let pa_usize = pa.as_usize();
                 //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
                  
-                write(pte.as_mut_ptr() as *mut PageTableEntry,
-                PageTableEntry::new(PageTableEntry::as_pte(pa_usize).as_usize() | perm).add_valid_bit());
+                // write(pte.as_mut_ptr() as *mut PageTableEntry,
+                // PageTableEntry::new(PageTableEntry::as_pte(pa_usize).as_usize() | perm).add_valid_bit());
                 //  println!("write pagetable entry");
+                pte.write_perm(pa, perm);
+                va.add_page();
+                pa.add_page();
 
-                if (start).equal(&end){
-                    break;
-                }
-                start = start.add_addr(PGSIZE);
-                end = end.add_addr(PGSIZE);
                 }
                 None => return false
              }
@@ -165,14 +166,18 @@ impl PageTable{
     // only used when booting
     // does not flush TLB or enable paging
     
-    pub unsafe fn kvmmap(&mut self, va:VirtualAddress, pa:PhysicalAddress, sz:usize, perm:usize){
+    pub unsafe fn kvmmap(&mut self, 
+        va:VirtualAddress, 
+        pa:PhysicalAddress, 
+        size:usize, 
+        perm:PteFlags){
         println!(
             "kvm_map: va={:#x}, pa={:#x}, size={:#x}",
             va.as_usize(),
             pa.as_usize(),
-            sz
+            size
         );
-        if !self.mappages(va, pa, sz, perm){
+        if !self.mappages(va, pa, size, perm){
             panic!("kvmmap");
         }
     }
@@ -197,8 +202,8 @@ impl PageTable{
     // for the very first process
     // sz must be less than a page
 
-    pub unsafe fn uvminit(&mut self, src:*const u8, sz:usize){
-        if sz >= PGSIZE{
+    pub unsafe fn uvminit(&mut self, src:*const u8, size:usize){
+        if size >= PGSIZE{
             panic!("inituvm: more than a page");
         }
 
@@ -206,7 +211,14 @@ impl PageTable{
             for i in 0..PGSIZE{
                 write(((mem as usize)+i) as *mut u8, 0);
             }
-            self.mappages(VirtualAddress::new(0), PhysicalAddress::new(mem as usize), PGSIZE, PteFlags::W.bits() | PteFlags::R.bits() | PteFlags::X.bits() | PteFlags::U.bits());
+
+            self.mappages(
+                VirtualAddress::new(0), 
+                PhysicalAddress::new(mem as usize), 
+                PGSIZE, 
+                PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
+            );
+
             for i in 0..PGSIZE{
                 let data = read(((src as usize) + i) as *const u8);
                 write(((mem as usize)+i) as *mut u8, data);

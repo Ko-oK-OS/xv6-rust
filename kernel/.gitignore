@@ -1,1 +1,6 @@
+# target files
 target/
+
+# editor
+.vscode
+.idea

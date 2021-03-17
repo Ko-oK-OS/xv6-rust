@@ -52,17 +52,18 @@ pub unsafe fn kinit(){
 
 }
 
-unsafe fn freerange(pa_start:PhysicalAddress, pa_end:PhysicalAddress){
+unsafe fn freerange(mut pa_start:PhysicalAddress, pa_end:PhysicalAddress){
     println!("enter freerange......");
-    let mut p = pa_start.page_round_up();
-    let end_addr:usize = pa_end.as_usize();
-    println!("enter loop......");
-    println!("start addr: {:#x}", p);
-    println!("end addr: {:#x}", end_addr);
-    while p < end_addr{
+    // let mut p:PhysicalAddress = pa_start.pg_round_up();
+    pa_start.pg_round_up();
+    // let end_addr:PhysAddr = pa_end.as_usize();
+    // println!("enter loop......");
+    // println!("start addr: {:#x}", p);
+    // println!("end addr: {:#x}", end_addr);
+    while pa_start != pa_end{
         // println!("page addr: {:#x}", p);
-        kfree(PhysicalAddress::new(p));
-        p += PGSIZE;
+        kfree(pa_start);
+        pa_start.add_page();
     }
     println!("freerange done......")
 

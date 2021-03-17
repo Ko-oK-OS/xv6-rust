@@ -12,8 +12,19 @@ pub mod virtio;
 pub struct Address(usize);
 
 impl Addr for Address{
+    #[inline]
     fn as_usize(&self) -> usize{
         self.0
+    }
+
+    #[inline]
+    fn data_ref(&self) -> &usize{
+        &self.0
+    }
+
+    #[inline]
+    fn data_mut(&mut self) -> &mut usize{
+        &mut self.0
     }
 }
 
