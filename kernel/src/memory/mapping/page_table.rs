@@ -1,7 +1,7 @@
 use core::ptr::{write, read};
 use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
-use crate::define::memlayout::{ PGSIZE, MAXVA };
+use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc:: kalloc, 
@@ -27,6 +27,12 @@ impl PageTable{
         Self{
             entries:[PageTableEntry(0); PGSIZE/8]
         }
+    }
+
+    /// Convert the page table to be the usize
+    /// that can be written in satp register
+    pub fn as_satp(&self) -> usize{
+        satp::SATP_SV39 | ((self.entries.as_ptr() as usize) >> PGSHIFT)
     }
 
     #[inline]

@@ -1,9 +1,8 @@
 // use riscv's sv39 page table scheme.
-const SATP_SV39:usize =  8 << 60;
+pub const SATP_SV39:usize =  8 << 60;
 
 
 pub fn make_satp(pagetable:usize) -> usize{
-    // println!("make satp");
     let ret:usize;
     ret = SATP_SV39 | (pagetable >> 12);
     ret

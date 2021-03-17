@@ -23,7 +23,7 @@ pub unsafe fn kvminit(){
 // and enable paging.
 pub unsafe fn kvminithart(){
     println!("kvminithart......");
-    satp::write(satp::make_satp(KERNEL_PAGETABLE.as_addr()));
+    satp::write(KERNEL_PAGETABLE.as_satp());
     sfence_vma();
     println!("kvminithart done......");
 }
