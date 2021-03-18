@@ -19,7 +19,7 @@ pub struct Context{
 }
 
 impl Context{
-    const fn new() -> Self{
+    pub const fn new() -> Self{
         Self{
             ra:0,
             sp:0,
