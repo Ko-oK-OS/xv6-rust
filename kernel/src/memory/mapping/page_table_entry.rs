@@ -20,41 +20,55 @@ bitflags!{
 
 
 impl PageTableEntry{
+    #[inline]
     pub fn new(addr:usize) -> Self{
         Self(addr)
     }
 
+    #[inline]
     pub fn as_mut_ptr(&self) -> *mut u8{
         let addr = self.as_usize() as *mut u8;
         addr
     }
 
+    #[inline]
     pub fn as_usize(&self) -> usize{
         self.0
     }
 
+    #[inline]
     pub fn is_valid(&self) -> bool{
         (self.0 & (PteFlags::V.bits())) > 0
     }
 
+    #[inline]
     pub fn is_user(&self) -> bool {
         (self.0 & (PteFlags::V.bits())) > 0
     }
 
+    #[inline]
     pub fn add_valid_bit(&self) -> Self{
         let pte = self.as_usize() | (PteFlags::V.bits());
         Self(pte)
     }
 
     // implement PTE2PA
+    #[inline]
     pub fn as_pagetable(&self) -> *mut PageTable{
         let ret = ((self.0 >> 10) << 12) as *mut PageTable;
         ret
     }
 
     // implement PA2PTE
+    #[inline]
     pub fn as_pte(addr: usize) -> Self{
         Self((addr >> 12) << 10)
+    }
+
+    // implement PTE_FLAGES
+    #[inline]
+    pub fn as_flags(&self) -> usize {
+        self.as_usize() & 0x3FF
     }
 
     #[inline]

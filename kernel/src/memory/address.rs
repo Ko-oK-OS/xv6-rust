@@ -23,6 +23,11 @@ pub trait Addr{
     fn data_mut(&mut self) -> &mut usize;
 
     #[inline]
+    fn is_page_aligned(&self) -> bool{
+        self.as_usize() % PGSIZE == 0
+    }
+
+    #[inline]
     fn as_ptr(&self) -> *const u8{
         self.as_usize() as *const u8
     }
@@ -141,6 +146,7 @@ impl Add for VirtualAddress{
         Self(self.0 + other.0)
     }
 }
+
 
 impl Sub for VirtualAddress{
     type Output = Self;

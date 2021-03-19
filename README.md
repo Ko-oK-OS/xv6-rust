@@ -22,7 +22,7 @@ What's more, we are desired to add something new to our OS, like GUI and network
 ### QEMU
 **Linux**:  
 ```
-wget https://download.qemu.org/qemu-5.2.0.tar.x  
+wget https://download.qemu.org/qemu-5.0.0.tar.x  
 tar xvJf qemu-5.0.0.tar.xz  
 cd qemu-5.0.0  
 ./configure --target-list=riscv32-softmmu,riscv64-softmmu   

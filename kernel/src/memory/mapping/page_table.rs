@@ -1,13 +1,13 @@
-use core::ptr::{write, read};
+use core::ptr::{write, read, write_bytes, copy_nonoverlapping};
 use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
-    kalloc:: kalloc, 
+    kalloc:: {kalloc, kfree}, 
     container::boxed::Box,
 };
-
+use super::*;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, align(4096))]
@@ -191,15 +191,13 @@ impl PageTable{
 
     // Create an empty user page table.
     // return None if out of memory
-    unsafe fn uvmcreate() -> Option<PageTable>{
-        match kalloc() {
-            Some(addr) => {
-                for i in 0..PGSIZE{
-                    write((addr as usize + i) as *mut u8, 0); 
-                }
-                let pagetable = addr as *const PageTable;
-                Some(*pagetable)
+    unsafe fn uvmcreate() -> Option<*mut PageTable>{
+        match Box::<PageTable>::new(){
+            Some(mut page_table) => {
+                page_table.clear();
+                Some(&mut (*page_table))
             }
+
             None => None
         }
     }
@@ -208,15 +206,13 @@ impl PageTable{
     // for the very first process
     // sz must be less than a page
 
-    pub unsafe fn uvminit(&mut self, src:*const u8, size:usize){
+    pub unsafe fn uvminit(&mut self, src: *const u8, size:usize){
         if size >= PGSIZE{
             panic!("inituvm: more than a page");
         }
 
         if let Some(mem) = kalloc(){
-            for i in 0..PGSIZE{
-                write(((mem as usize)+i) as *mut u8, 0);
-            }
+            write_bytes(mem, 0, PGSIZE);
 
             self.mappages(
                 VirtualAddress::new(0), 
@@ -225,11 +221,113 @@ impl PageTable{
                 PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
             );
 
-            for i in 0..PGSIZE{
-                let data = read(((src as usize) + i) as *const u8);
-                write(((mem as usize)+i) as *mut u8, data);
-            }
+            copy_nonoverlapping(src, mem, PGSIZE);
         }
+    }
+
+
+    // Allocate PTEs and physical memory to grow process from oldsz to
+    // newsz, which need not be page aligned.  Returns new size or 0 on error.
+    pub unsafe fn uvmalloc(&mut self, mut old_size:usize, new_size:usize) -> Option<usize>{
+        if new_size < old_size {
+            return Some(old_size)
+        }
+
+        old_size = page_round_up(old_size);
+        let mut a = old_size;
+        while a < new_size {
+            match kalloc(){
+                Some(mem) => {
+                
+                    write_bytes(mem, 0, PGSIZE);
+                    
+                    if self.mappages(
+                        VirtualAddress::new(a), 
+                        PhysicalAddress::new(mem as usize), 
+                        PGSIZE, 
+                        PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
+                    ){
+                        kfree(PhysicalAddress::new(mem as usize));
+                        self.uvmdealloc(a, old_size);
+                        return None
+                    }
+                }
+
+                None => {
+                    self.uvmdealloc(a, old_size);
+                    return None
+                }
+            }
+
+            a += PGSIZE;
+        }
+
+        Some(new_size)
+    }
+
+
+    // Deallocate user pages to bring the process size from oldsz to
+    // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
+    // need to be less than oldsz.  oldsz can be larger than the actual
+    // process size.  Returns the new process size.
+
+    pub fn uvmdealloc(&mut self, old_size:usize, new_size:usize) -> usize{
+        if new_size >= old_size {
+            return old_size
+        }
+
+        if page_round_up(new_size) < page_round_up(old_size){
+            let npages = (page_round_up(old_size) - page_round_up(new_size)) / PGSIZE;
+            self.uvmunmap(
+                VirtualAddress::new(page_round_up(new_size)), 
+                npages, 
+                1
+            );
+        }
+
+        new_size
+
+    }
+
+
+    // Remove npages of mappings starting from va. va must be
+    // page-aligned. The mappings must exist.
+    // Optionally free the physical memory.
+    pub fn uvmunmap(&mut self, va:VirtualAddress, npages:usize, do_free:usize){
+        if !va.is_page_aligned(){
+            panic!("uvmunmap: not aligned");
+        }
+
+        let mut a = va.clone();
+
+        while a != va.add_addr(npages * PGSIZE){
+            match self.walk(va, 0){
+                Some(pte) => {
+                    if pte.as_usize() & PteFlags::V.bits() == 0 {
+                        panic!("uvmunmap: not mapped")
+                    }
+
+                    if pte.as_flags() == PteFlags::V.bits() {
+                        panic!("uvmunmap: not a leaf")
+                    }
+
+                    if do_free != 0 {
+                        unsafe{
+                            let pa = (&(*pte.as_pagetable())).as_addr();
+                            kfree(PhysicalAddress::new(pa));
+                        }
+                    }
+
+                    pte.write_zero();
+                }
+
+                None => panic!("uvmunmap: walk")
+            }
+
+            a.add_page()
+        }
+
+
     }
 
 }
