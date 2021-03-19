@@ -6,14 +6,15 @@ use crate::process::{cpu};
 use crate::define::memlayout;
 use super::*;
 
-use lazy_static::*;
+static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
+// static mut TICKS:usize = 0;
 
-lazy_static! {
-    static ref TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
+pub fn trapinit(){
+    println!("trap init......");
 }
-static mut TICKS:usize = 0;
 
-pub unsafe fn trap_init_hart() {
+// set up to take exceptions and traps while in the kernel.
+pub unsafe fn trapinithart() {
     println!("trap init hart......");
     extern "C" {
         fn kernelvec();
@@ -47,7 +48,7 @@ pub unsafe fn kerneltrap() {
         // panic!("kerneltrap");
         let scause_obj = Scause::new(scause);
         match scause_obj.cause(){
-            Trap::Exception(Exception::Breakpoint) => panic!("Breakpoint!"),
+            Trap::Exception(Exception::Breakpoint) => breakpoint_handler(),
 
             Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
@@ -63,7 +64,7 @@ pub unsafe fn kerneltrap() {
 
 
     if which_dev == 2{
-        panic!("kerneltrap");
+        println!("Timer Interrupt!");
     }
 
     sepc::write(sepc);
@@ -71,20 +72,35 @@ pub unsafe fn kerneltrap() {
 
 }
 
+
+pub unsafe fn clockintr(){
+    let mut ticks = TICKSLOCK.acquire();
+    *ticks = *ticks + 1;
+    if *ticks % 100 == 0{
+        println!("TICKS: {}", *ticks);
+    }
+    TICKSLOCK.release();
+}
+
+// check if it's an external interrupt or software interrupt,
+// and handle it.
+// returns 2 if timer interrupt,
+// 1 if other device,
+// 0 if not recognized.
 unsafe fn devintr() -> usize {
     let scause = scause::read();
     let flag_1 = (scause & 0xff) == 9;
-    let flag_2:bool = scause & 0x8000000000000000 !=0;
-    if flag_1 &&flag_2 {
+    let flag_2: bool = scause & 0x8000000000000000 !=0;
+    if flag_1 && flag_2 {
         // this is a supervisor external interrupt, via PLIC.
 
         // irq indicates which device interrupted.
         let irq = plic::plic_claim();
 
-        if irq == memlayout::UART0_IRQ as u32{
+        if irq == memlayout::UART0_IRQ as usize{
             // TODO: uartinit
             println!("uart interrupt")
-        }else if irq == memlayout::VIRTIO0_IRQ as u32{
+        }else if irq == memlayout::VIRTIO0_IRQ as usize{
             // TODO: virtio_disk_init
             println!("virtio0 interrupt")
         }else if irq != 0{
@@ -101,7 +117,7 @@ unsafe fn devintr() -> usize {
         // forwarded by timervec in kernelvec.S.
         if cpu::cpuid() == 0{
             // TODO: clockintr
-            // clockintr();
+            clockintr();
             println!("clockintr!");
         }
 

@@ -37,19 +37,19 @@ pub unsafe fn plicinithart(){
 }
 
 // ask the PLIC what interrupt we should serve.
-pub unsafe fn plic_claim() -> u32{
+pub unsafe fn plic_claim() -> usize{
     let id = cpu::cpuid();
     let plic_sclaim = memlayout::plic_sclaim(id);
 
-    let irq = ptr::read_volatile(plic_sclaim as *const u32);
-    return irq;
+    let irq = ptr::read_volatile(plic_sclaim as *const usize);
+    irq
 }
 
 
 // tell the PLIC we've served this IRQ.
-pub unsafe fn plic_complete(irq:u32){
+pub unsafe fn plic_complete(irq:usize){
     let id = cpu::cpuid();
     let plic_sclaim = memlayout::plic_sclaim(id);
 
-    ptr::write_volatile(plic_sclaim as *mut u32, irq);
+    ptr::write_volatile(plic_sclaim as *mut usize, irq);
 }
