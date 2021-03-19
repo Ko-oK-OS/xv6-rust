@@ -1,6 +1,6 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
-use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE };
+use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE, PHYSTOP, TRAMPOLINE };
 use crate::register::{satp, sfence_vma};
 
 
@@ -58,7 +58,7 @@ unsafe fn kvmmake(){
     KERNEL_PAGETABLE.kvmmap(
         VirtualAddress::new(PLIC.as_usize()), 
         PhysicalAddress::new(PLIC.as_usize()), 
-        PGSIZE, 
+        0x400000, 
         PteFlags::R | PteFlags::X
     );
 
@@ -67,7 +67,7 @@ unsafe fn kvmmake(){
     KERNEL_PAGETABLE.kvmmap(
         VirtualAddress::new(KERNBASE.as_usize()), 
         PhysicalAddress::new(KERNBASE.as_usize()), 
-        PGSIZE, 
+        etext as usize - Into::<usize>::into(KERNBASE), 
         PteFlags::R | PteFlags::W
     );
 
@@ -76,7 +76,7 @@ unsafe fn kvmmake(){
     KERNEL_PAGETABLE.kvmmap(
         VirtualAddress::new(etext as usize), 
         PhysicalAddress::new(etext as usize), 
-        PGSIZE, 
+        Into::<usize>::into(PHYSTOP) - etext as usize, 
         PteFlags::R | PteFlags::W
     );
 
@@ -84,7 +84,7 @@ unsafe fn kvmmake(){
     // map the trampoline for trap entry/exit
     // the highest virtual address in the kernel
     KERNEL_PAGETABLE.kvmmap(
-        VirtualAddress::new(trampoline as usize), 
+        VirtualAddress::new(TRAMPOLINE), 
         PhysicalAddress::new(trampoline as usize), 
         PGSIZE, 
         PteFlags::R | PteFlags::X

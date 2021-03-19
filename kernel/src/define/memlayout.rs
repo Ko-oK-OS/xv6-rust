@@ -122,7 +122,7 @@ pub fn pgroundup(sz:usize) -> usize{
 
 // map the trampoline page to the highest address,
 // in both user and kernel space.
-
+pub const TRAMPOLINE:usize = MAXVA - PGSIZE;
 
 
 // map kernel stacks beneath the trampoline,

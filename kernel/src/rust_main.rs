@@ -27,6 +27,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         trap_init_hart(); // trap vectors
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
     }
     panic!("end of rust main, cpu id is {}", cpu::cpuid());
 }

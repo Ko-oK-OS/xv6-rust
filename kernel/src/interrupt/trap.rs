@@ -1,5 +1,5 @@
 use crate::register::{
-    sepc, sstatus, scause, stval, stvec, sip
+    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap}
 };
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
@@ -43,9 +43,22 @@ pub unsafe fn kerneltrap() {
     
     let which_dev = devintr();
     if which_dev == 0{
-        println!("scause={}", scause);
-        println!("sepc={} stval={}", sepc::read(), stval::read());
-        panic!("kerneltrap");
+        println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
+        // panic!("kerneltrap");
+        let scause_obj = Scause::new(scause);
+        match scause_obj.cause(){
+            Trap::Exception(Exception::Breakpoint) => panic!("Breakpoint!"),
+
+            Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
+
+            Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
+
+            Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
+
+            Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+
+            _ => panic!("Unresolved Trap!")
+        }
     }
 
 
