@@ -50,7 +50,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(VIRTIO0), 
         PhysicalAddress::new(VIRTIO0), 
         PGSIZE, 
-        PteFlags::R | PteFlags::X
+        PteFlags::R | PteFlags::W
     );
 
     println!("plic map......");
@@ -59,7 +59,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(PLIC.as_usize()), 
         PhysicalAddress::new(PLIC.as_usize()), 
         0x400000, 
-        PteFlags::R | PteFlags::X
+        PteFlags::R | PteFlags::W
     );
 
     println!("text map......");
@@ -68,7 +68,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(KERNBASE.as_usize()), 
         PhysicalAddress::new(KERNBASE.as_usize()), 
         etext as usize - Into::<usize>::into(KERNBASE), 
-        PteFlags::R | PteFlags::W
+        PteFlags::R | PteFlags::X
     );
 
     println!("kernel data map......");
