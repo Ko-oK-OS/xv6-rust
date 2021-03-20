@@ -62,6 +62,10 @@ impl ProcessInner{
             name: "process"
         }
     }
+
+    pub fn set_kstack(&mut self, addr:usize){
+        self.kstack = addr
+    }
 }
 
 // Per-process state
@@ -70,12 +74,24 @@ pub struct Process {
    pub inner: ProcessInner
 }
 
+impl Process{
+    pub fn new() -> Self{
+        Self{
+            excl:Spinlock::new(ProcessExcl::new(), "process"),
+            inner: ProcessInner::new()
+        }
+    }
+
+    pub fn as_ptr(&self) -> *const Process{
+        self as *const Process
+    }
+}
+
 extern "C" {
     fn trampoline();
 }
 
 
-// initialize the proc table at boot time
-// pub fn procinit()
+
 
 
