@@ -26,18 +26,7 @@ impl ProcManager{
     }
 
 
-    pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
-        // TODO: push_off, pop_off
-        let c = CPU_MANAGER.mycpu();
-        match c.process{
-            Some(mut proc) => {
-                Some(proc.as_mut())
-            }
-
-            None => None
-        }
-
-    }
+    
 
     // initialize the proc table at boot time.
     // Only used in boot.
@@ -66,7 +55,7 @@ pub unsafe fn scheduler(){
         // Avoid deadlock by ensuring that devices can interrupt.
         intr_on();
 
-        for &mut p in PROC_MANAGER.get_table_mut().iter_mut(){
+        for p in PROC_MANAGER.get_table_mut().iter_mut(){
             let mut guard = p.excl.acquire();
             if guard.state == Procstate::RUNNABLE {
                 // Switch to chosen process.  It is the process's job
@@ -100,7 +89,7 @@ pub unsafe fn scheduler(){
 // there's no process.
 
 pub unsafe fn sched(){
-    let my_proc = PROC_MANAGER.myproc().unwrap();
+    let my_proc = CPU_MANAGER.myproc().unwrap();
     let mut my_cpu = CPU_MANAGER.mycpu();
 
     if !my_proc.excl.holding(){

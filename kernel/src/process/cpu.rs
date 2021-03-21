@@ -32,6 +32,16 @@ impl CPUManager{
         let cpu_id = cpuid();
         &mut self.cpus[cpu_id]
     }
+
+    pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
+        // TODO: push_off, pop_off
+        let c = CPU_MANAGER.mycpu();
+        if let Some(mut proc) = c.process{
+            return Some(proc.as_mut())
+        }
+        None
+
+    }
 }
 
 impl CPU{
@@ -44,7 +54,9 @@ impl CPU{
         }
     }
 
-
+    // pub fn get_proc(&self) -> &Process {
+    //     self.process.unwrap().as_ref()
+    // }
 
     pub fn set_proc(&mut self, proc:Option<NonNull<Process>>){
         self.process = proc;
