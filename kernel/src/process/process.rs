@@ -7,6 +7,7 @@ use crate::memory::{
 };
 use super::*;
 
+#[derive(PartialEq)]
 pub enum Procstate{
     UNUSED,
     USED,
@@ -18,13 +19,13 @@ pub enum Procstate{
 
 pub struct ProcessExcl{
     // p->lock must be held when using these:
-    state:Procstate,
-    channel:usize, // If non-zero, sleeping on chan
-    killed:usize, // If non-zero, have been killed
-    xstate:usize, // Exit status to be returned to parent's wait
-    pid: usize,   // Process ID
+    pub state:Procstate,
+    pub channel:usize, // If non-zero, sleeping on chan
+    pub killed:usize, // If non-zero, have been killed
+    pub xstate:usize, // Exit status to be returned to parent's wait
+    pub pid: usize,   // Process ID
     // proc_tree_lock must be held when using this:
-    parent: Option<ptr::NonNull<Process>>
+    pub parent: Option<ptr::NonNull<Process>>
 }
 
 impl ProcessExcl{
@@ -37,6 +38,10 @@ impl ProcessExcl{
             pid: 0,
             parent: None
         }
+    }
+
+    pub fn set_state(&mut self, state: Procstate){
+        self.state = state;
     }
 }
 
@@ -62,6 +67,11 @@ impl ProcessInner{
             name: "process"
         }
     }
+
+    pub fn get_context_mut(&mut self) -> *mut Context{
+        &mut self.context as *mut Context
+    }
+
 
     pub fn set_kstack(&mut self, addr:usize){
         self.kstack = addr
