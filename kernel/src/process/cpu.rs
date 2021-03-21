@@ -1,3 +1,4 @@
+use array_macro::array;
 use crate::register::tp;
 use crate::define::param::NCPU;
 use core::ptr::NonNull;
@@ -23,11 +24,11 @@ pub unsafe fn cpuid() ->usize{
 impl CPUManager{
     pub const fn new() -> Self{
         Self{
-            cpus:[CPU::new();NCPU]
+            cpus: array![_ => CPU::new(); NCPU],
         }
     }
 
-    pub fn mycpu(&mut self) -> &mut CPU{
+    pub unsafe fn mycpu(&mut self) -> &mut CPU{
         let cpu_id = cpuid();
         &mut self.cpus[cpu_id]
     }

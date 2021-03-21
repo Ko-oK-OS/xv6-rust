@@ -7,6 +7,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bcb85e548c05d407fa6faff46b750ba287714ef32afc0f5e15b4641ffd6affb"
 
 [[package]]
+name = "array-macro"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "971f4e6bd8c03058ca7562baf83b44396dbcc65476eba33071700cdc24e9c5eb"
+
+[[package]]
 name = "bit_field"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -23,6 +29,7 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "array-const-fn-init",
+ "array-macro",
  "bit_field",
  "bitflags",
  "lazy_static",

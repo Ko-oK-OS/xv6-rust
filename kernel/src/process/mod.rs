@@ -1,5 +1,5 @@
 mod process;
-mod cpu;
+pub mod cpu;
 mod context;
 mod trapframe;
 mod scheduler;
@@ -17,7 +17,7 @@ use crate::register::sstatus::{ intr_get, intr_off, intr_on };
 // it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
 // are initially off, then push_off, pop_off leaves them off.
 
-pub fn push_off(){
+pub unsafe fn push_off(){
     let old  = intr_get();
 
     intr_off();
@@ -29,7 +29,7 @@ pub fn push_off(){
     my_cpu.noff += 1;
 }
 
-pub fn pop_off(){
+pub unsafe fn pop_off(){
     let mut my_cpu = CPU_MANAGER.mycpu();
 
     if intr_get(){

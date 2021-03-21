@@ -85,7 +85,7 @@ pub struct Process {
 }
 
 impl Process{
-    pub fn new() -> Self{
+    pub const fn new() -> Self{
         Self{
             excl:Spinlock::new(ProcessExcl::new(), "process"),
             inner: ProcessInner::new()

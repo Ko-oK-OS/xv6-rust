@@ -1,3 +1,4 @@
+use array_macro::array;
 use core::ptr::NonNull;
 use super::*;
 use crate::define::{
@@ -16,7 +17,7 @@ pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
 impl ProcManager{
     const fn new() -> Self{
         Self{
-            proc: [Process::new(); NPROC]
+            proc: array![_ => Process::new(); NPROC],
         }
     }
 
@@ -25,11 +26,11 @@ impl ProcManager{
     }
 
 
-    pub fn myproc(&mut self) -> Option<&mut Process>{
+    pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
         // TODO: push_off, pop_off
         let c = CPU_MANAGER.mycpu();
         match c.process{
-            Some(proc) => {
+            Some(mut proc) => {
                 Some(proc.as_mut())
             }
 
@@ -40,7 +41,7 @@ impl ProcManager{
 
     // initialize the proc table at boot time.
     // Only used in boot.
-    pub fn procinit(){
+    pub unsafe fn procinit(){
         for p in PROC_MANAGER.proc.iter_mut(){
             p.inner.set_kstack((p.as_ptr() as usize) - (PROC_MANAGER.proc.as_ptr() as usize));
         }
@@ -57,16 +58,16 @@ impl ProcManager{
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
 
-pub fn scheduler(){
-    let mut c = CPU_MANAGER.mycpu();
+pub unsafe fn scheduler(){
+    let c = CPU_MANAGER.mycpu();
     c.set_proc(None);
 
     loop{
         // Avoid deadlock by ensuring that devices can interrupt.
         intr_on();
 
-        for p in PROC_MANAGER.get_table_mut().iter_mut(){
-            let guard = p.excl.acquire();
+        for &mut p in PROC_MANAGER.get_table_mut().iter_mut(){
+            let mut guard = p.excl.acquire();
             if guard.state == Procstate::RUNNABLE {
                 // Switch to chosen process.  It is the process's job
                 // to release its lock and then reacquire it
@@ -98,7 +99,7 @@ pub fn scheduler(){
 // break in the few places where a lock is held but
 // there's no process.
 
-pub fn sched(){
+pub unsafe fn sched(){
     let my_proc = PROC_MANAGER.myproc().unwrap();
     let mut my_cpu = CPU_MANAGER.mycpu();
 

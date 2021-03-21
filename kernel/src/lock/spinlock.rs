@@ -44,7 +44,7 @@ impl<T> Spinlock<T>{
     // Check whether this cpu is holding the lock.
     // Interrupts must be off.
     pub fn holding(&self) -> bool{
-        if self.locked.into_inner() && self.cpu_id != 0{
+        if self.locked.load(Ordering::Relaxed) && self.cpu_id != 0{
             return true
         }
 
