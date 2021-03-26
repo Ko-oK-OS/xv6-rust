@@ -48,7 +48,7 @@ pub unsafe fn kerneltrap() {
         // panic!("kerneltrap");
         let scause_obj = Scause::new(scause);
         match scause_obj.cause(){
-            Trap::Exception(Exception::Breakpoint) => breakpoint_handler(),
+            Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
             Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 

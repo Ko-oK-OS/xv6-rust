@@ -111,14 +111,6 @@ pub const PTE_U:usize = 1 << 4; // 1 -> user can access
 // that have the high bit set.
 pub const MAXVA:usize =  1 << (9 + 9 + 9 + 12 - 1); 
 
-pub fn pgroundup(sz:usize) -> usize{
-    let ret:usize;
-    ret = (sz+PGSIZE-1) & (!(PGSIZE-1));
-    ret
-}
-
-
-
 
 // map the trampoline page to the highest address,
 // in both user and kernel space.
@@ -127,7 +119,10 @@ pub const TRAMPOLINE:usize = MAXVA - PGSIZE;
 
 // map kernel stacks beneath the trampoline,
 // each surrounded by invalid guard pages.
-
+#[inline]
+pub fn KSTACK(addr: usize) -> usize{
+    TRAMPOLINE - (addr + 1)*2*PGSIZE 
+}
 
 // User memory layout.
 // Address zero first:

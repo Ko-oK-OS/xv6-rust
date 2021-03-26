@@ -3,6 +3,8 @@ use core::hint::spin_loop;
 use core::cell::{Cell, UnsafeCell};
 use core::ops::{Deref, DerefMut};
 
+use crate::process::CPU_MANAGER;
+
 #[derive(Debug,Default)]
 pub struct Spinlock<T: ?Sized>{
     locked:AtomicBool,
@@ -39,7 +41,23 @@ impl<T> Spinlock<T>{
         self.locked.store(false, Ordering::Release);
     }
 
+    // Check whether this cpu is holding the lock.
+    // Interrupts must be off.
+    pub fn holding(&self) -> bool{
+        if self.locked.load(Ordering::Relaxed) && self.cpu_id != 0{
+            return true
+        }
 
+        false
+    }
+
+
+}
+
+impl<'a, T> SpinlockGuard<'a, T>{
+    pub unsafe fn holding(&self) -> bool{
+        self.spinlock.holding()
+    }
 }
 
 impl<T> Deref for SpinlockGuard<'_, T>{

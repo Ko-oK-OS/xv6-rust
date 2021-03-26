@@ -32,10 +32,10 @@ impl<T> Sleeplock<T> {
     fn acquire(&self) -> SleeplockGuard<'_, T>{
         let mut guard = self.lock.acquire();
         while self.locked.get(){
-            unsafe{
-                // TODO: process
-                println!("TO DO!");
-            }
+           
+            // TODO: process
+            println!("TO DO!");
+           
             guard = self.lock.acquire();
         }
         self.locked.set(true);

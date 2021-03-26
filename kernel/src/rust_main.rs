@@ -13,7 +13,7 @@ use crate::memory::{
     container::{boxed::Box, vec::Vec}
 };
 
-use crate::process::{cpu};
+use crate::process::*;
 
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() -> !{
@@ -24,12 +24,21 @@ pub unsafe extern "C" fn rust_main() -> !{
         kinit(); // physical page allocator
         kvminit(); // create kernel page table
         kvminithart(); // turn on paging
+        ProcManager::procinit();
         trapinit();      // trap vectors
         trapinithart(); // trap vectors
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
 
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
+    }else{
+        println!("hart {} starting\n", cpu::cpuid());
+        kvminithart(); // turn on paging
+        trapinithart();   // install kernel trap vector
+        plicinithart();   // ask PLIC for device interrupts
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
     }
-    panic!("end of rust main, cpu id is {}", cpu::cpuid());
+
+    scheduler();
+    
 }
