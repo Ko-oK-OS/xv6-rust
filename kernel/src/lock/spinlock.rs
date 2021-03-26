@@ -54,6 +54,12 @@ impl<T> Spinlock<T>{
 
 }
 
+impl<'a, T> SpinlockGuard<'a, T>{
+    pub unsafe fn holding(&self) -> bool{
+        self.spinlock.holding()
+    }
+}
+
 impl<T> Deref for SpinlockGuard<'_, T>{
     type Target = T;
 

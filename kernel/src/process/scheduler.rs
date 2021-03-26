@@ -6,7 +6,7 @@ use crate::define::{
     param::NPROC,
     memlayout::KSTACK
 };
-use crate::lock::spinlock::Spinlock;
+use crate::lock::spinlock::{ Spinlock };
 use crate::register::sstatus::intr_on;
 
 pub struct ProcManager{
@@ -14,6 +14,16 @@ pub struct ProcManager{
 }
 
 pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
+
+pub static PID_LOCK:Spinlock<usize> = Spinlock::new(0, "pid_lock");
+
+// helps ensure that wakeups of wait()ing
+// parents are not lost. helps obey the
+// memory model when using p->parent.
+// must be acquired before any p->lock.
+pub static WAIT_LOCK:Spinlock<usize> = Spinlock::new(0, "wait_lock");
+
+pub static mut NEXT_PID:usize = 0;
 
 impl ProcManager{
     pub const fn new() -> Self{
@@ -91,37 +101,12 @@ pub unsafe fn scheduler(){
 }
 
 
-// Switch to scheduler.  Must hold only p->lock
-// and have changed proc->state. Saves and restores
-// intena because intena is a property of this
-// kernel thread, not this CPU. It should
-// be proc->intena and proc->noff, but that would
-// break in the few places where a lock is held but
-// there's no process.
-
-pub unsafe fn sched(){
-    let my_proc = CPU_MANAGER.myproc().unwrap();
-    let mut my_cpu = CPU_MANAGER.mycpu();
-
-    // if !my_proc.holding(){
-    //     panic!("sched p->lock");
-    // }
-
-    if my_cpu.noff != 1{
-        panic!("sched locks");
-    }
-
-    //TODO: p->state == RUNNING
-
-    if intr_get(){
-        panic!("sched interruptible");
-    }
-
-    let intena = my_cpu.intena;
-    extern "C" {
-        fn swtch(old: *mut Context, new: *mut Context);
-    }
-
-    swtch(my_proc.get_context_mut(), my_cpu.get_context_mut());
-    my_cpu.intena = intena;
+pub unsafe fn alloc_pid() -> usize{
+    PID_LOCK.acquire();
+    let pid = NEXT_PID;
+    NEXT_PID += 1;
+    PID_LOCK.release();
+    pid
 }
+
+

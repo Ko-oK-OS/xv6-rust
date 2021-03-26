@@ -86,6 +86,10 @@ impl Process{
     pub fn get_context_mut(&mut self) -> *mut Context{
         &mut self.context as *mut Context
     }
+
+    pub fn yielding(&self){
+
+    }
 }
 
 extern "C" {

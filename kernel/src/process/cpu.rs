@@ -1,6 +1,7 @@
 use array_macro::array;
 use crate::register::tp;
 use crate::define::param::NCPU;
+use crate::lock::spinlock::{SpinlockGuard, Spinlock};
 use core::ptr::NonNull;
 use super::*;
 pub struct CPU{
@@ -66,5 +67,42 @@ impl CPU{
 
     pub fn get_context_mut(&mut self) -> *mut Context{
         &mut self.context as *mut Context
+    }
+
+
+    // Switch to scheduler.  Must hold only p->lock
+    // and have changed proc->state. Saves and restores
+    // intena because intena is a property of this
+    // kernel thread, not this CPU. It should
+    // be proc->intena and proc->noff, but that would
+    // break in the few places where a lock is held but
+    // there's no process.
+
+    pub unsafe fn sched(&mut self, guard: SpinlockGuard<Process>, ctx: *mut Context){
+        // I have something confused about this function.
+
+        if !guard.holding(){
+            panic!("sched p->lock");
+        }
+
+        if self.noff != 1{
+            panic!("sched locks");
+        }
+
+        if guard.state == Procstate::RUNNING{
+            panic!("sched running");
+        }
+
+        if intr_get(){
+            panic!("sched interruptible");
+        }
+
+        let intena = self.intena;
+        extern "C" {
+            fn swtch(old: *mut Context, new: *mut Context);
+        }
+
+        swtch(ctx, self.get_context_mut());
+        self.intena = intena;
     }
 }
