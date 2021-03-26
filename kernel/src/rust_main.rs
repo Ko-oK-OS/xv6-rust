@@ -13,7 +13,7 @@ use crate::memory::{
     container::{boxed::Box, vec::Vec}
 };
 
-use crate::process::{cpu};
+use crate::process::*;
 
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() -> !{
@@ -24,6 +24,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         kinit(); // physical page allocator
         kvminit(); // create kernel page table
         kvminithart(); // turn on paging
+        ProcManager::procinit();
         trapinit();      // trap vectors
         trapinithart(); // trap vectors
         plicinit(); // set up interrupt controller

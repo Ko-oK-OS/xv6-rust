@@ -1,5 +1,6 @@
 use array_macro::array;
 use core::ptr::NonNull;
+use core::ops::{DerefMut};
 use super::*;
 use crate::define::{
     param::NPROC,
@@ -9,19 +10,20 @@ use crate::lock::spinlock::Spinlock;
 use crate::register::sstatus::intr_on;
 
 pub struct ProcManager{
-    proc:[Process; NPROC]
+    proc:[Spinlock<Process>; NPROC]
 }
 
 pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
 
 impl ProcManager{
-    const fn new() -> Self{
+    pub const fn new() -> Self{
         Self{
-            proc: array![_ => Process::new(); NPROC],
+            proc: array![_ => Spinlock::new(Process::new(), "proc"); NPROC],
+            // proc: [Spinlock::new(Process::new(), "proc"); NPROC]
         }
     }
 
-    pub fn get_table_mut(&mut self) -> &mut [Process; NPROC]{
+    pub fn get_table_mut(&mut self) -> &mut [Spinlock<Process>; NPROC]{
         &mut self.proc
     }
 
@@ -32,7 +34,12 @@ impl ProcManager{
     // Only used in boot.
     pub unsafe fn procinit(){
         for p in PROC_MANAGER.proc.iter_mut(){
-            p.inner.set_kstack((p.as_ptr() as usize) - (PROC_MANAGER.proc.as_ptr() as usize));
+            // p.inner.set_kstack((p.as_ptr() as usize) - (PROC_MANAGER.proc.as_ptr() as usize));
+            let mut guard = p.acquire();
+            let curr_proc_addr = guard.as_ptr_addr();
+            guard.set_kstack(curr_proc_addr - PROC_MANAGER.proc.as_ptr() as usize);
+            p.release();
+            drop(guard);
         }
     }
 
@@ -56,25 +63,26 @@ pub unsafe fn scheduler(){
         intr_on();
 
         for p in PROC_MANAGER.get_table_mut().iter_mut(){
-            let mut guard = p.excl.acquire();
+            let mut guard = p.acquire();
             if guard.state == Procstate::RUNNABLE {
                 // Switch to chosen process.  It is the process's job
                 // to release its lock and then reacquire it
                 // before jumping back to us.
                 guard.set_state(Procstate::RUNNING);
-                c.set_proc(NonNull::new(p as *mut Process));
+                c.set_proc(NonNull::new(guard.deref_mut() as *mut Process));
+
                 extern "C" {
                     fn swtch(old:*mut Context, new:*mut Context);
                 }
 
-                swtch(c.get_context_mut(), p.inner.get_context_mut());
+                swtch(c.get_context_mut(), guard.get_context_mut());
 
                 // Process is done running for now.
                 // It should have changed its p->state before coming back.
                 c.set_proc(None);
             }
             drop(guard);
-            p.excl.release();
+            p.release();
         }
     }
 }
@@ -92,11 +100,11 @@ pub unsafe fn sched(){
     let my_proc = CPU_MANAGER.myproc().unwrap();
     let mut my_cpu = CPU_MANAGER.mycpu();
 
-    if !my_proc.excl.holding(){
-        panic!("sched p->lock");
-    }
+    // if !my_proc.holding(){
+    //     panic!("sched p->lock");
+    // }
 
-    if CPU_MANAGER.mycpu().noff != 1{
+    if my_cpu.noff != 1{
         panic!("sched locks");
     }
 
@@ -111,6 +119,6 @@ pub unsafe fn sched(){
         fn swtch(old: *mut Context, new: *mut Context);
     }
 
-    swtch(my_proc.inner.get_context_mut(), my_cpu.get_context_mut());
+    swtch(my_proc.get_context_mut(), my_cpu.get_context_mut());
     my_cpu.intena = intena;
 }
