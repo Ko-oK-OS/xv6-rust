@@ -31,6 +31,8 @@ pub unsafe extern "C" fn rust_main() -> !{
         plicinithart(); // ask PLIC for device interrupts
 
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
+    }else{
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
     }
-    panic!("end of rust main, cpu id is {}", cpu::cpuid());
+    
 }

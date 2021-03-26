@@ -7,7 +7,7 @@ use crate::memory::{
 };
 use super::*;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum Procstate{
     UNUSED,
     USED,

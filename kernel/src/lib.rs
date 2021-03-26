@@ -10,6 +10,7 @@
 #![allow(const_item_mutation)]
 #![allow(unused_imports)]
 #![feature(const_option)]
+#![feature(const_fn_union)]
 
 
 

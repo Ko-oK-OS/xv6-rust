@@ -19,7 +19,6 @@ impl ProcManager{
     pub const fn new() -> Self{
         Self{
             proc: array![_ => Spinlock::new(Process::new(), "proc"); NPROC],
-            // proc: [Spinlock::new(Process::new(), "proc"); NPROC]
         }
     }
 
@@ -33,6 +32,7 @@ impl ProcManager{
     // initialize the proc table at boot time.
     // Only used in boot.
     pub unsafe fn procinit(){
+        println!("procinit......");
         for p in PROC_MANAGER.proc.iter_mut(){
             // p.inner.set_kstack((p.as_ptr() as usize) - (PROC_MANAGER.proc.as_ptr() as usize));
             let mut guard = p.acquire();
@@ -41,6 +41,8 @@ impl ProcManager{
             p.release();
             drop(guard);
         }
+
+        println!("procinit done......");
     }
 
 }
@@ -71,8 +73,9 @@ pub unsafe fn scheduler(){
                 guard.set_state(Procstate::RUNNING);
                 c.set_proc(NonNull::new(guard.deref_mut() as *mut Process));
 
+
                 extern "C" {
-                    fn swtch(old:*mut Context, new:*mut Context);
+                    fn swtch(old: *mut Context, new: *mut Context);
                 }
 
                 swtch(c.get_context_mut(), guard.get_context_mut());
