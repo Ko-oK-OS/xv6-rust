@@ -30,6 +30,8 @@ pub unsafe extern "C" fn rust_main() -> !{
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
 
+        llvm_asm!("ebreak"::::"volatile");
+
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
     }else{
         println!("hart {} starting\n", cpu::cpuid());
@@ -39,6 +41,6 @@ pub unsafe extern "C" fn rust_main() -> !{
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
     }
 
-    scheduler();
+    // scheduler();
     
 }

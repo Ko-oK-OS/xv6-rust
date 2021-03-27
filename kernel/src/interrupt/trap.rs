@@ -30,7 +30,7 @@ pub unsafe fn trapinithart() {
 // on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kerneltrap() {
-    let sepc = sepc::read();
+    let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
 
@@ -43,28 +43,42 @@ pub unsafe fn kerneltrap() {
     }
     
     let which_dev = devintr();
-    if which_dev == 0{
-        println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
-        // panic!("kerneltrap");
-        let scause_obj = Scause::new(scause);
-        match scause_obj.cause(){
-            Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
-            Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
+    match which_dev {
+        0 => {
+            // modify sepc to countine running after restoring context
+            sepc += 2;
+            println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
+            let scause = Scause::new(scause);
+            match scause.cause(){
+                Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
-            Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
+                Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
-            Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
+                Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
 
-            Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+                Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
 
-            _ => panic!("Unresolved Trap!")
+                Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+
+                _ => panic!("Unresolved Trap!")
+            }
+
         }
-    }
 
+        1 => {
+            panic!("Unsolved solution!");
 
-    if which_dev == 2{
-        println!("Timer Interrupt!");
+        }
+
+        2 => {
+            println!("Timer Interrupt!");
+
+        }
+
+        _ => {
+            unreachable!();
+        }
     }
 
     sepc::write(sepc);
