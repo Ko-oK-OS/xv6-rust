@@ -56,6 +56,12 @@ pub enum Exception {
     Unknown
 }
 
+// #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+// pub enum TimerInterrupt{
+
+// }
+
+
 impl Interrupt{
     pub fn from(nr: usize) -> Self {
         match nr{
@@ -116,7 +122,7 @@ impl Scause{
     pub fn cause(&self) -> Trap{
         if self.is_interrupt() {
             Trap::Interrupt(Interrupt::from(self.code()))
-        }else {
+        }else{
             Trap::Exception(Exception::from(self.code()))
         }
     }
@@ -128,10 +134,24 @@ impl Scause{
         self.bits.get_bit(size_of::<usize>()*8 - 1)
     }
 
+    // Is trap cause a supervisor external interrupt
+    // #[inline]
+    // pub fn is_supervisor_external_interrput(&self) -> bool{
+    //     self.is_interrupt() && (self.bits() & 0xff) == 9
+    // }
+
+    // // Is trap cause timer interrupt
+    // #[inline]
+    // pub fn is_timer(&self) -> bool{
+    //     self.bits == 0x8000000000000001
+    // }
+
     // Is trap cause an exception
     #[inline]
     pub fn is_exception(&self) -> bool{
         !self.is_interrupt()
     }
+
+    
 }
 

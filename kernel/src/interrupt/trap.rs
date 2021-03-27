@@ -1,5 +1,5 @@
 use crate::register::{
-    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap}
+    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt}
 };
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
@@ -103,46 +103,55 @@ pub unsafe fn clockintr(){
 // 0 if not recognized.
 unsafe fn devintr() -> usize {
     let scause = scause::read();
-    let flag_1 = (scause & 0xff) == 9;
-    let flag_2: bool = scause & 0x8000000000000000 !=0;
-    if flag_1 && flag_2 {
-        // this is a supervisor external interrupt, via PLIC.
+    let scause = Scause::new(scause);
 
-        // irq indicates which device interrupted.
-        let irq = plic::plic_claim();
+    match scause.cause(){
+            Trap::Interrupt(Interrupt::SupervisorExternal) => {
+                println!("Supervisor Enternal Interrupt Occures!");
+            // this is a supervisor external interrupt, via PLIC.
 
-        if irq == memlayout::UART0_IRQ as usize{
-            // TODO: uartinit
-            println!("uart interrupt")
-        }else if irq == memlayout::VIRTIO0_IRQ as usize{
-            // TODO: virtio_disk_init
-            println!("virtio0 interrupt")
-        }else if irq != 0{
-            println!("unexpected intrrupt, irq={}", irq);
+            // irq indicates which device interrupted.
+            let irq = plic::plic_claim();
+
+            if irq == memlayout::UART0_IRQ as usize{
+                // TODO: uartinit
+                println!("uart interrupt")
+            }else if irq == memlayout::VIRTIO0_IRQ as usize{
+                // TODO: virtio_disk_init
+                println!("virtio0 interrupt")
+            }else if irq != 0{
+                println!("unexpected intrrupt, irq={}", irq);
+            }
+
+            if irq != 0 {
+                plic::plic_complete(irq);
+            }
+
+            1
         }
 
-        if irq != 0 {
-            plic::plic_complete(irq);
+        Trap::Interrupt(Interrupt::SupervisorSoft) => {
+            println!("Timer Interupt Occures!");
+            // software interrupt from a machine-mode timer interrupt,
+            // forwarded by timervec in kernelvec.S.
+            // if cpu::cpuid() == 0{
+            //     // TODO: clockintr
+            //     clockintr();
+            //     println!("clockintr!");
+            // }
+
+
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            sip::write(sip::read() & !2);
+
+            2
         }
 
-        return 1;
-    }else if scause == 0x8000000000000001{
-        // software interrupt from a machine-mode timer interrupt,
-        // forwarded by timervec in kernelvec.S.
-        if cpu::cpuid() == 0{
-            // TODO: clockintr
-            clockintr();
-            println!("clockintr!");
+        _ => {
+            println!("Exception and other Interrupts Occurs!");
+            0
         }
-
-
-        // acknowledge the software interrupt by clearing
-        // the SSIP bit in sip.
-        sip::write(sip::read() & !2);
-
-        return 2;
-    }else{
-        return 0;
     }
     
 
