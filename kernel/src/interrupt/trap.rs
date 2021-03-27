@@ -81,6 +81,7 @@ pub unsafe fn kerneltrap() {
         }
     }
 
+    // store context
     sepc::write(sepc);
     sstatus::write(sstatus);
 
@@ -134,12 +135,12 @@ unsafe fn devintr() -> usize {
             println!("Timer Interupt Occures!");
             // software interrupt from a machine-mode timer interrupt,
             // forwarded by timervec in kernelvec.S.
-            // if cpu::cpuid() == 0{
-            //     // TODO: clockintr
-            //     clockintr();
-            //     println!("clockintr!");
-            // }
 
+            if cpu::cpuid() == 0{
+                // TODO: clockintr
+                // clockintr();
+                println!("clockintr!");
+            }
 
             // acknowledge the software interrupt by clearing
             // the SSIP bit in sip.
