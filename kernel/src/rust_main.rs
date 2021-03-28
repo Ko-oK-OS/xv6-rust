@@ -33,12 +33,14 @@ pub unsafe extern "C" fn rust_main() -> !{
         llvm_asm!("ebreak"::::"volatile");
 
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // loop{}
     }else{
         println!("hart {} starting\n", cpu::cpuid());
         kvminithart(); // turn on paging
         trapinithart();   // install kernel trap vector
         plicinithart();   // ask PLIC for device interrupts
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // loop{}
     }
 
     // scheduler();
