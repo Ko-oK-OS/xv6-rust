@@ -122,6 +122,7 @@ pub fn push_off(){
         my_cpu.intena = old_enable as usize;
     }
 
+
     my_cpu.noff += 1;
 }
 
@@ -138,4 +139,5 @@ pub fn pop_off() {
     if c.noff == 0 && c.intena != 0 {
         unsafe{ sstatus::intr_on() };
     }
+
 }

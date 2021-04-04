@@ -5,34 +5,52 @@ use core::panic::PanicInfo;
 use crate::console;
 use crate::lock::spinlock::Spinlock;
 
-static Pr: Spinlock<Stdout> = Spinlock::new(Stdout, "Stdout");
-
-struct Stdout;
-
-// This function is used to putchar in console
-pub fn console_putchar(c: u8){
-    console::consputc(c);
+pub struct Pr {
+    locking: AtomicBool,
+    lock: Spinlock<()>
 }
 
-impl Write for Stdout {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
+
+static mut PR: Pr = Pr {
+    locking: AtomicBool::new(true),
+    lock: Spinlock::new((), "pr")
+};
+
+
+// This function is used to putchar in console
+impl Pr {
+    pub fn console_putchar(&self, c:u8) {
+        console::consputc(c);
+    }
+}
+
+
+
+
+impl fmt::Write for Pr {
+       fn write_str(&mut self, s: &str) -> fmt::Result {
         let mut buffer = [0u8; 4];
         for c in s.chars() {
             for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
-                console_putchar(*code_point as u8);
+                self.console_putchar(*code_point as u8);
             }
         }
         Ok(())
     }
 }
 
-/// 打印由 [`core::format_args!`] 格式化后的数据
-///
-/// [`print!`] 和 [`println!`] 宏都将展开成此函数
-///
-/// [`core::format_args!`]: https://doc.rust-lang.org/nightly/core/macro.format_args.html
 pub fn print(args: fmt::Arguments) {
-    Pr.acquire().write_fmt(args).unwrap();
+   use fmt::Write;
+
+   unsafe {
+       if PR.locking.load(Ordering::Relaxed) {
+        let guard = PR.lock.acquire();
+        PR.write_fmt(args).expect("Fail to write");
+        drop(guard);
+       }else {
+           PR.write_fmt(args).expect("Fail to write");
+       }
+   }
 }
 
 /// implement print and println! macro
