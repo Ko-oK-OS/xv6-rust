@@ -1,5 +1,5 @@
 use array_macro::array;
-use crate::register::tp;
+use crate::register::{ tp, sstatus };
 use crate::define::param::NCPU;
 use crate::lock::spinlock::{SpinlockGuard, Spinlock};
 use core::ptr::NonNull;
@@ -35,13 +35,15 @@ impl CPUManager{
     }
 
     pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
-        // TODO: push_off, pop_off
+        push_off();
         let p;
         let c = CPU_MANAGER.mycpu();
         if let Some(proc) = c.process{
            p = &mut *(proc.as_ptr());
+           pop_off();
            return Some(p)
         }
+        pop_off();
         None
 
     }
@@ -105,4 +107,39 @@ impl CPU{
         swtch(ctx, self.get_context_mut());
         self.intena = intena;
     }
+}
+
+// push_off/pop_off are like intr_off()/intr_on() except that they are matched:
+// it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
+// are initially off, then push_off, pop_off leaves them off.
+
+pub fn push_off(){
+    let old_enable;
+    unsafe{
+        old_enable = sstatus::intr_get();
+        sstatus::intr_off();
+    }
+    let my_cpu = unsafe{ CPU_MANAGER.mycpu() };
+    if my_cpu.noff == 0 {
+        my_cpu.intena = old_enable as usize;
+    }
+
+
+    my_cpu.noff += 1;
+}
+
+
+pub fn pop_off() {
+    if unsafe{ sstatus::intr_get() } {
+        panic!("pop_off(): interruptable");
+    }
+    let c = unsafe { CPU_MANAGER.mycpu() };
+    if c.noff.checked_sub(1).is_none() {
+        panic!("pop_off(): count not match");
+    }
+    c.noff -= 1;
+    if c.noff == 0 && c.intena != 0 {
+        unsafe{ sstatus::intr_on() };
+    }
+
 }

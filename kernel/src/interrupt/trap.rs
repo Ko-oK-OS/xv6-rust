@@ -1,5 +1,5 @@
 use crate::register::{
-    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap}
+    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt}
 };
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
@@ -30,7 +30,7 @@ pub unsafe fn trapinithart() {
 // on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kerneltrap() {
-    let sepc = sepc::read();
+    let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
 
@@ -43,30 +43,45 @@ pub unsafe fn kerneltrap() {
     }
     
     let which_dev = devintr();
-    if which_dev == 0{
-        println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
-        // panic!("kerneltrap");
-        let scause_obj = Scause::new(scause);
-        match scause_obj.cause(){
-            Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
-            Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
+    match which_dev {
+        0 => {
+            // modify sepc to countine running after restoring context
+            sepc += 2;
+            println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
+            let scause = Scause::new(scause);
+            match scause.cause(){
+                Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
-            Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
+                Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
-            Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
+                Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
 
-            Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+                Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
 
-            _ => panic!("Unresolved Trap!")
+                Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+
+                _ => panic!("Unresolved Trap!")
+            }
+
+        }
+
+        1 => {
+            panic!("Unsolved solution!");
+
+        }
+
+        2 => {
+            println!("Timer Interrupt!");
+
+        }
+
+        _ => {
+            unreachable!();
         }
     }
 
-
-    if which_dev == 2{
-        println!("Timer Interrupt!");
-    }
-
+    // store context
     sepc::write(sepc);
     sstatus::write(sstatus);
 
@@ -78,8 +93,10 @@ pub unsafe fn clockintr(){
     *ticks = *ticks + 1;
     if *ticks % 100 == 0{
         println!("TICKS: {}", *ticks);
+        panic!("TICKS: {}", *ticks);
     }
-    TICKSLOCK.release();
+    // TICKSLOCK.release();
+    drop(ticks);
 }
 
 // check if it's an external interrupt or software interrupt,
@@ -89,46 +106,55 @@ pub unsafe fn clockintr(){
 // 0 if not recognized.
 unsafe fn devintr() -> usize {
     let scause = scause::read();
-    let flag_1 = (scause & 0xff) == 9;
-    let flag_2: bool = scause & 0x8000000000000000 !=0;
-    if flag_1 && flag_2 {
-        // this is a supervisor external interrupt, via PLIC.
+    let scause = Scause::new(scause);
 
-        // irq indicates which device interrupted.
-        let irq = plic::plic_claim();
+    match scause.cause(){
+            Trap::Interrupt(Interrupt::SupervisorExternal) => {
+                println!("Supervisor Enternal Interrupt Occures!");
+            // this is a supervisor external interrupt, via PLIC.
 
-        if irq == memlayout::UART0_IRQ as usize{
-            // TODO: uartinit
-            println!("uart interrupt")
-        }else if irq == memlayout::VIRTIO0_IRQ as usize{
-            // TODO: virtio_disk_init
-            println!("virtio0 interrupt")
-        }else if irq != 0{
-            println!("unexpected intrrupt, irq={}", irq);
+            // irq indicates which device interrupted.
+            let irq = plic::plic_claim();
+
+            if irq == memlayout::UART0_IRQ as usize{
+                // TODO: uartinit
+                println!("uart interrupt")
+            }else if irq == memlayout::VIRTIO0_IRQ as usize{
+                // TODO: virtio_disk_init
+                println!("virtio0 interrupt")
+            }else if irq != 0{
+                println!("unexpected intrrupt, irq={}", irq);
+            }
+
+            if irq != 0 {
+                plic::plic_complete(irq);
+            }
+
+            1
         }
 
-        if irq != 0 {
-            plic::plic_complete(irq);
+        Trap::Interrupt(Interrupt::SupervisorSoft) => {
+            println!("Timer Interupt Occures!");
+            // software interrupt from a machine-mode timer interrupt,
+            // forwarded by timervec in kernelvec.S.
+
+            if cpu::cpuid() == 0{
+                // TODO: clockintr
+                clockintr();
+                println!("clockintr!");
+            }
+
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            sip::write(sip::read() & !2);
+
+            2
         }
 
-        return 1;
-    }else if scause == 0x8000000000000001{
-        // software interrupt from a machine-mode timer interrupt,
-        // forwarded by timervec in kernelvec.S.
-        if cpu::cpuid() == 0{
-            // TODO: clockintr
-            clockintr();
-            println!("clockintr!");
+        _ => {
+            println!("Exception and other Interrupts Occurs!");
+            0
         }
-
-
-        // acknowledge the software interrupt by clearing
-        // the SSIP bit in sip.
-        sip::write(sip::read() & !2);
-
-        return 2;
-    }else{
-        return 0;
     }
     
 

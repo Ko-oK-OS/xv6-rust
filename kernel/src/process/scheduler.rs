@@ -48,7 +48,7 @@ impl ProcManager{
             let mut guard = p.acquire();
             let curr_proc_addr = guard.as_ptr_addr();
             guard.set_kstack(curr_proc_addr - PROC_MANAGER.proc.as_ptr() as usize);
-            p.release();
+            // p.release();
             drop(guard);
         }
 
@@ -95,17 +95,18 @@ pub unsafe fn scheduler(){
                 c.set_proc(None);
             }
             drop(guard);
-            p.release();
+            // p.release();
         }
     }
 }
 
 
 pub unsafe fn alloc_pid() -> usize{
-    PID_LOCK.acquire();
+    let guard = PID_LOCK.acquire();
     let pid = NEXT_PID;
     NEXT_PID += 1;
-    PID_LOCK.release();
+    // PID_LOCK.release();
+    drop(guard);
     pid
 }
 

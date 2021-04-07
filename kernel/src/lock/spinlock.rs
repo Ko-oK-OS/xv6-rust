@@ -1,15 +1,15 @@
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::{AtomicBool, Ordering, fence};
 use core::hint::spin_loop;
 use core::cell::{Cell, UnsafeCell};
 use core::ops::{Deref, DerefMut};
 
-use crate::process::CPU_MANAGER;
+use crate::process::{ CPU_MANAGER, push_off, pop_off, cpuid };
 
 #[derive(Debug,Default)]
 pub struct Spinlock<T: ?Sized>{
     locked:AtomicBool,
     name: &'static str,
-    cpu_id: isize,
+    cpu_id: Cell<isize>,
     data:UnsafeCell<T>,
 }
 
@@ -23,31 +23,49 @@ impl<T> Spinlock<T>{
         let lock = Spinlock {
             locked: AtomicBool::new(false),
             name: name,
-            cpu_id:-1,
+            cpu_id: Cell::new(-1),
             data: UnsafeCell::new(data)
         };
         lock
     }
 
     pub fn acquire(&self) -> SpinlockGuard<'_, T> {
+
+        push_off();
+        if self.holding() {
+            panic!("acquire");
+        }
+        
         while self.locked.swap(true, Ordering::Acquire){
             // Now we signals the processor that it is inside a busy-wait spin-loop 
             spin_loop();
         }
+        fence(Ordering::SeqCst);
+        unsafe {
+            self.cpu_id.set(cpuid() as isize);
+        }
+
         SpinlockGuard{spinlock: &self}
     }
 
     pub fn release(&self) {
+        if !self.holding() {
+            panic!("release");
+        }
+        self.cpu_id.set(-1);
+        fence(Ordering::SeqCst);
         self.locked.store(false, Ordering::Release);
+
+        pop_off();
     }
 
     // Check whether this cpu is holding the lock.
     // Interrupts must be off.
     pub fn holding(&self) -> bool{
-        if self.locked.load(Ordering::Relaxed) && self.cpu_id != 0{
+        // self.locked.load(Ordering::Relaxed) && (self.cpu_id.get() == unsafe{ cpuid() } as isize)
+        if self.locked.load(Ordering::Relaxed) && self.cpu_id.get() == unsafe{ cpuid() } as isize {
             return true
         }
-
         false
     }
 
