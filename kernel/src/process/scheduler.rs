@@ -1,6 +1,6 @@
 use array_macro::array;
 use core::ptr::NonNull;
-use core::ops::{DerefMut};
+use core::ops::{ DerefMut };
 use super::*;
 use crate::define::{
     param::NPROC,
@@ -15,13 +15,13 @@ pub struct ProcManager{
 
 pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
 
-pub static PID_LOCK:Spinlock<usize> = Spinlock::new(0, "pid_lock");
+pub static PID_LOCK:Spinlock<()> = Spinlock::new((), "pid_lock");
 
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
 // must be acquired before any p->lock.
-pub static WAIT_LOCK:Spinlock<usize> = Spinlock::new(0, "wait_lock");
+pub static WAIT_LOCK:Spinlock<()> = Spinlock::new((), "wait_lock");
 
 pub static mut NEXT_PID:usize = 0;
 
@@ -44,16 +44,28 @@ impl ProcManager{
     pub unsafe fn procinit(){
         println!("procinit......");
         for p in PROC_MANAGER.proc.iter_mut(){
-            // p.inner.set_kstack((p.as_ptr() as usize) - (PROC_MANAGER.proc.as_ptr() as usize));
             let mut guard = p.acquire();
             let curr_proc_addr = guard.as_ptr_addr();
             guard.set_kstack(curr_proc_addr - PROC_MANAGER.proc.as_ptr() as usize);
-            // p.release();
             drop(guard);
         }
 
         println!("procinit done......");
     }
+
+    // Wake up all processes sleeping on chan.
+    // Must be called without any p->lock.
+    pub fn wakeup(&self, channel: usize) {
+        for p in self.proc.iter() {
+            let mut guard = p.acquire();
+            if guard.state == Procstate::SLEEPING && guard.channel == channel {
+                guard.state = Procstate::RUNNABLE;
+            }
+            drop(guard);
+        }
+    }
+
+
 
 }
 
@@ -95,7 +107,6 @@ pub unsafe fn scheduler(){
                 c.set_proc(None);
             }
             drop(guard);
-            // p.release();
         }
     }
 }
@@ -105,7 +116,6 @@ pub unsafe fn alloc_pid() -> usize{
     let guard = PID_LOCK.acquire();
     let pid = NEXT_PID;
     NEXT_PID += 1;
-    // PID_LOCK.release();
     drop(guard);
     pid
 }

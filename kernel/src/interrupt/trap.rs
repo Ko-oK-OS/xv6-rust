@@ -91,11 +91,10 @@ pub unsafe fn kerneltrap() {
 pub unsafe fn clockintr(){
     let mut ticks = TICKSLOCK.acquire();
     *ticks = *ticks + 1;
-    if *ticks % 100 == 0{
-        println!("TICKS: {}", *ticks);
-        panic!("TICKS: {}", *ticks);
-    }
-    // TICKSLOCK.release();
+    // if *ticks % 100 == 0{
+    //     println!("TICKS: {}", *ticks);
+    // }
+    println!("TICKS: {}", *ticks);
     drop(ticks);
 }
 
