@@ -72,7 +72,7 @@ pub unsafe fn kerneltrap() {
         }
 
         2 => {
-            println!("Timer Interrupt!");
+            // println!("Timer Interrupt!");
 
         }
 
@@ -140,7 +140,7 @@ unsafe fn devintr() -> usize {
             if cpu::cpuid() == 0{
                 // TODO: clockintr
                 clockintr();
-                println!("clockintr!");
+                // println!("clockintr!");
             }
 
             // acknowledge the software interrupt by clearing

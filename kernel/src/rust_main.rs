@@ -14,6 +14,7 @@ use crate::memory::{
 };
 
 use crate::process::*;
+use crate::register::sstatus;
 
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() -> !{
@@ -30,10 +31,11 @@ pub unsafe extern "C" fn rust_main() -> !{
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
 
-        llvm_asm!("ebreak"::::"volatile");
+        // llvm_asm!("ebreak"::::"volatile");
 
-        panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        // loop{}
+        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        sstatus::intr_on();
+        loop{}
     }else{
         println!("hart {} starting\n", cpu::cpuid());
         kvminithart(); // turn on paging

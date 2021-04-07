@@ -39,10 +39,8 @@ pub struct Process {
     name: &'static str   // Process name (debugging)
 }
 
-// pub struct Process_Pool {
-//     proc: Process,
-//     lock: Spinlock<()>
-// }
+
+
 
 
 impl Process{
