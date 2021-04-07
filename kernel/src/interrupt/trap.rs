@@ -92,10 +92,11 @@ pub unsafe fn clockintr(){
     let mut ticks = TICKSLOCK.acquire();
     *ticks = *ticks + 1;
     if *ticks % 100 == 0{
-        // println!("TICKS: {}", *ticks);
-        // panic!("TICKS: {}", *ticks);
+        println!("TICKS: {}", *ticks);
+        panic!("TICKS: {}", *ticks);
     }
-    TICKSLOCK.release();
+    // TICKSLOCK.release();
+    drop(ticks);
 }
 
 // check if it's an external interrupt or software interrupt,

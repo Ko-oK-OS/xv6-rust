@@ -30,13 +30,17 @@ impl<T> Spinlock<T>{
     }
 
     pub fn acquire(&self) -> SpinlockGuard<'_, T> {
+
+        push_off();
+        if self.holding() {
+            panic!("acquire");
+        }
         
-        // push_off();
         while self.locked.swap(true, Ordering::Acquire){
             // Now we signals the processor that it is inside a busy-wait spin-loop 
             spin_loop();
         }
-        // fence(Ordering::SeqCst);
+        fence(Ordering::SeqCst);
         unsafe {
             self.cpu_id.set(cpuid() as isize);
         }
@@ -45,11 +49,14 @@ impl<T> Spinlock<T>{
     }
 
     pub fn release(&self) {
+        if !self.holding() {
+            panic!("release");
+        }
         self.cpu_id.set(-1);
-        // fence(Ordering::SeqCst);
+        fence(Ordering::SeqCst);
         self.locked.store(false, Ordering::Release);
 
-        // pop_off();
+        pop_off();
     }
 
     // Check whether this cpu is holding the lock.

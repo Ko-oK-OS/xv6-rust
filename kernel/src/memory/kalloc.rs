@@ -93,7 +93,7 @@ pub unsafe fn kfree(pa: PhysicalAddress){
     guard.set_next(Some(r));
     drop(guard);
 
-    (*KMEM).release();
+    // (*KMEM).release();
 
 }
 
@@ -108,7 +108,7 @@ pub unsafe fn kalloc() -> Option<*mut u8>{
         guard.set_next(addr.as_mut().get_next());
     }
     drop(guard);
-    (*KMEM).release();
+    // (*KMEM).release();
 
     match r {
         Some(ptr) => {

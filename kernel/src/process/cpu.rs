@@ -35,13 +35,15 @@ impl CPUManager{
     }
 
     pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
-        // TODO: push_off, pop_off
+        push_off();
         let p;
         let c = CPU_MANAGER.mycpu();
         if let Some(proc) = c.process{
            p = &mut *(proc.as_ptr());
+           pop_off();
            return Some(p)
         }
+        pop_off();
         None
 
     }
