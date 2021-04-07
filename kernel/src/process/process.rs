@@ -19,7 +19,8 @@ pub enum Procstate{
 
 
 pub struct Process {
-    pub data: Spinlock<ProcData>
+    pub data: Spinlock<ProcData>,
+    name: &'static str   // Process name (debugging)
 }
 
 pub struct ProcData {
@@ -40,7 +41,6 @@ pub struct ProcData {
     pub trapframe: *mut Trapframe, // data page for trampoline.S
     pub context: Context, // swtch() here to run processs
     // TODO: Open files and Current directory
-    name: &'static str   // Process name (debugging)
 }
 
 impl ProcData {
@@ -58,8 +58,19 @@ impl ProcData {
             pagetable: None,
             trapframe: ptr::null_mut(),
             context: Context::new(),
-            name: "process"
         }
+    }
+
+    pub fn set_kstack(&mut self, ksatck:usize) {
+        self.kstack = ksatck;
+    }
+
+    pub fn set_state(&mut self, state: Procstate) {
+        self.state = state;
+    }
+
+    pub fn get_context_mut(&mut self) -> *mut Context {
+        &mut self.context as *mut Context
     }
 }
 
@@ -68,7 +79,8 @@ impl ProcData {
 impl Process{
     pub const fn new() -> Self{
         Self{    
-            data: Spinlock::new(ProcData::new(), "process")
+            data: Spinlock::new(ProcData::new(), "process"),
+            name: "process"
         }
     }
 
@@ -88,17 +100,6 @@ impl Process{
         self as *mut Process as usize
     }
 
-    pub fn set_kstack(&mut self, addr:usize){
-        self.data.kstack = addr
-    }
-
-    pub fn set_state(&mut self, state: Procstate){
-        self.state = state;
-    }
-
-    pub fn get_context_mut(&mut self) -> *mut Context{
-        &mut self.context as *mut Context
-    }
 
     pub fn yielding(&self){
 

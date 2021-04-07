@@ -4,13 +4,15 @@ use core::ops::{ DerefMut };
 use super::*;
 use crate::define::{
     param::NPROC,
-    memlayout::KSTACK
+    memlayout::{ KSTACK, PGSIZE, TRAMPOLINE }
 };
 use crate::lock::spinlock::{ Spinlock };
 use crate::register::sstatus::intr_on;
+use crate::memory::*;
 
 pub struct ProcManager{
-    proc:[Spinlock<Process>; NPROC]
+    // proc:[Spinlock<Process>; NPROC]
+    proc: [Process; NPROC]
 }
 
 pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
@@ -26,16 +28,26 @@ pub static WAIT_LOCK:Spinlock<()> = Spinlock::new((), "wait_lock");
 pub static mut NEXT_PID:usize = 0;
 
 impl ProcManager{
-    pub const fn new() -> Self{
+    // pub const fn new() -> Self{
+    //     Self{
+    //         proc: array![_ => Spinlock::new(Process::new(), "proc"); NPROC],
+    //     }
+    // }
+
+    pub const fn new() -> Self {
         Self{
-            proc: array![_ => Spinlock::new(Process::new(), "proc"); NPROC],
+            proc: array![_ => Process::new(); NPROC]
         }
     }
 
-    pub fn get_table_mut(&mut self) -> &mut [Spinlock<Process>; NPROC]{
+
+    // pub fn get_table_mut(&mut self) -> &mut [Spinlock<Process>; NPROC]{
+    //     &mut self.proc
+    // }
+    
+    pub fn get_table_mut(&mut self) -> &mut [Process; NPROC] {
         &mut self.proc
     }
-
 
     
 
@@ -43,11 +55,17 @@ impl ProcManager{
     // Only used in boot.
     pub unsafe fn procinit(){
         println!("procinit......");
-        for p in PROC_MANAGER.proc.iter_mut(){
-            let mut guard = p.acquire();
-            let curr_proc_addr = guard.as_ptr_addr();
-            guard.set_kstack(curr_proc_addr - PROC_MANAGER.proc.as_ptr() as usize);
-            drop(guard);
+        for (pos, p) in PROC_MANAGER.proc.iter_mut().enumerate() {
+            let guard = p.data.acquire();
+            let pa = kalloc().expect("no enough page for kernel process");
+            let va = kstack(pos);
+            PageTable::empty().kvmmap(
+                VirtualAddress::new(va),
+                PhysicalAddress::new(pa as usize),
+                PGSIZE,
+                PteFlags::R | PteFlags::W,
+            );
+            guard.set_kstack(pa as usize);
         }
 
         println!("procinit done......");
@@ -121,3 +139,7 @@ pub unsafe fn alloc_pid() -> usize{
 }
 
 
+#[inline]
+fn kstack(pos: usize) -> usize {
+    Into::<usize>::into(TRAMPOLINE) - (pos + 1) * 2 * PGSIZE
+}
