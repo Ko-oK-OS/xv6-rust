@@ -1,5 +1,5 @@
 use core::ptr;
-use crate::lock::spinlock::Spinlock;
+use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     address::{VirtualAddress, Addr},
     mapping::page_table::PageTable,
@@ -38,6 +38,10 @@ pub struct Process {
     // TODO: Open files and Current directory
     name: &'static str   // Process name (debugging)
 }
+
+
+
+
 
 impl Process{
     pub const fn new() -> Self{
@@ -90,6 +94,33 @@ impl Process{
     pub fn yielding(&self){
 
     }
+
+    // Atomically release lock and sleep on chan
+    // Reacquires lock when awakened.
+    // pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<T>) {
+    //     let my_proc = unsafe { CPU_MANAGER.myproc().unwrap() };
+
+    //     // Must acquire p->lock in order to 
+    //     // change p->state and then call sched.
+    //     // Once we hold p->lock, we can be
+    //     // guaranteed that we won't miss any wakeup
+    //     // (wakeup locks p->lock)
+    //     // so it's okay to release lk;
+    //     let mut guard = my_proc.acquire();
+    //     drop(lock);
+
+    //     guard.channel = channel;
+    //     guard.state = Procstate::SLEEPING;
+
+    //     unsafe {
+    //         let c = CPU_MANAGER.mycpu();
+    //         // guard = c.sched(
+    //         //     guard, 
+    //         //     &mut (*self.data.get()).context as *mut _
+    //         // );
+    //     }
+
+    // }
 }
 
 extern "C" {

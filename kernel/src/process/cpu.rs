@@ -36,10 +36,10 @@ impl CPUManager{
 
     pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
         push_off();
-        let p;
         let c = CPU_MANAGER.mycpu();
         if let Some(proc) = c.process{
-           p = &mut *(proc.as_ptr());
+           let p = &mut *(proc.as_ptr());
+        //    let p = Spinlock::new(p, "process");
            pop_off();
            return Some(p)
         }
@@ -80,7 +80,9 @@ impl CPU{
     // break in the few places where a lock is held but
     // there's no process.
 
-    pub unsafe fn sched(&mut self, guard: SpinlockGuard<Process>, ctx: *mut Context){
+    pub unsafe fn sched<'a>(&mut self, guard: SpinlockGuard<'a, Process>, ctx: *mut Context)
+        ->  SpinlockGuard<'a, Process> 
+    {
         // I have something confused about this function.
 
         if !guard.holding(){
@@ -106,6 +108,8 @@ impl CPU{
 
         swtch(ctx, self.get_context_mut());
         self.intena = intena;
+
+        guard
     }
 }
 
