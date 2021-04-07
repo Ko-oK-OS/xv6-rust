@@ -91,11 +91,9 @@ pub unsafe fn kerneltrap() {
 pub unsafe fn clockintr(){
     let mut ticks = TICKSLOCK.acquire();
     *ticks = *ticks + 1;
-    if *ticks % 5 == 0{
+    if *ticks % 100 == 0{
         println!("TICKS: {}", *ticks);
-        // panic!("TICKS: {}", *ticks);
     }
-    // TICKSLOCK.release();
     drop(ticks);
 }
 
@@ -134,7 +132,7 @@ unsafe fn devintr() -> usize {
         }
 
         Trap::Interrupt(Interrupt::SupervisorSoft) => {
-            println!("Timer Interupt Occures!");
+            // println!("Timer Interupt Occures!");
             // software interrupt from a machine-mode timer interrupt,
             // forwarded by timervec in kernelvec.S.
 

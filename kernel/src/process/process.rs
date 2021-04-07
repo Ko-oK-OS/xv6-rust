@@ -19,6 +19,10 @@ pub enum Procstate{
 
 
 pub struct Process {
+    pub data: Spinlock<ProcData>
+}
+
+pub struct ProcData {
     // p->lock must be held when using these
     pub state:Procstate,
     pub channel:usize, // If non-zero, sleeping on chan
@@ -30,22 +34,18 @@ pub struct Process {
     pub parent: Option<ptr::NonNull<Process>>,
 
     // these are private to the process, so p->lock need to be held
-    kstack:usize,  // Virtual address of kernel stack
-    size:usize, // size of process memory
-    pagetable: Option<Box<PageTable>>, // User page table
-    trapframe: *mut Trapframe, // data page for trampoline.S
-    context: Context, // swtch() here to run processs
+    pub kstack:usize,  // Virtual address of kernel stack
+    pub size:usize, // size of process memory
+    pub pagetable: Option<Box<PageTable>>, // User page table
+    pub trapframe: *mut Trapframe, // data page for trampoline.S
+    pub context: Context, // swtch() here to run processs
     // TODO: Open files and Current directory
     name: &'static str   // Process name (debugging)
 }
 
-
-
-
-
-impl Process{
-    pub const fn new() -> Self{
-        Self{    
+impl ProcData {
+    pub const fn new() -> Self {
+        Self {
             state: Procstate::UNUSED,
             channel: 0,
             killed: 0,
@@ -59,7 +59,16 @@ impl Process{
             trapframe: ptr::null_mut(),
             context: Context::new(),
             name: "process"
+        }
+    }
+}
 
+
+
+impl Process{
+    pub const fn new() -> Self{
+        Self{    
+            data: Spinlock::new(ProcData::new(), "process")
         }
     }
 
@@ -80,7 +89,7 @@ impl Process{
     }
 
     pub fn set_kstack(&mut self, addr:usize){
-        self.kstack = addr
+        self.data.kstack = addr
     }
 
     pub fn set_state(&mut self, state: Procstate){
