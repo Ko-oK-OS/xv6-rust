@@ -4,7 +4,7 @@ use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE, P
 use crate::register::{satp, sfence_vma};
 
 
-static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
+pub static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
 extern "C" {
     fn etext();
     fn trampoline();

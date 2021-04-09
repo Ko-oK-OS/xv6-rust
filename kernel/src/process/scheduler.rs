@@ -43,13 +43,13 @@ impl ProcManager{
 
     // initialize the proc table at boot time.
     // Only used in boot.
-    pub unsafe fn procinit(){
+    pub unsafe fn procinit(&mut self){
         println!("procinit......");
-        for (pos, p) in PROC_MANAGER.proc.iter_mut().enumerate() {
+        for (pos, p) in self.proc.iter_mut().enumerate() {
             let mut guard = p.data.acquire();
             let pa = kalloc().expect("no enough page for kernel process");
             let va = kstack(pos);
-            PageTable::empty().kvmmap(
+            KERNEL_PAGETABLE.kvmmap(
                 VirtualAddress::new(va),
                 PhysicalAddress::new(pa as usize),
                 PGSIZE,
