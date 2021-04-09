@@ -14,11 +14,17 @@ pub enum Procstate{
     SLEEPING,
     RUNNABLE,
     RUNNING,
-    ZOMBIE
+    ZOMBIE,
+    ALLOCATED
 }
 
 
 pub struct Process {
+    pub data: Spinlock<ProcData>,
+    name: &'static str   // Process name (debugging)
+}
+
+pub struct ProcData {
     // p->lock must be held when using these
     pub state:Procstate,
     pub channel:usize, // If non-zero, sleeping on chan
@@ -30,22 +36,17 @@ pub struct Process {
     pub parent: Option<ptr::NonNull<Process>>,
 
     // these are private to the process, so p->lock need to be held
-    kstack:usize,  // Virtual address of kernel stack
-    size:usize, // size of process memory
-    pagetable: Option<Box<PageTable>>, // User page table
-    trapframe: *mut Trapframe, // data page for trampoline.S
-    context: Context, // swtch() here to run processs
+    pub kstack:usize,  // Virtual address of kernel stack
+    pub size:usize, // size of process memory
+    pub pagetable: Option<Box<PageTable>>, // User page table
+    pub trapframe: *mut Trapframe, // data page for trampoline.S
+    pub context: Context, // swtch() here to run processs
     // TODO: Open files and Current directory
-    name: &'static str   // Process name (debugging)
 }
 
-
-
-
-
-impl Process{
-    pub const fn new() -> Self{
-        Self{    
+impl ProcData {
+    pub const fn new() -> Self {
+        Self {
             state: Procstate::UNUSED,
             channel: 0,
             killed: 0,
@@ -58,8 +59,29 @@ impl Process{
             pagetable: None,
             trapframe: ptr::null_mut(),
             context: Context::new(),
-            name: "process"
+        }
+    }
 
+    pub fn set_kstack(&mut self, ksatck:usize) {
+        self.kstack = ksatck;
+    }
+
+    pub fn set_state(&mut self, state: Procstate) {
+        self.state = state;
+    }
+
+    pub fn get_context_mut(&mut self) -> *mut Context {
+        &mut self.context as *mut Context
+    }
+}
+
+
+
+impl Process{
+    pub const fn new() -> Self{
+        Self{    
+            data: Spinlock::new(ProcData::new(), "process"),
+            name: "process"
         }
     }
 
@@ -79,17 +101,6 @@ impl Process{
         self as *mut Process as usize
     }
 
-    pub fn set_kstack(&mut self, addr:usize){
-        self.kstack = addr
-    }
-
-    pub fn set_state(&mut self, state: Procstate){
-        self.state = state;
-    }
-
-    pub fn get_context_mut(&mut self) -> *mut Context{
-        &mut self.context as *mut Context
-    }
 
     pub fn yielding(&self){
 
