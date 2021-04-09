@@ -102,8 +102,21 @@ impl Process{
     }
 
 
-    pub fn yielding(&self){
+    // Give up the CPU for one scheduling round.
+    // yield is a keyword in rust
+    pub fn yielding(&self) {
+        let mut guard = self.data.acquire();
+        let ctx = guard.get_context_mut();
+        guard.set_state(Procstate::RUNNABLE);
 
+        unsafe {
+            let my_cpu = CPU_MANAGER.mycpu();
+            guard = my_cpu.sched(
+                guard,
+                ctx
+            );
+        }
+        drop(guard)
     }
 
     // Atomically release lock and sleep on chan
@@ -124,12 +137,15 @@ impl Process{
 
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
-            let ctx = guard.get_context_mut(); 
+            let ctx = guard.get_context_mut();
+            
+            // get schedule process
             guard = my_cpu.sched(
                 guard, 
                 ctx
             );
 
+            // Tide up
             guard.channel = 0;
             drop(guard);
         }
