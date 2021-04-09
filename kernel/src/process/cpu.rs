@@ -39,7 +39,6 @@ impl CPUManager{
         let c = CPU_MANAGER.mycpu();
         if let Some(proc) = c.process{
            let p = &mut *(proc.as_ptr());
-        //    let p = Spinlock::new(p, "process");
            pop_off();
            return Some(p)
         }
@@ -80,37 +79,39 @@ impl CPU{
     // break in the few places where a lock is held but
     // there's no process.
 
-    pub unsafe fn sched<'a>(&mut self, guard: SpinlockGuard<'a, Process>, ctx: *mut Context)
-        ->  SpinlockGuard<'a, Process> 
+    pub unsafe fn sched<'a>(&mut self, 
+        guard: SpinlockGuard<'a, ProcData>, 
+        ctx: *mut Context) 
+    -> SpinlockGuard<'a, ProcData>
     {
-        // I have something confused about this function.
-
-        if !guard.holding(){
-            panic!("sched p->lock");
-        }
-
-        if self.noff != 1{
-            panic!("sched locks");
-        }
-
-        if guard.state == Procstate::RUNNING{
-            panic!("sched running");
-        }
-
-        if intr_get(){
-            panic!("sched interruptible");
-        }
-
-        let intena = self.intena;
         extern "C" {
             fn swtch(old: *mut Context, new: *mut Context);
         }
 
-        swtch(ctx, self.get_context_mut());
+        if !guard.holding() {
+            panic!("sched: not holding proc's lock");
+        }
+
+        if self.noff != 1 {
+            panic!("sched: cpu hold mutliple locks");
+        }
+
+        if guard.state == Procstate::RUNNING {
+            panic!("sched: proc is running");
+        }
+
+        if sstatus::intr_get() {
+            panic!("sched: interruptible");
+        }
+
+        let intena = self.intena;
+        swtch(ctx, &mut self.context as *mut Context);
         self.intena = intena;
 
         guard
+        
     }
+
 }
 
 // push_off/pop_off are like intr_off()/intr_on() except that they are matched:

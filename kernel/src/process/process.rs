@@ -14,7 +14,8 @@ pub enum Procstate{
     SLEEPING,
     RUNNABLE,
     RUNNING,
-    ZOMBIE
+    ZOMBIE,
+    ALLOCATED
 }
 
 

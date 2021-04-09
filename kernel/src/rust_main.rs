@@ -25,7 +25,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         kinit(); // physical page allocator
         kvminit(); // create kernel page table
         kvminithart(); // turn on paging
-        ProcManager::procinit();
+        // ProcManager::procinit();
         trapinit();      // trap vectors
         trapinithart(); // trap vectors
         plicinit(); // set up interrupt controller
@@ -33,14 +33,14 @@ pub unsafe extern "C" fn rust_main() -> !{
 
         // llvm_asm!("ebreak"::::"volatile");
 
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        sstatus::intr_on();
-        loop{}
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // sstatus::intr_on();
+        // loop{}
     }else{
         println!("hart {} starting\n", cpu::cpuid());
-        kvminithart(); // turn on paging
-        trapinithart();   // install kernel trap vector
-        plicinithart();   // ask PLIC for device interrupts
+        // kvminithart(); // turn on paging
+        // trapinithart();   // install kernel trap vector
+        // plicinithart();   // ask PLIC for device interrupts
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // loop{}
     }
