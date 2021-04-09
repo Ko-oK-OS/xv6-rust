@@ -102,36 +102,56 @@ impl Process{
     }
 
 
-    pub fn yielding(&self){
+    // Give up the CPU for one scheduling round.
+    // yield is a keyword in rust
+    pub fn yielding(&self) {
+        let mut guard = self.data.acquire();
+        let ctx = guard.get_context_mut();
+        guard.set_state(Procstate::RUNNABLE);
 
+        unsafe {
+            let my_cpu = CPU_MANAGER.mycpu();
+            guard = my_cpu.sched(
+                guard,
+                ctx
+            );
+        }
+        drop(guard)
     }
 
     // Atomically release lock and sleep on chan
     // Reacquires lock when awakened.
-    // pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<T>) {
-    //     let my_proc = unsafe { CPU_MANAGER.myproc().unwrap() };
+    pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<T>) {
+        // Must acquire p->lock in order to 
+        // change p->state and then call sched.
+        // Once we hold p->lock, we can be
+        // guaranteed that we won't miss any wakeup
+        // (wakeup locks p->lock)
+        // so it's okay to release lk;
+        let mut guard = self.data.acquire();
+        drop(lock);
 
-    //     // Must acquire p->lock in order to 
-    //     // change p->state and then call sched.
-    //     // Once we hold p->lock, we can be
-    //     // guaranteed that we won't miss any wakeup
-    //     // (wakeup locks p->lock)
-    //     // so it's okay to release lk;
-    //     let mut guard = my_proc.acquire();
-    //     drop(lock);
+        // Go to sleep.
+        guard.channel = channel;
+        guard.set_state(Procstate::SLEEPING);
 
-    //     guard.channel = channel;
-    //     guard.state = Procstate::SLEEPING;
+        unsafe {
+            let my_cpu = CPU_MANAGER.mycpu();
+            let ctx = guard.get_context_mut();
+            
+            // get schedule process
+            guard = my_cpu.sched(
+                guard, 
+                ctx
+            );
 
-    //     unsafe {
-    //         let c = CPU_MANAGER.mycpu();
-    //         // guard = c.sched(
-    //         //     guard, 
-    //         //     &mut (*self.data.get()).context as *mut _
-    //         // );
-    //     }
+            // Tide up
+            guard.channel = 0;
+            drop(guard);
+        }
+        
 
-    // }
+    }
 }
 
 extern "C" {

@@ -79,9 +79,12 @@ impl CPU{
     // break in the few places where a lock is held but
     // there's no process.
 
-    pub unsafe fn sched<'a>(&mut self, 
+    pub unsafe fn sched<'a>
+    (
+        &mut self, 
         guard: SpinlockGuard<'a, ProcData>, 
-        ctx: *mut Context) 
+        ctx: *mut Context
+    ) 
     -> SpinlockGuard<'a, ProcData>
     {
         extern "C" {
