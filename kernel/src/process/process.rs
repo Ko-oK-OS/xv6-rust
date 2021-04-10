@@ -62,8 +62,12 @@ impl ProcData {
         }
     }
 
-    pub fn set_kstack(&mut self, ksatck:usize) {
+    pub fn set_kstack(&mut self, ksatck: usize) {
         self.kstack = ksatck;
+    }
+
+    pub fn set_trapframe(&mut self, trapframe: *mut Trapframe) {
+        self.trapframe = trapframe;
     }
 
     pub fn set_state(&mut self, state: Procstate) {
@@ -73,6 +77,10 @@ impl ProcData {
     pub fn get_context_mut(&mut self) -> *mut Context {
         &mut self.context as *mut Context
     }
+
+    // free a proc structure and the data hanging from it,
+    // including user pages.
+    // p.acquire() must be held.
 }
 
 

@@ -1,7 +1,7 @@
 use core::ptr::{write, read, write_bytes, copy_nonoverlapping};
 use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
-use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT };
+use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc:: {kalloc, kfree}, 
@@ -42,6 +42,31 @@ impl PageTable{
         }
     }
 
+
+    // Recursively free page-table pages.
+    // All leaf mappings must already have been removed.
+
+    pub fn freewalk(&mut self) {
+        // there are 2^9 = 512 PTEs in a pagetable
+        for i in 0..512 {
+            let pte = self.entries[i];
+            if pte.is_valid() && (pte.is_read() || pte.is_write() || pte.is_execute()) {
+                // this PTE points to a lower-level page. 
+                unsafe {
+                    let child = &mut *(pte.as_pagetable());
+                    child.freewalk();
+                }
+                self.entries[i] = PageTableEntry::new(0);
+            }else if pte.is_valid() {
+                panic!("freewalk: leaf");
+            }
+        }
+
+        unsafe {
+            kfree(PhysicalAddress::new(self.entries.as_ptr() as usize));
+        }
+    }
+
     
 
     // Return the address of the PTE in page table pagetable
@@ -76,11 +101,6 @@ impl PageTable{
                 }
                 match unsafe{Box::<PageTable>::new()}{
                     Some(mut new_pagetable) => {
-                        // let page_addr = page_table as usize;
-                        // for i in 0..PGSIZE{
-                        //     unsafe{write((page_addr + i) as *mut u8, 0)};
-                        // }
-                        // unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
                         new_pagetable.clear();
                         pagetable = new_pagetable.into_raw();
                         pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
@@ -265,6 +285,22 @@ impl PageTable{
         Some(new_size)
     }
 
+    // Free user memory pages,
+    // then free page-table pages
+    pub fn uvmfree(&mut self, size: usize) {
+        if size > 0 {
+            let mut pa = PhysicalAddress::new(size);
+            pa.pg_round_up();
+            self.uvmunmap(
+                VirtualAddress::new(0),
+                 pa.as_usize(),
+                1
+            );
+        }
+
+        self.freewalk();
+    }
+
 
     // Deallocate user pages to bring the process size from oldsz to
     // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
@@ -328,6 +364,25 @@ impl PageTable{
         }
 
 
+    }
+
+
+    // Free a process's page table, and free the
+    // physical memory it refers to.
+    pub fn proc_freepagetable(&mut self, size: usize) {
+        self.uvmunmap(
+            VirtualAddress::new(TRAMPOLINE ), 
+            1, 
+            0
+        );
+
+        self.uvmunmap(
+            VirtualAddress::new(TRAPFRAME),
+            1,
+            0
+        );
+
+        self.uvmfree(size);
     }
 
 }

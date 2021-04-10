@@ -46,6 +46,21 @@ impl PageTableEntry{
         (self.0 & (PteFlags::V.bits())) > 0
     }
 
+    #[inline] 
+    pub fn is_read(&self) -> bool {
+        (self.0 & (PteFlags::R.bits())) > 0
+    }
+
+    #[inline]
+    pub fn is_write(&self) -> bool {
+        (self.0 & (PteFlags::W.bits())) > 0
+    }
+
+    #[inline] 
+    pub fn is_execute(&self) -> bool {
+        (self.0 & (PteFlags::X.bits())) > 0
+    }
+
     #[inline]
     pub fn add_valid_bit(&self) -> Self{
         let pte = self.as_usize() | (PteFlags::V.bits());
