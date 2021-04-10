@@ -1,7 +1,8 @@
-use core::ptr;
+use core::ptr::*;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
-    address::{VirtualAddress, Addr},
+    kalloc::*,
+    address::{ PhysicalAddress, VirtualAddress, Addr },
     mapping::page_table::PageTable,
     container::boxed::Box
 };
@@ -33,7 +34,7 @@ pub struct ProcData {
     pub pid: usize,   // Process ID
 
     // proc_tree_lock must be held when using this:
-    pub parent: Option<ptr::NonNull<Process>>,
+    pub parent: Option<NonNull<Process>>,
 
     // these are private to the process, so p->lock need to be held
     pub kstack:usize,  // Virtual address of kernel stack
@@ -57,7 +58,7 @@ impl ProcData {
             kstack:0,
             size: 0,
             pagetable: None,
-            trapframe: ptr::null_mut(),
+            trapframe: null_mut(),
             context: Context::new(),
         }
     }
@@ -74,13 +75,55 @@ impl ProcData {
         self.state = state;
     }
 
+    pub fn set_pagetable(&mut self, pagetable: Option<Box<PageTable>>) {
+        self.pagetable = pagetable
+    }
+
+    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
+        self.parent = parent;
+    }
+
+    pub fn set_context(&mut self, ctx: Context) {
+        self.context = ctx
+    }
+
     pub fn get_context_mut(&mut self) -> *mut Context {
         &mut self.context as *mut Context
     }
 
+    // pub fn get_pagetable(&self) -> Option<&Box<PageTable>> {
+    //     self.pagetable.as_ref()
+    // }
+
     // free a proc structure and the data hanging from it,
     // including user pages.
     // p.acquire() must be held.
+    pub fn freeproc(&mut self) {
+        if !self.trapframe.is_null() {
+            unsafe {
+                kfree(PhysicalAddress::new(self.trapframe as usize));
+            }
+
+            self.set_trapframe(0 as *mut Trapframe);
+
+            if let Some(page_table) = self.pagetable.as_ref() {
+                unsafe{
+                    let page_table = &mut *page_table.into_raw();
+                    page_table.proc_freepagetable(self.size);
+                }
+            }
+
+            self.set_pagetable(None);
+            self.size = 0;
+            self.pid = 0;
+            self.set_parent(None);
+            self.channel = 0;
+            self.killed = 0;
+            self.xstate = 0;
+            self.set_state(Procstate::UNUSED);
+            
+        }
+    }
 }
 
 

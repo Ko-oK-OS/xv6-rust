@@ -57,8 +57,8 @@ impl PageTable{
                     child.freewalk();
                 }
                 self.entries[i] = PageTableEntry::new(0);
-            }else if pte.is_valid() {
-                panic!("freewalk: leaf");
+            } else if pte.is_valid() {
+                panic!("freewalk(): leaf not be removed");
             }
         }
 
@@ -84,7 +84,11 @@ impl PageTable{
 
 
     // find  the PTE for a virtual address
-     fn walk(&mut self, va: VirtualAddress, alloc:i32) -> Option<&mut PageTableEntry>{
+     fn walk(
+         &mut self, 
+         va: VirtualAddress, 
+         alloc:i32
+        ) -> Option<&mut PageTableEntry> {
         let mut pagetable = self as *mut PageTable;
         let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
@@ -118,7 +122,10 @@ impl PageTable{
     // Look up a virtual address, return the physical address,
     // or 0 if not mapped.
     // Can only be used to look up user pages.
-    pub fn walkaddr(pagetable: &mut PageTable, va: VirtualAddress) -> Option<PhysicalAddress>{
+    pub fn walkaddr(
+        pagetable: &mut PageTable, 
+        va: VirtualAddress
+    ) -> Option<PhysicalAddress> {
         let addr = va.as_usize();
         if addr > MAXVA{
             return None
@@ -171,12 +178,6 @@ impl PageTable{
                     );
                     panic!("remap");
                 }
-                // let pa_usize = pa.as_usize();
-                //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
-                 
-                // write(pte.as_mut_ptr() as *mut PageTableEntry,
-                // PageTableEntry::new(PageTableEntry::as_pte(pa_usize).as_usize() | perm).add_valid_bit());
-                //  println!("write pagetable entry");
                 pte.write_perm(pa, perm);
                 va.add_page();
                 pa.add_page();
@@ -192,11 +193,13 @@ impl PageTable{
     // only used when booting
     // does not flush TLB or enable paging
     
-    pub unsafe fn kvmmap(&mut self, 
+    pub unsafe fn kvmmap(
+        &mut self, 
         va:VirtualAddress, 
         pa:PhysicalAddress, 
         size:usize, 
-        perm:PteFlags){
+        perm:PteFlags
+    ) {
         println!(
             "kvm_map: va={:#x}, pa={:#x}, size={:#x}",
             va.as_usize(),

@@ -6,6 +6,8 @@ use crate::memory::{
     kalloc::{ kalloc, kfree},
     address::PhysicalAddress
 };
+
+#[derive(Clone)]
 pub struct Box<T: ?Sized>(Unique<T>);
 
 impl<T> Box<T>{
@@ -19,7 +21,7 @@ impl<T> Box<T>{
         }
     }
 
-    pub fn into_raw(self) -> *mut T{
+    pub fn into_raw(&self) -> *mut T{
         let ptr = self.0.as_ptr();
         mem::forget(self);
         ptr

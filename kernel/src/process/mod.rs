@@ -10,7 +10,6 @@ pub use process::*;
 pub use scheduler::*;
 
 
-use crate::register::sstatus::{ intr_get, intr_off, intr_on };
 
 
 
