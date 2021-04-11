@@ -98,6 +98,7 @@ impl ProcData {
     // free a proc structure and the data hanging from it,
     // including user pages.
     // p.acquire() must be held.
+
     pub fn freeproc(&mut self) {
         if !self.trapframe.is_null() {
             unsafe {
@@ -106,12 +107,10 @@ impl ProcData {
 
             self.set_trapframe(0 as *mut Trapframe);
 
-            if let Some(page_table) = self.pagetable.as_ref() {
-                unsafe{
-                    let page_table = &mut *page_table.into_raw();
-                    page_table.proc_freepagetable(self.size);
-                }
+            if let Some(page_table) = self.pagetable.as_mut() {
+                page_table.proc_freepagetable(self.size);
             }
+
 
             self.set_pagetable(None);
             self.size = 0;
