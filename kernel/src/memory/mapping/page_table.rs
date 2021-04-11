@@ -153,7 +153,7 @@ impl PageTable{
     // be page-aligned. Returns 0 on success, -1 if walk() couldn't
     // allocate a needed page-table page.
 
-    unsafe fn mappages(
+    pub unsafe fn mappages(
         &mut self, 
         mut va: VirtualAddress, 
         mut pa: PhysicalAddress, 
@@ -214,7 +214,7 @@ impl PageTable{
 
     // Create an empty user page table.
     // return None if out of memory
-    unsafe fn uvmcreate() -> Option<*mut PageTable>{
+    pub unsafe fn uvmcreate() -> Option<*mut PageTable>{
         match Box::<PageTable>::new(){
             Some(mut page_table) => {
                 page_table.clear();

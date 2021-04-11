@@ -3,9 +3,10 @@ use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     kalloc::*,
     address::{ PhysicalAddress, VirtualAddress, Addr },
-    mapping::page_table::PageTable,
+    mapping::{ page_table::PageTable, page_table_entry::PteFlags},
     container::boxed::Box
 };
+use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use super::*;
 
 #[derive(PartialEq, Copy, Clone)]
@@ -91,9 +92,6 @@ impl ProcData {
         &mut self.context as *mut Context
     }
 
-    // pub fn get_pagetable(&self) -> Option<&Box<PageTable>> {
-    //     self.pagetable.as_ref()
-    // }
 
     // free a proc structure and the data hanging from it,
     // including user pages.
@@ -123,6 +121,51 @@ impl ProcData {
             
         }
     }
+
+
+        // Create a user page table for a given process,
+    // with no user memory, but with trampoline pages
+    pub unsafe fn proc_pagetable(&mut self) -> Option<*mut PageTable> {
+
+        // An empty page table
+        if let Some(page_table) = PageTable::uvmcreate() {
+            // map the trampoline code (for system call return )
+            // at the highest user virtual address.
+            // only the supervisor uses it, on the way
+            // to/from user space, so not PTE_U. 
+            let page_table = &mut *page_table;
+            let is_ok = page_table.mappages(
+                VirtualAddress::new(TRAMPOLINE),
+                PhysicalAddress::new(TRAMPOLINE),
+                PGSIZE,
+                PteFlags::R | PteFlags::X
+            );
+
+            if !is_ok {
+                page_table.uvmfree(0);
+
+                return None
+            }
+
+            // map the trapframe just below TRAMPOLINE, for trampoline.S 
+            let is_ok = page_table.mappages(
+                VirtualAddress::new(TRAPFRAME), 
+                PhysicalAddress::new(self.trapframe as usize),
+                PGSIZE,
+                PteFlags::R | PteFlags::X
+            );
+
+            if !is_ok {
+                page_table.uvmfree(0);
+                return None
+            }
+
+            return Some(page_table)
+        }
+
+        None
+
+    }
 }
 
 
@@ -150,6 +193,8 @@ impl Process{
     pub fn as_mut_ptr_addr(&mut self) -> usize{
         self as *mut Process as usize
     }
+
+
 
 
     // Give up the CPU for one scheduling round.

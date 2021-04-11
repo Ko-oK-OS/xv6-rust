@@ -58,7 +58,7 @@ impl ProcManager{
     // Map it high in memory, followed by an invalid 
     // group page
     pub unsafe fn proc_mapstacks(&mut self) {
-        for (pos, p) in self.proc.iter_mut().enumerate() {
+        for (pos, _) in self.proc.iter_mut().enumerate() {
             let pa = kalloc().expect("Fail to allocate physical page.");
             let va = kstack(pos);
 
@@ -85,13 +85,15 @@ impl ProcManager{
                 guard.pid = alloc_pid();
                 guard.set_state(Procstate::USED);
 
+                // Allocate a trapframe page.
                 match unsafe { kalloc() } {
                     Some(pa) => {
                         guard.set_trapframe(pa as *mut Trapframe);
                     }
 
                     None => {
-                        
+                        guard.freeproc();
+                        drop(guard);
                         return None
                     }
                 }
