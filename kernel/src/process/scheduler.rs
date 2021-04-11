@@ -6,7 +6,7 @@ use crate::define::{
     param::NPROC,
     memlayout::{ KSTACK, PGSIZE, TRAMPOLINE }
 };
-use crate::lock::spinlock::{ Spinlock };
+use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
 use crate::memory::*;
 
@@ -78,7 +78,12 @@ impl ProcManager{
     // and return p.acquire() held.
     // If there are a free procs, or a memory allocation fails, return 0. 
 
-    pub fn allocaproc(&mut self) -> Option<Process> {
+    // TODO: possible error occurs here.
+    pub fn allocaproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
+        extern "C" {
+            fn forkret();
+        }
+
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             if guard.state == Procstate::UNUSED {
@@ -89,6 +94,27 @@ impl ProcManager{
                 match unsafe { kalloc() } {
                     Some(pa) => {
                         guard.set_trapframe(pa as *mut Trapframe);
+
+                        // An empty user page table
+                        if let Some(page_table) = unsafe { guard.proc_pagetable() } {
+                            unsafe {
+                                guard.set_pagetable(Box::<PageTable>::new_ptr(*page_table));
+                            }
+
+                            // Set up new context to start executing at forkret, 
+                            // which returns to user space. 
+                            let kstack = guard.kstack;
+                            guard.context.write_zero();
+                            guard.context.write_ra(forkret as usize);
+                            guard.context.write_sp(kstack + PGSIZE);
+
+                            return Some(guard)
+                            
+                        } else {
+                            guard.freeproc();
+                            drop(guard);
+                            return None
+                        }
                     }
 
                     None => {

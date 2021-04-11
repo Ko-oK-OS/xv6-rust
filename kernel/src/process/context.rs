@@ -38,4 +38,29 @@ impl Context{
 
         }
     }
+
+    pub fn write_zero(&mut self) {
+        self.ra = 0;
+        self.sp = 0;
+        self.s0 = 0;
+        self.s1 = 0;
+        self.s2 = 0;
+        self.s3 = 0;
+        self.s4 = 0;
+        self.s5 = 0;
+        self.s6 = 0;
+        self.s7 = 0;
+        self.s8 = 0;
+        self.s9 = 0;
+        self.s10 = 0;
+        self.s11 = 0;
+    }
+
+    pub fn write_ra(&mut self, ra: usize) {
+        self.ra = ra;
+    }
+
+    pub fn write_sp(&mut self, sp: usize) {
+        self.sp = sp;
+    }
 }
