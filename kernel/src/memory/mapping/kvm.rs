@@ -2,6 +2,7 @@ use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE, PHYSTOP, TRAMPOLINE };
 use crate::register::{satp, sfence_vma};
+use crate::process::*;
 
 
 pub static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
@@ -30,7 +31,7 @@ pub unsafe fn kvminithart(){
 
 
 // Make a direct-map page table for the kernel.
-unsafe fn kvmmake(){
+unsafe fn kvmmake() {
     println!("kvmmake start......");
 
 
@@ -41,7 +42,7 @@ unsafe fn kvmmake(){
         VirtualAddress::new(UART0), 
         PhysicalAddress::new(UART0), 
         PGSIZE, 
-        PteFlags::R| PteFlags::W,
+        PteFlags::R | PteFlags::W,
     );
 
     println!("virtio0 map......");
@@ -90,7 +91,10 @@ unsafe fn kvmmake(){
         PteFlags::R | PteFlags::X
     );
 
-    // TODO: map kernel stacks
-    
+    // map kernel stacks
+    println!("process stack map......");
+    PROC_MANAGER.proc_mapstacks();
+
+    println!("process stack map done......");
 }
 

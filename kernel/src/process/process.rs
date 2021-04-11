@@ -1,10 +1,12 @@
-use core::ptr;
+use core::ptr::*;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
-    address::{VirtualAddress, Addr},
-    mapping::page_table::PageTable,
+    kalloc::*,
+    address::{ PhysicalAddress, VirtualAddress, Addr },
+    mapping::{ page_table::PageTable, page_table_entry::PteFlags},
     container::boxed::Box
 };
+use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use super::*;
 
 #[derive(PartialEq, Copy, Clone)]
@@ -33,7 +35,7 @@ pub struct ProcData {
     pub pid: usize,   // Process ID
 
     // proc_tree_lock must be held when using this:
-    pub parent: Option<ptr::NonNull<Process>>,
+    pub parent: Option<NonNull<Process>>,
 
     // these are private to the process, so p->lock need to be held
     pub kstack:usize,  // Virtual address of kernel stack
@@ -57,21 +59,137 @@ impl ProcData {
             kstack:0,
             size: 0,
             pagetable: None,
-            trapframe: ptr::null_mut(),
+            trapframe: null_mut(),
             context: Context::new(),
         }
     }
 
-    pub fn set_kstack(&mut self, ksatck:usize) {
+    pub fn set_kstack(&mut self, ksatck: usize) {
         self.kstack = ksatck;
+    }
+
+    pub fn set_trapframe(&mut self, trapframe: *mut Trapframe) {
+        self.trapframe = trapframe;
     }
 
     pub fn set_state(&mut self, state: Procstate) {
         self.state = state;
     }
 
+    pub fn set_pagetable(&mut self, pagetable: Option<Box<PageTable>>) {
+        self.pagetable = pagetable
+    }
+
+    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
+        self.parent = parent;
+    }
+
+    pub fn set_context(&mut self, ctx: Context) {
+        self.context = ctx
+    }
+
     pub fn get_context_mut(&mut self) -> *mut Context {
         &mut self.context as *mut Context
+    }
+
+
+    // free a proc structure and the data hanging from it,
+    // including user pages.
+    // p.acquire() must be held.
+
+    pub fn freeproc(&mut self) {
+        if !self.trapframe.is_null() {
+            unsafe {
+                kfree(PhysicalAddress::new(self.trapframe as usize));
+            }
+
+            self.set_trapframe(0 as *mut Trapframe);
+
+            if let Some(page_table) = self.pagetable.as_mut() {
+                page_table.proc_freepagetable(self.size);
+            }
+
+
+            self.set_pagetable(None);
+            self.size = 0;
+            self.pid = 0;
+            self.set_parent(None);
+            self.channel = 0;
+            self.killed = 0;
+            self.xstate = 0;
+            self.set_state(Procstate::UNUSED);
+            
+        }
+    }
+
+
+    // Create a user page table for a given process,
+    // with no user memory, but with trampoline pages
+    pub unsafe fn proc_pagetable(&mut self) -> Option<*mut PageTable> {
+
+        // An empty page table
+        if let Some(page_table) = PageTable::uvmcreate() {
+            // map the trampoline code (for system call return )
+            // at the highest user virtual address.
+            // only the supervisor uses it, on the way
+            // to/from user space, so not PTE_U. 
+            let page_table = &mut *page_table;
+            let is_ok = page_table.mappages(
+                VirtualAddress::new(TRAMPOLINE),
+                PhysicalAddress::new(TRAMPOLINE),
+                PGSIZE,
+                PteFlags::R | PteFlags::X
+            );
+
+            if !is_ok {
+                page_table.uvmfree(0);
+
+                return None
+            }
+
+            // map the trapframe just below TRAMPOLINE, for trampoline.S 
+            let is_ok = page_table.mappages(
+                VirtualAddress::new(TRAPFRAME), 
+                PhysicalAddress::new(self.trapframe as usize),
+                PGSIZE,
+                PteFlags::R | PteFlags::X
+            );
+
+            if !is_ok {
+                page_table.uvmfree(0);
+                return None
+            }
+
+            return Some(page_table)
+        }
+
+        None
+
+    }
+
+    // Grow or shrink user memory by n bytes. 
+    // Return true on success, false on failure. 
+    pub fn growproc(&mut self, n: isize) -> bool {
+        let mut size = self.size; 
+        let page_table = self.pagetable.as_mut().unwrap();
+        if n > 0 {
+            match unsafe { page_table.uvmalloc(size, size + n as usize) } {
+                Some(new_size) => {
+                    size = new_size;
+                },
+
+                None => {
+                    return false
+                }
+            }
+        }else if n < 0 {
+            let new_size = (size as isize + n) as usize;
+            size = page_table.uvmdealloc(size, new_size);
+        }
+
+        self.size = size;
+
+        true
     }
 }
 
@@ -100,6 +218,8 @@ impl Process{
     pub fn as_mut_ptr_addr(&mut self) -> usize{
         self as *mut Process as usize
     }
+
+
 
 
     // Give up the CPU for one scheduling round.

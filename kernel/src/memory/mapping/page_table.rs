@@ -1,7 +1,7 @@
 use core::ptr::{write, read, write_bytes, copy_nonoverlapping};
 use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
-use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT };
+use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc:: {kalloc, kfree}, 
@@ -42,6 +42,37 @@ impl PageTable{
         }
     }
 
+    pub fn write(&mut self, page_table: &PageTable) {
+        for i in 0..512 {
+            self.entries[i].write(page_table.entries[i].as_usize());
+        }
+    }
+
+
+    // Recursively free page-table pages.
+    // All leaf mappings must already have been removed.
+
+    pub fn freewalk(&mut self) {
+        // there are 2^9 = 512 PTEs in a pagetable
+        for i in 0..512 {
+            let pte = self.entries[i];
+            if pte.is_valid() && (pte.is_read() || pte.is_write() || pte.is_execute()) {
+                // this PTE points to a lower-level page. 
+                unsafe {
+                    let child = &mut *(pte.as_pagetable());
+                    child.freewalk();
+                }
+                self.entries[i] = PageTableEntry::new(0);
+            } else if pte.is_valid() {
+                panic!("freewalk(): leaf not be removed");
+            }
+        }
+
+        unsafe {
+            kfree(PhysicalAddress::new(self.entries.as_ptr() as usize));
+        }
+    }
+
     
 
     // Return the address of the PTE in page table pagetable
@@ -59,7 +90,11 @@ impl PageTable{
 
 
     // find  the PTE for a virtual address
-     fn walk(&mut self, va: VirtualAddress, alloc:i32) -> Option<&mut PageTableEntry>{
+     fn walk(
+         &mut self, 
+         va: VirtualAddress, 
+         alloc:i32
+        ) -> Option<&mut PageTableEntry> {
         let mut pagetable = self as *mut PageTable;
         let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
@@ -76,11 +111,6 @@ impl PageTable{
                 }
                 match unsafe{Box::<PageTable>::new()}{
                     Some(mut new_pagetable) => {
-                        // let page_addr = page_table as usize;
-                        // for i in 0..PGSIZE{
-                        //     unsafe{write((page_addr + i) as *mut u8, 0)};
-                        // }
-                        // unsafe{write((pte as *const _) as *mut PageTableEntry, PageTableEntry::as_pte(page_addr).add_valid_bit())};
                         new_pagetable.clear();
                         pagetable = new_pagetable.into_raw();
                         pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
@@ -98,7 +128,10 @@ impl PageTable{
     // Look up a virtual address, return the physical address,
     // or 0 if not mapped.
     // Can only be used to look up user pages.
-    pub fn walkaddr(pagetable: &mut PageTable, va: VirtualAddress) -> Option<PhysicalAddress>{
+    pub fn walkaddr(
+        pagetable: &mut PageTable, 
+        va: VirtualAddress
+    ) -> Option<PhysicalAddress> {
         let addr = va.as_usize();
         if addr > MAXVA{
             return None
@@ -126,7 +159,7 @@ impl PageTable{
     // be page-aligned. Returns 0 on success, -1 if walk() couldn't
     // allocate a needed page-table page.
 
-    unsafe fn mappages(
+    pub unsafe fn mappages(
         &mut self, 
         mut va: VirtualAddress, 
         mut pa: PhysicalAddress, 
@@ -151,12 +184,6 @@ impl PageTable{
                     );
                     panic!("remap");
                 }
-                // let pa_usize = pa.as_usize();
-                //  *pte = PageTableEntry::new(PageTableEntry::as_pte(pa_num).as_usize() | perm).add_valid_bit();
-                 
-                // write(pte.as_mut_ptr() as *mut PageTableEntry,
-                // PageTableEntry::new(PageTableEntry::as_pte(pa_usize).as_usize() | perm).add_valid_bit());
-                //  println!("write pagetable entry");
                 pte.write_perm(pa, perm);
                 va.add_page();
                 pa.add_page();
@@ -172,11 +199,13 @@ impl PageTable{
     // only used when booting
     // does not flush TLB or enable paging
     
-    pub unsafe fn kvmmap(&mut self, 
+    pub unsafe fn kvmmap(
+        &mut self, 
         va:VirtualAddress, 
         pa:PhysicalAddress, 
         size:usize, 
-        perm:PteFlags){
+        perm:PteFlags
+    ) {
         println!(
             "kvm_map: va={:#x}, pa={:#x}, size={:#x}",
             va.as_usize(),
@@ -191,7 +220,7 @@ impl PageTable{
 
     // Create an empty user page table.
     // return None if out of memory
-    unsafe fn uvmcreate() -> Option<*mut PageTable>{
+    pub unsafe fn uvmcreate() -> Option<*mut PageTable>{
         match Box::<PageTable>::new(){
             Some(mut page_table) => {
                 page_table.clear();
@@ -228,7 +257,11 @@ impl PageTable{
 
     // Allocate PTEs and physical memory to grow process from oldsz to
     // newsz, which need not be page aligned.  Returns new size or 0 on error.
-    pub unsafe fn uvmalloc(&mut self, mut old_size:usize, new_size:usize) -> Option<usize>{
+    pub unsafe fn uvmalloc(
+        &mut self, 
+        mut old_size:usize, 
+        new_size:usize
+    ) -> Option<usize> {
         if new_size < old_size {
             return Some(old_size)
         }
@@ -265,14 +298,34 @@ impl PageTable{
         Some(new_size)
     }
 
+    // Free user memory pages,
+    // then free page-table pages
+    pub fn uvmfree(&mut self, size: usize) {
+        if size > 0 {
+            let mut pa = PhysicalAddress::new(size);
+            pa.pg_round_up();
+            self.uvmunmap(
+                VirtualAddress::new(0),
+                 pa.as_usize(),
+                1
+            );
+        }
+
+        self.freewalk();
+    }
+
 
     // Deallocate user pages to bring the process size from oldsz to
     // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
     // need to be less than oldsz.  oldsz can be larger than the actual
     // process size.  Returns the new process size.
 
-    pub fn uvmdealloc(&mut self, old_size:usize, new_size:usize) -> usize{
-        if new_size >= old_size {
+    pub fn uvmdealloc(
+        &mut self, 
+        old_size:usize, 
+        new_size:usize
+    ) -> usize {
+        if new_size >= old_size { 
             return old_size
         }
 
@@ -328,6 +381,93 @@ impl PageTable{
         }
 
 
+    }
+
+
+    // Given a parent process's page table, copy
+    // its memory into a child's page table.
+    // Copies both the page table and the
+    // physical memory.
+    // returns 0 on success, -1 on failure.
+    // frees any allocated pages on failure.
+
+    pub unsafe fn uvmcopy(
+        &mut self, 
+        mut new: Self, 
+        size: usize
+    ) -> bool {
+        let mut va = VirtualAddress::new(0);
+        while va.as_usize() != size {
+            match self.walk(va, 0) {
+                Some(pte) => {
+                    if !pte.is_valid() {
+                        panic!("uvmcopy(): page not present");
+                    }
+
+                    let page_table = pte.as_pagetable();
+                    let flags = pte.as_flags();
+                    let flags = PteFlags::new(flags);
+
+                    match Box::<PageTable>::new() {
+                        Some(mut new_page_table) => {
+                            
+                            new_page_table.write(& *page_table);
+                            
+                            if !new.mappages(
+                                va,
+                                PhysicalAddress::new(new_page_table.as_addr()), 
+                                PGSIZE,
+                                flags
+                            ) {
+                                kfree(PhysicalAddress::new(new_page_table.as_addr()));
+                                new.uvmunmap(
+                                    VirtualAddress::new(0), 
+                                    va.as_usize() / PGSIZE, 
+                                    1
+                                );
+                                return false
+                            }
+                        },
+
+                        None => {
+                            new.uvmunmap(
+                                VirtualAddress::new(0), 
+                                va.as_usize() / PGSIZE, 
+                                1
+                            );
+
+                            return false
+                        }
+                    }
+                },
+
+                None => {
+                    panic!("uvmcopy(): no exist pte(pte should exist)");
+                }
+            }
+            va.add_page();
+        }
+
+        true
+    }
+
+
+    // Free a process's page table, and free the
+    // physical memory it refers to.
+    pub fn proc_freepagetable(&mut self, size: usize) {
+        self.uvmunmap(
+            VirtualAddress::new(TRAMPOLINE ), 
+            1, 
+            0
+        );
+
+        self.uvmunmap(
+            VirtualAddress::new(TRAPFRAME),
+            1,
+            0
+        );
+
+        self.uvmfree(size);
     }
 
 }

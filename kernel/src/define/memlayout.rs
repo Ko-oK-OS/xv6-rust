@@ -133,3 +133,5 @@ pub fn KSTACK(addr: usize) -> usize{
 //   ...
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
+
+pub const TRAPFRAME:usize = TRAMPOLINE - PGSIZE;

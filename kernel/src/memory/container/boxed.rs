@@ -6,15 +6,28 @@ use crate::memory::{
     kalloc::{ kalloc, kfree},
     address::PhysicalAddress
 };
+
+#[derive(Clone)]
 pub struct Box<T: ?Sized>(Unique<T>);
 
 impl<T> Box<T>{
-    pub unsafe fn new() -> Option<Box<T>>{
+    pub unsafe fn new() -> Option<Box<T>> {
         match kalloc(){
             Some(ptr) => {
                 // write(ptr as *mut T, x);
                 Some(Self(Unique::new(ptr as *mut T).unwrap()))
             }
+            None => None
+        }
+    }
+
+    pub unsafe fn new_ptr(x: T) -> Option<Box<T>> {
+        match kalloc() {
+            Some(ptr) => {
+                write(ptr as *mut T, x);
+                Some(Self(Unique::new(ptr as *mut T).unwrap()))
+            }
+
             None => None
         }
     }

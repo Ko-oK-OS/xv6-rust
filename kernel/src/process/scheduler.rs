@@ -6,7 +6,7 @@ use crate::define::{
     param::NPROC,
     memlayout::{ KSTACK, PGSIZE, TRAMPOLINE }
 };
-use crate::lock::spinlock::{ Spinlock };
+use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
 use crate::memory::*;
 
@@ -47,19 +47,89 @@ impl ProcManager{
         println!("procinit......");
         for (pos, p) in self.proc.iter_mut().enumerate() {
             let mut guard = p.data.acquire();
-            let pa = kalloc().expect("no enough page for kernel process");
-            let va = kstack(pos);
-            KERNEL_PAGETABLE.kvmmap(
-                VirtualAddress::new(va),
-                PhysicalAddress::new(pa as usize),
-                PGSIZE,
-                PteFlags::R | PteFlags::W,
-            );
-            guard.set_kstack(pa as usize);
+            guard.set_kstack(kstack(pos));
             drop(guard);
         }
 
         println!("procinit done......");
+    }
+
+    // Allocate a page for each process's kernel stack.
+    // Map it high in memory, followed by an invalid 
+    // group page
+    pub unsafe fn proc_mapstacks(&mut self) {
+        for (pos, _) in self.proc.iter_mut().enumerate() {
+            let pa = kalloc().expect("Fail to allocate physical page.");
+            let va = kstack(pos);
+
+            KERNEL_PAGETABLE.kvmmap(
+                VirtualAddress::new(va),
+                PhysicalAddress::new(pa as usize),
+                PGSIZE,
+                PteFlags::R | PteFlags::W
+            );
+            
+        }
+    }
+
+
+    // Look in the process table for an UNUSED proc.
+    // If found, initialize state required to run in the kernel,
+    // and return p.acquire() held.
+    // If there are a free procs, or a memory allocation fails, return 0. 
+
+    // TODO: possible error occurs here.
+    pub fn allocproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
+        extern "C" {
+            fn forkret();
+        }
+
+        for p in self.proc.iter_mut() {
+            let mut guard = p.data.acquire();
+            if guard.state == Procstate::UNUSED {
+                guard.pid = alloc_pid();
+                guard.set_state(Procstate::USED);
+
+                // Allocate a trapframe page.
+                match unsafe { kalloc() } {
+                    Some(pa) => {
+                        guard.set_trapframe(pa as *mut Trapframe);
+
+                        // An empty user page table
+                        if let Some(page_table) = unsafe { guard.proc_pagetable() } {
+                            unsafe {
+                                guard.set_pagetable(Box::<PageTable>::new_ptr(*page_table));
+                            }
+
+                            // Set up new context to start executing at forkret, 
+                            // which returns to user space. 
+                            let kstack = guard.kstack;
+                            guard.context.write_zero();
+                            guard.context.write_ra(forkret as usize);
+                            guard.context.write_sp(kstack + PGSIZE);
+
+                            return Some(guard)
+                            
+                        } else {
+                            guard.freeproc();
+                            drop(guard);
+                            return None
+                        }
+                    }
+
+                    None => {
+                        guard.freeproc();
+                        drop(guard);
+                        return None
+                    }
+                }
+            
+            }else {
+                drop(guard);
+            }
+        }
+
+        None
     }
 
     // Wake up all processes sleeping on chan.
@@ -138,10 +208,13 @@ pub unsafe fn scheduler(){
 }
 
 
-pub unsafe fn alloc_pid() -> usize{
+pub fn alloc_pid() -> usize{
     let guard = PID_LOCK.acquire();
-    let pid = NEXT_PID;
-    NEXT_PID += 1;
+    let pid;
+    unsafe {
+        pid = NEXT_PID;
+        NEXT_PID += 1;
+    }
     drop(guard);
     pid
 }
