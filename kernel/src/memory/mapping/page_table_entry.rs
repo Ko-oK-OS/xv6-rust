@@ -71,9 +71,20 @@ impl PageTableEntry{
     }
 
     #[inline]
-    pub fn add_valid_bit(&self) -> Self{
+    pub fn add_valid_bit(&self) -> Self {
         let pte = self.as_usize() | (PteFlags::V.bits());
         Self(pte)
+    }
+
+    #[inline]
+    pub fn add_user_bit(&self) -> Self {
+        let pte = self.as_usize() | (PteFlags::U.bits());
+        Self(pte)
+    }
+
+    #[inline]
+    pub fn rm_user_bit(&mut self) {
+        self.0 & (!(PteFlags::U.bits()));
     }
 
     // implement PTE2PA

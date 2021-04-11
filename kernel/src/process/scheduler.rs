@@ -80,9 +80,6 @@ impl ProcManager{
 
     // TODO: possible error occurs here.
     pub fn allocproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
-        extern "C" {
-            fn forkret();
-        }
 
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
@@ -105,7 +102,7 @@ impl ProcManager{
                             // which returns to user space. 
                             let kstack = guard.kstack;
                             guard.context.write_zero();
-                            guard.context.write_ra(forkret as usize);
+                            // guard.context.write_ra(forkret as usize);
                             guard.context.write_sp(kstack + PGSIZE);
 
                             return Some(guard)

@@ -127,6 +127,10 @@ impl ProcData {
     // with no user memory, but with trampoline pages
     pub unsafe fn proc_pagetable(&mut self) -> Option<*mut PageTable> {
 
+        extern "C" {
+            fn trampoline();
+        }
+
         // An empty page table
         if let Some(page_table) = PageTable::uvmcreate() {
             // map the trampoline code (for system call return )
@@ -136,7 +140,7 @@ impl ProcData {
             let page_table = &mut *page_table;
             let is_ok = page_table.mappages(
                 VirtualAddress::new(TRAMPOLINE),
-                PhysicalAddress::new(TRAMPOLINE),
+                PhysicalAddress::new(trampoline as usize),
                 PGSIZE,
                 PteFlags::R | PteFlags::X
             );
