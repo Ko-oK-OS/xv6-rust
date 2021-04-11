@@ -42,6 +42,12 @@ impl PageTable{
         }
     }
 
+    pub fn write(&mut self, page_table: &PageTable) {
+        for i in 0..512 {
+            self.entries[i].write(page_table.entries[i].as_usize());
+        }
+    }
+
 
     // Recursively free page-table pages.
     // All leaf mappings must already have been removed.
@@ -251,7 +257,11 @@ impl PageTable{
 
     // Allocate PTEs and physical memory to grow process from oldsz to
     // newsz, which need not be page aligned.  Returns new size or 0 on error.
-    pub unsafe fn uvmalloc(&mut self, mut old_size:usize, new_size:usize) -> Option<usize>{
+    pub unsafe fn uvmalloc(
+        &mut self, 
+        mut old_size:usize, 
+        new_size:usize
+    ) -> Option<usize> {
         if new_size < old_size {
             return Some(old_size)
         }
@@ -310,8 +320,12 @@ impl PageTable{
     // need to be less than oldsz.  oldsz can be larger than the actual
     // process size.  Returns the new process size.
 
-    pub fn uvmdealloc(&mut self, old_size:usize, new_size:usize) -> usize{
-        if new_size >= old_size {
+    pub fn uvmdealloc(
+        &mut self, 
+        old_size:usize, 
+        new_size:usize
+    ) -> usize {
+        if new_size >= old_size { 
             return old_size
         }
 
@@ -367,6 +381,74 @@ impl PageTable{
         }
 
 
+    }
+
+
+    // Given a parent process's page table, copy
+    // its memory into a child's page table.
+    // Copies both the page table and the
+    // physical memory.
+    // returns 0 on success, -1 on failure.
+    // frees any allocated pages on failure.
+
+    pub unsafe fn uvmcopy(
+        &mut self, 
+        mut new: Self, 
+        size: usize
+    ) -> bool {
+        let mut va = VirtualAddress::new(0);
+        while va.as_usize() != size {
+            match self.walk(va, 0) {
+                Some(pte) => {
+                    if !pte.is_valid() {
+                        panic!("uvmcopy(): page not present");
+                    }
+
+                    let page_table = pte.as_pagetable();
+                    let flags = pte.as_flags();
+                    let flags = PteFlags::new(flags);
+
+                    match Box::<PageTable>::new() {
+                        Some(mut new_page_table) => {
+                            
+                            new_page_table.write(& *page_table);
+                            
+                            if !new.mappages(
+                                va,
+                                PhysicalAddress::new(new_page_table.as_addr()), 
+                                PGSIZE,
+                                flags
+                            ) {
+                                kfree(PhysicalAddress::new(new_page_table.as_addr()));
+                                new.uvmunmap(
+                                    VirtualAddress::new(0), 
+                                    va.as_usize() / PGSIZE, 
+                                    1
+                                );
+                                return false
+                            }
+                        },
+
+                        None => {
+                            new.uvmunmap(
+                                VirtualAddress::new(0), 
+                                va.as_usize() / PGSIZE, 
+                                1
+                            );
+
+                            return false
+                        }
+                    }
+                },
+
+                None => {
+                    panic!("uvmcopy(): no exist pte(pte should exist)");
+                }
+            }
+            va.add_page();
+        }
+
+        true
     }
 
 

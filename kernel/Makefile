@@ -13,7 +13,7 @@ QEMUOPTS    += -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-de
 QEMUGDB 	:= -gdb tcp::26000
 
 
-.PHONY: doc kernel build clean qemu run
+.PHONY: doc kernel build clean qemu run test
 
 # 默认 build 为输出二进制文件
 build: $(BIN_FILE) 
@@ -54,6 +54,7 @@ qemu-gdb:
 
 # 一键运行
 run: build qemu
+
 
 debug: build
 	@tmux new-session -d \

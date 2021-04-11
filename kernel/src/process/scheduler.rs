@@ -79,7 +79,7 @@ impl ProcManager{
     // If there are a free procs, or a memory allocation fails, return 0. 
 
     // TODO: possible error occurs here.
-    pub fn allocaproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
+    pub fn allocproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
         extern "C" {
             fn forkret();
         }

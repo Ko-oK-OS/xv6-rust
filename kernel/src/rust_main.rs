@@ -50,6 +50,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         // loop{}
     }
 
-    // scheduler();
+    #[cfg(feature = "unit_test")]
+    scheduler();
     
 }

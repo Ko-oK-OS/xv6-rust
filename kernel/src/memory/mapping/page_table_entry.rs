@@ -9,12 +9,21 @@ pub struct PageTableEntry(pub usize);
 
 
 bitflags!{
-    pub struct PteFlags:usize{
+    pub struct PteFlags:usize {
         const V = PTE_V;
         const R = PTE_R;
         const W = PTE_W;
         const X = PTE_X;
         const U = PTE_U;
+    }
+
+}
+
+impl PteFlags {
+    pub fn new(x: usize) -> Self {
+        Self{
+            bits: x
+        }
     }
 }
 
@@ -94,6 +103,11 @@ impl PageTableEntry{
     #[inline]
     pub fn write_perm(&mut self, pa:PhysicalAddress, perm: PteFlags){
         self.0 = ((pa.as_usize() >> 12) << 10) | (perm | PteFlags::V).bits()
+    }
+
+    #[inline]
+    pub fn write(&mut self, addr: usize) {
+        self.0 = addr
     }
     
 }

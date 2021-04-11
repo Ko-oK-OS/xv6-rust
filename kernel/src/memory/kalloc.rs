@@ -108,14 +108,10 @@ pub unsafe fn kalloc() -> Option<*mut u8>{
         guard.set_next(addr.as_mut().get_next());
     }
     drop(guard);
-    // (*KMEM).release();
 
     match r {
         Some(ptr) => {
             let addr = ptr.as_ptr() as usize;
-            // for i in 0..PGSIZE{
-            //     write_volatile((addr + i) as *mut u8 , 5);
-            // }
             Some(addr as *mut u8)
         }
         None => None

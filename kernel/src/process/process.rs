@@ -166,6 +166,31 @@ impl ProcData {
         None
 
     }
+
+    // Grow or shrink user memory by n bytes. 
+    // Return true on success, false on failure. 
+    pub fn growproc(&mut self, n: isize) -> bool {
+        let mut size = self.size; 
+        let page_table = self.pagetable.as_mut().unwrap();
+        if n > 0 {
+            match unsafe { page_table.uvmalloc(size, size + n as usize) } {
+                Some(new_size) => {
+                    size = new_size;
+                },
+
+                None => {
+                    return false
+                }
+            }
+        }else if n < 0 {
+            let new_size = (size as isize + n) as usize;
+            size = page_table.uvmdealloc(size, new_size);
+        }
+
+        self.size = size;
+
+        true
+    }
 }
 
 
