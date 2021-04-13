@@ -73,7 +73,7 @@ pub unsafe fn kerneltrap() {
         }
 
         2 => {
-            println!("Timer Interrupt!");
+            // println!("Timer Interrupt!");
             if let Some(my_proc) = CPU_MANAGER.myproc() {
                 let guard = my_proc.data.acquire();
                 if guard.state == Procstate::RUNNING {
