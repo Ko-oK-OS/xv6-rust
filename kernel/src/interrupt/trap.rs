@@ -4,6 +4,7 @@ use crate::register::{
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::memlayout;
+use crate::process::*;
 use super::*;
 
 static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
@@ -72,7 +73,16 @@ pub unsafe fn kerneltrap() {
         }
 
         2 => {
-            // println!("Timer Interrupt!");
+            println!("Timer Interrupt!");
+            if let Some(my_proc) = CPU_MANAGER.myproc() {
+                let guard = my_proc.data.acquire();
+                if guard.state == Procstate::RUNNING {
+                    drop(guard);
+                    my_proc.yielding();
+                }else {
+                    drop(guard);
+                }
+            }
 
         }
 
