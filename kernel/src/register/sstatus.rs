@@ -43,7 +43,21 @@ pub unsafe fn intr_off(){
 
 
 // are device interrupts enabled?
+#[inline]
 pub unsafe fn intr_get() -> bool{
     let x = read();
     return (x & SSTATUS::SIE as usize) != 0;
 }
+
+// clear SPP to 0
+#[inline]
+pub fn clear_spp(sstatus: usize) -> usize {
+    sstatus & !(SSTATUS::SPP as usize)
+}
+
+// enable interrupts in user mode
+#[inline]
+pub fn user_intr_on(sstatus: usize) -> usize {
+    sstatus | (SSTATUS::SPIE as usize)
+}
+
