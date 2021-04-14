@@ -74,10 +74,10 @@ macro_rules! println {
 #[panic_handler]
 fn panic(info: &PanicInfo<'_>) -> ! {
     println!("\x1b[1;31mpanic: '{}'\x1b[0m", info);
-    system_reset(
-        RESET_TYPE_SHUTDOWN,
-        RESET_REASON_NO_REASON
-    );
+    // system_reset(
+    //     RESET_TYPE_SHUTDOWN,
+    //     RESET_REASON_NO_REASON
+    // );
     loop {}
 }
 

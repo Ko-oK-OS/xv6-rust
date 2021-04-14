@@ -1,4 +1,5 @@
 use core::ptr::*;
+use core::cell::UnsafeCell;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     kalloc::*,
@@ -23,6 +24,7 @@ pub enum Procstate{
 
 pub struct Process {
     pub data: Spinlock<ProcData>,
+    pub extern_data: UnsafeCell<ProcExtern>,
     name: &'static str   // Process name (debugging)
 }
 
@@ -37,13 +39,6 @@ pub struct ProcData {
     // proc_tree_lock must be held when using this:
     pub parent: Option<NonNull<Process>>,
 
-    // these are private to the process, so p->lock need to be held
-    pub kstack:usize,  // Virtual address of kernel stack
-    pub size:usize, // size of process memory
-    pub pagetable: Option<Box<PageTable>>, // User page table
-    pub trapframe: *mut Trapframe, // data page for trampoline.S
-    pub context: Context, // swtch() here to run processs
-    // TODO: Open files and Current directory
 }
 
 impl ProcData {
@@ -56,6 +51,33 @@ impl ProcData {
             pid: 0,
             parent: None,
 
+        }
+    }
+
+    pub fn set_state(&mut self, state: Procstate) {
+        self.state = state;
+    }
+
+
+    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
+        self.parent = parent;
+    }
+
+}
+
+pub struct ProcExtern {
+    // these are private to the process, so p->lock need to be held
+    pub kstack:usize,  // Virtual address of kernel stack
+    pub size:usize, // size of process memory
+    pub pagetable: Option<Box<PageTable>>, // User page table
+    pub trapframe: *mut Trapframe, // data page for trampoline.S
+    pub context: Context, // swtch() here to run processs
+    // TODO: Open files and Current directory
+}
+
+impl ProcExtern {
+    pub const fn new() -> Self {
+        Self {
             kstack:0,
             size: 0,
             pagetable: None,
@@ -72,16 +94,8 @@ impl ProcData {
         self.trapframe = trapframe;
     }
 
-    pub fn set_state(&mut self, state: Procstate) {
-        self.state = state;
-    }
-
     pub fn set_pagetable(&mut self, pagetable: Option<Box<PageTable>>) {
         self.pagetable = pagetable
-    }
-
-    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
-        self.parent = parent;
     }
 
     pub fn set_context(&mut self, ctx: Context) {
@@ -92,38 +106,7 @@ impl ProcData {
         &mut self.context as *mut Context
     }
 
-
-    // free a proc structure and the data hanging from it,
-    // including user pages.
-    // p.acquire() must be held.
-
-    pub fn freeproc(&mut self) {
-        if !self.trapframe.is_null() {
-            unsafe {
-                kfree(PhysicalAddress::new(self.trapframe as usize));
-            }
-
-            self.set_trapframe(0 as *mut Trapframe);
-
-            if let Some(page_table) = self.pagetable.as_mut() {
-                page_table.proc_freepagetable(self.size);
-            }
-
-
-            self.set_pagetable(None);
-            self.size = 0;
-            self.pid = 0;
-            self.set_parent(None);
-            self.channel = 0;
-            self.killed = 0;
-            self.xstate = 0;
-            self.set_state(Procstate::UNUSED);
-            
-        }
-    }
-
-
-    // Create a user page table for a given process,
+        // Create a user page table for a given process,
     // with no user memory, but with trampoline pages
     pub unsafe fn proc_pagetable(&mut self) -> Option<*mut PageTable> {
 
@@ -170,31 +153,6 @@ impl ProcData {
         None
 
     }
-
-    // Grow or shrink user memory by n bytes. 
-    // Return true on success, false on failure. 
-    pub fn growproc(&mut self, n: isize) -> bool {
-        let mut size = self.size; 
-        let page_table = self.pagetable.as_mut().unwrap();
-        if n > 0 {
-            match unsafe { page_table.uvmalloc(size, size + n as usize) } {
-                Some(new_size) => {
-                    size = new_size;
-                },
-
-                None => {
-                    return false
-                }
-            }
-        }else if n < 0 {
-            let new_size = (size as isize + n) as usize;
-            size = page_table.uvmdealloc(size, new_size);
-        }
-
-        self.size = size;
-
-        true
-    }
 }
 
 
@@ -203,6 +161,7 @@ impl Process{
     pub const fn new() -> Self{
         Self{    
             data: Spinlock::new(ProcData::new(), "process"),
+            extern_data: UnsafeCell::new(ProcExtern::new()),
             name: "process"
         }
     }
@@ -226,11 +185,80 @@ impl Process{
 
 
 
+
+    // free a proc structure and the data hanging from it,
+    // including user pages.
+    // p.acquire() must be held.
+
+    pub fn freeproc(&mut self) {
+        let mut extern_data = self.extern_data.get_mut();
+        if !extern_data.trapframe.is_null() {
+            unsafe {
+                kfree(PhysicalAddress::new(extern_data.trapframe as usize));
+            }
+
+            extern_data.set_trapframe(0 as *mut Trapframe);
+
+            if let Some(page_table) = extern_data.pagetable.as_mut() {
+                page_table.proc_freepagetable(extern_data.size);
+            }
+
+
+            let mut guard = self.data.acquire();
+
+            extern_data.set_pagetable(None);
+            extern_data.size = 0;
+
+            guard.pid = 0;
+            guard.set_parent(None);
+            guard.channel = 0;
+            guard.killed = 0;
+            guard.xstate = 0;
+            guard.set_state(Procstate::UNUSED);
+
+            drop(guard);
+            
+        }
+    }
+
+
+
+
+
+
+
+    // Grow or shrink user memory by n bytes. 
+    // Return true on success, false on failure. 
+    pub fn growproc(&mut self, n: isize) -> bool {
+        let mut extern_data = self.extern_data.get_mut();
+        let mut size = extern_data.size; 
+        let page_table = extern_data.pagetable.as_mut().unwrap();
+        if n > 0 {
+            match unsafe { page_table.uvmalloc(size, size + n as usize) } {
+                Some(new_size) => {
+                    size = new_size;
+                },
+
+                None => {
+                    return false
+                }
+            }
+        }else if n < 0 {
+            let new_size = (size as isize + n) as usize;
+            size = page_table.uvmdealloc(size, new_size);
+        }
+
+        extern_data.size = size;
+
+        true
+    }
+
+
     // Give up the CPU for one scheduling round.
     // yield is a keyword in rust
-    pub fn yielding(&self) {
+    pub fn yielding(&mut self) {
         let mut guard = self.data.acquire();
-        let ctx = guard.get_context_mut();
+        let ctx = self.extern_data.get_mut().get_context_mut();
         guard.set_state(Procstate::RUNNABLE);
 
         unsafe {
@@ -253,6 +281,7 @@ impl Process{
         // (wakeup locks p->lock)
         // so it's okay to release lk;
         let mut guard = self.data.acquire();
+        // let extern_data = self.extern_data.get_mut();
         drop(lock);
 
         // Go to sleep.
@@ -261,7 +290,7 @@ impl Process{
 
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
-            let ctx = guard.get_context_mut();
+            let ctx = (&mut (*self.extern_data.get())).get_context_mut();
             
             // get schedule process
             guard = my_cpu.sched(

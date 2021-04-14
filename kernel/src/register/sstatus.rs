@@ -19,6 +19,16 @@ pub unsafe fn write(x:usize){
     llvm_asm!("csrw sstatus, $0"::"r"(x)::"volatile");
 }
 
+#[inline]
+pub unsafe fn is_from_supervisor() -> bool {
+    (read() & SSTATUS::SPP as usize) != 0
+}
+
+#[inline]
+pub unsafe fn is_from_user() -> bool {
+    (read() & SSTATUS::SPP as usize) == 0
+}
+
 // enable device interrupts
 #[inline]
 pub unsafe fn intr_on(){

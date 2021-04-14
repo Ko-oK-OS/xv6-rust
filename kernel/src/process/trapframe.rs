@@ -16,7 +16,7 @@ pub struct Trapframe{
     /*0 */      pub kernel_satp:usize, // kernel page table
     /*8 */      pub kernel_sp:usize, // top of process's kernel stack
     /*16 */     pub kernel_trap:usize, // usertrap()
-    /*24 */     pub etc:usize, // saved user program counter
+    /*24 */     pub epc:usize, // saved user program counter
     /*32 */     pub kernel_hartid:usize, // saved kernel tp
     /*40 */     pub ra:usize,
     /*48 */     pub sp:usize,

@@ -1,9 +1,10 @@
 use crate::register::{
-    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt}
+    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
+    satp
 };
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
-use crate::define::memlayout;
+use crate::define::memlayout::*;
 use crate::process::*;
 use super::*;
 
@@ -25,6 +26,100 @@ pub unsafe fn trapinithart() {
 }
 
 
+//
+// handle an interrupt, exception, or system call from user space.
+// called from trampoline.S
+//
+#[no_mangle]
+pub unsafe fn usertrap() {
+    let sepc = sepc::read();
+    let scause = scause::read();
+
+    let which_dev = devintr();
+    if !sstatus::is_from_user() {
+        panic!("usertrap(): not from user mode");
+    }
+
+    // send interrupts and exceptions to kerneltrap(),
+    // since we're now in the kernel.
+    stvec::write(kerneltrap as usize);
+
+    let my_proc = CPU_MANAGER.myproc().unwrap();
+
+    let mut guard = my_proc.data.acquire();
+
+    let mut extern_data = my_proc.extern_data.get_mut();
+
+    (*extern_data.trapframe).epc = sepc;
+
+    if scause == 8 {
+        // system call 
+        if guard.killed != 0 {
+            //TODO: exit
+        }
+
+        // sepc points to the ecall instruction,
+        // but we want to return to the next instruction.
+
+        (*extern_data.trapframe).epc += 4;
+
+
+        // an interrupt will change sstatus &c registers,
+        // so don't enable until done with those registers.
+        sstatus::intr_on();
+
+        // TODO:syscall()
+    }else if which_dev != 0 {
+        // ok
+    }else {
+        println!("usertrap(): unexpected scause {} pid={}", scause, guard.pid);
+        println!("                       sepc={} stval={}", sepc, stval::read());
+        guard.killed = 1;
+    }
+
+    if guard.killed != 0{
+        // TODO: exit
+    }
+
+    // give up the CPU if this a timer interrupt
+    if which_dev ==  2 {
+        CPU_MANAGER.yield_proc();
+    }
+
+}
+
+//
+// return to user space
+//
+
+#[no_mangle]
+unsafe fn usertrap_ret() {
+    extern "C" {
+        fn uservec();
+        fn trampoline();
+    }
+
+    let mut my_proc = CPU_MANAGER.myproc().unwrap();
+
+    // we're about to switch the destination of traps from
+    // kerneltrap() to usertrap(), so turn off interrupts until
+    // we're back in user space, where usertrap() is correct.
+
+    sstatus::intr_off();
+
+    // send syscalls, interrupts, and exceptions to trampoline.S
+    stvec::write(TRAMPOLINE + (uservec as usize - trampoline as usize));
+
+    // set up trapframe values that uservec will need when
+    // the process next re-enters the kernel.
+
+
+    let mut extern_data = my_proc.extern_data.get_mut();
+    (*extern_data.trapframe).kernel_satp = satp::read();
+
+}
+
+
 
 
 // interrupts and exceptions from kernel code go here via kernelvec,
@@ -35,7 +130,7 @@ pub unsafe fn kerneltrap() {
     let sstatus = sstatus::read();
     let scause = scause::read();
 
-    if (sstatus & (sstatus::SSTATUS::SPP as usize)) == 0{
+    if !sstatus::is_from_supervisor() {
         panic!("kerneltrap: not from supervisor mode");
     }
 
@@ -74,15 +169,7 @@ pub unsafe fn kerneltrap() {
 
         2 => {
             // println!("Timer Interrupt!");
-            if let Some(my_proc) = CPU_MANAGER.myproc() {
-                let guard = my_proc.data.acquire();
-                if guard.state == Procstate::RUNNING {
-                    drop(guard);
-                    my_proc.yielding();
-                }else {
-                    drop(guard);
-                }
-            }
+            CPU_MANAGER.yield_proc();
 
         }
 
@@ -124,10 +211,10 @@ unsafe fn devintr() -> usize {
             // irq indicates which device interrupted.
             let irq = plic::plic_claim();
 
-            if irq == memlayout::UART0_IRQ as usize{
+            if irq == UART0_IRQ as usize{
                 // TODO: uartinit
                 println!("uart interrupt")
-            }else if irq == memlayout::VIRTIO0_IRQ as usize{
+            }else if irq == VIRTIO0_IRQ as usize{
                 // TODO: virtio_disk_init
                 println!("virtio0 interrupt")
             }else if irq != 0{
