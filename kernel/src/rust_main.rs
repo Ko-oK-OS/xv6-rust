@@ -37,10 +37,10 @@ pub unsafe extern "C" fn rust_main() -> !{
 
         // llvm_asm!("ebreak"::::"volatile");
 
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        sstatus::intr_on();
-        STARTED.store(true, Ordering::SeqCst);
-        loop{}
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // sstatus::intr_on();
+        // STARTED.store(true, Ordering::SeqCst);
+        // loop{}
     }else{
         while !STARTED.load(Ordering::SeqCst){}
         println!("hart {} starting\n", cpu::cpuid());

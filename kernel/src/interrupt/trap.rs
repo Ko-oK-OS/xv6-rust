@@ -125,14 +125,18 @@ unsafe fn usertrap_ret() {
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
 #[no_mangle]
-pub unsafe fn kerneltrap() {
+pub unsafe fn kerneltrap(
+    _: usize, _: usize, _: usize, _: usize,
+    _: usize, _: usize, _: usize, arg7: usize
+) {
+
     let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
 
-    if !sstatus::is_from_supervisor() {
-        panic!("kerneltrap: not from supervisor mode");
-    }
+    // if !sstatus::is_from_supervisor() {
+    //     panic!("kerneltrap: not from supervisor mode");
+    // }
 
     if sstatus::intr_get() {
         panic!("kerneltrap: interrupts enabled");
@@ -156,6 +160,8 @@ pub unsafe fn kerneltrap() {
                 Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
 
                 Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+
+                Trap::Exception(Exception::KernelEnvCall) => handler_kernel_syscall(arg7),
 
                 _ => panic!("Unresolved Trap!")
             }
