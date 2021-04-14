@@ -451,6 +451,38 @@ impl PageTable{
         true
     }
 
+    // mark a PTE invalid for user access.
+    // used by exec for the user stack guard page.
+
+    pub fn uvmclear(&mut self, va: VirtualAddress) {
+        if let Some(pte) = self.walk(va, 0) {
+            pte.rm_user_bit();
+        }else {
+            panic!("uvmclear(): Not found valid pte for virtualaddress");
+        }
+    }
+
+    // Copy from kernel to user.
+    // Copy len bytes from src to virtual address dstva in a given page table.
+    // Return true on success, false on error.
+
+    // pub fn copyout(
+    //     &mut self, 
+    //     src_va: VirtualAddress, 
+    //     src: &mut [u8] 
+    // ) -> bool {
+    //     let mut i: usize = 0;
+
+    //     // iterate through the raw content page by page
+    //     while i < dst.len() {
+    //         let mut base = src_va;
+    //         base.pg_round_up();
+    //         let distance = (va - base).as_usize();
+
+    //     }
+
+    // }
+
 
     // Free a process's page table, and free the
     // physical memory it refers to.

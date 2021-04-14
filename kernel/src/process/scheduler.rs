@@ -46,9 +46,7 @@ impl ProcManager{
     pub unsafe fn procinit(&mut self){
         println!("procinit......");
         for (pos, p) in self.proc.iter_mut().enumerate() {
-            let mut guard = p.data.acquire();
-            guard.set_kstack(kstack(pos));
-            drop(guard);
+            p.extern_data.get_mut().set_kstack(kstack(pos));
         }
 
         println!("procinit done......");
@@ -79,58 +77,56 @@ impl ProcManager{
     // If there are a free procs, or a memory allocation fails, return 0. 
 
     // TODO: possible error occurs here.
-    pub fn allocproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
-        extern "C" {
-            fn forkret();
-        }
+    // pub fn allocproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
 
-        for p in self.proc.iter_mut() {
-            let mut guard = p.data.acquire();
-            if guard.state == Procstate::UNUSED {
-                guard.pid = alloc_pid();
-                guard.set_state(Procstate::USED);
+    //     for p in self.proc.iter_mut() {
+    //         let mut guard = p.data.acquire();
+    //         let extern_data = p.extern_data.get_mut();
+    //         if guard.state == Procstate::UNUSED {
+    //             guard.pid = alloc_pid();
+    //             guard.set_state(Procstate::USED);
 
-                // Allocate a trapframe page.
-                match unsafe { kalloc() } {
-                    Some(pa) => {
-                        guard.set_trapframe(pa as *mut Trapframe);
+    //             // Allocate a trapframe page.
+    //             match unsafe { kalloc() } {
+    //                 Some(pa) => {
+    //                     extern_data.set_trapframe(pa as *mut Trapframe);
 
-                        // An empty user page table
-                        if let Some(page_table) = unsafe { guard.proc_pagetable() } {
-                            unsafe {
-                                guard.set_pagetable(Box::<PageTable>::new_ptr(*page_table));
-                            }
+    //                     // An empty user page table
+    //                     if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
+    //                         unsafe {
+    //                             extern_data.set_pagetable(Box::<PageTable>::new_ptr(*page_table));
+    //                         }
 
-                            // Set up new context to start executing at forkret, 
-                            // which returns to user space. 
-                            let kstack = guard.kstack;
-                            guard.context.write_zero();
-                            guard.context.write_ra(forkret as usize);
-                            guard.context.write_sp(kstack + PGSIZE);
+    //                         // Set up new context to start executing at forkret, 
+    //                         // which returns to user space. 
+    //                         let kstack = extern_data.kstack;
+    //                         extern_data.context.write_zero();
+    //                         // guard.context.write_ra(forkret as usize);
+    //                         extern_data.context.write_sp(kstack + PGSIZE);
 
-                            return Some(guard)
+    //                         return Some(guard)
                             
-                        } else {
-                            guard.freeproc();
-                            drop(guard);
-                            return None
-                        }
-                    }
+    //                     } else {
+    //                         p.freeproc();
+    //                         drop(guard);
+    //                         return None
+    //                     }
+    //                 }
 
-                    None => {
-                        guard.freeproc();
-                        drop(guard);
-                        return None
-                    }
-                }
+    //                 None => {
+    //                     p.freeproc();
+    //                     drop(guard);
+    //                     return None
+    //                 }
+    //             }
             
-            }else {
-                drop(guard);
-            }
-        }
+    //         }else {
+    //             drop(guard);
+    //         }
+    //     }
 
-        None
-    }
+    //     None
+    // }
 
     // Wake up all processes sleeping on chan.
     // Must be called without any p->lock.
@@ -195,7 +191,7 @@ pub unsafe fn scheduler(){
                 guard.state = Procstate::RUNNING;
 
                 swtch(c.get_context_mut(),
-                    &mut guard.context as *mut Context);
+                    &mut p.extern_data.get_mut().context as *mut Context);
 
                 c.set_proc(None);
                 drop(guard);

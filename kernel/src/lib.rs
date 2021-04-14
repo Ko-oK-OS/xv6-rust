@@ -28,6 +28,8 @@ global_asm!(include_str!("asm/swtch.S"));
 mod printf;
 mod start;
 mod rust_main;
+mod shutdown;
+mod kernel_syscall;
 
 mod logo;
 mod console;

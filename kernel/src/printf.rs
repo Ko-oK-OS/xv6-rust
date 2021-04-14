@@ -4,6 +4,8 @@ use core::panic::PanicInfo;
 
 use crate::console;
 use crate::lock::spinlock::Spinlock;
+use crate::shutdown::*;
+use crate::kernel_syscall::*;
 
 pub struct Pr {
     locking: AtomicBool,
@@ -73,6 +75,7 @@ macro_rules! println {
 #[panic_handler]
 fn panic(info: &PanicInfo<'_>) -> ! {
     println!("\x1b[1;31mpanic: '{}'\x1b[0m", info);
+    kernel_syscall(SHUTDOWN, 0, 0, 0);
     loop {}
 }
 

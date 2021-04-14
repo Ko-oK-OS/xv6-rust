@@ -46,6 +46,18 @@ impl CPUManager{
         None
 
     }
+
+    pub fn yield_proc(&mut self) {
+        if let Some(my_proc) = unsafe{ self.myproc() } {
+            let guard = my_proc.data.acquire();
+            if guard.state == Procstate::RUNNING {
+                drop(guard);
+                my_proc.yielding();
+            }else {
+                drop(guard);
+            }
+        }
+    }
 }
 
 impl CPU{
