@@ -12,11 +12,10 @@ pub fn handler_kernel_syscall(result: usize) {
                 RESET_TYPE_SHUTDOWN,
                 RESET_REASON_NO_REASON
             );
-            // panic!("sutdown");
         }
 
         _ => {
-            println!("Unresolved Kernel Syscall");
+            panic!("Unresolved Kernel Syscall!");
         }
     }
 }
