@@ -1,6 +1,6 @@
 use crate::register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
-    satp
+    satp, tp
 };
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
@@ -97,6 +97,7 @@ unsafe fn usertrap_ret() {
     extern "C" {
         fn uservec();
         fn trampoline();
+        fn userret();
     }
 
     let mut my_proc = CPU_MANAGER.myproc().unwrap();
@@ -115,7 +116,34 @@ unsafe fn usertrap_ret() {
 
 
     let mut extern_data = my_proc.extern_data.get_mut();
-    (*extern_data.trapframe).kernel_satp = satp::read();
+
+    (*extern_data.trapframe).kernel_satp = satp::read(); // kernel page table
+    (*extern_data.trapframe).kernel_sp = extern_data.kstack + PGSIZE; // process's kernel stack
+    (*extern_data.trapframe).kernel_trap = usertrap as usize;
+    (*extern_data.trapframe).kernel_hartid = tp::read(); // hartid for cpuid()
+
+    // set up the registers that trampoline.S's sret will use
+    // to get to user space.
+
+    let mut sstatus = sstatus::read();
+    sstatus = sstatus::clear_spp(sstatus); // clear SPP to 0 for user mode
+    sstatus = sstatus::user_intr_on(sstatus); // enable interrupts in user mode
+    sstatus::write(sstatus);
+
+    // set S Exception Program Counter to the saved user pc. 
+    sepc::write((*extern_data.trapframe).epc);
+    
+    // tell trampoline.S the user page table to switch to
+    let satp= extern_data.pagetable.as_ref().unwrap().as_satp();
+
+    // jump to trampoline.S at the top of memory, which
+    // switches to the user page table, restores user registers,
+    // and switches to user mode with sret. 
+    let func = TRAMPOLINE + (userret as usize - trampoline as usize);
+    let func: extern "C" fn(usize, usize) -> ! = 
+    core::mem::transmute(func);
+
+    func(TRAMPOLINE, satp);
 
 }
 
