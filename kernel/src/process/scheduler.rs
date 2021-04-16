@@ -81,15 +81,16 @@ impl ProcManager{
 
     //     for p in self.proc.iter_mut() {
     //         let mut guard = p.data.acquire();
-    //         let extern_data = p.extern_data.get_mut();
+    //         // let extern_data = p.extern_data.get_mut();
     //         if guard.state == Procstate::UNUSED {
     //             guard.pid = alloc_pid();
     //             guard.set_state(Procstate::USED);
 
+    //             let extern_data = p.extern_data.get_mut();
     //             // Allocate a trapframe page.
     //             match unsafe { kalloc() } {
-    //                 Some(pa) => {
-    //                     extern_data.set_trapframe(pa as *mut Trapframe);
+    //                 Some(ptr) => {
+    //                     extern_data.set_trapframe(ptr as *mut Trapframe);
 
     //                     // An empty user page table
     //                     if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
@@ -107,14 +108,14 @@ impl ProcManager{
     //                         return Some(guard)
                             
     //                     } else {
-    //                         p.freeproc();
+    //                         // p.freeproc();
     //                         drop(guard);
     //                         return None
     //                     }
     //                 }
 
     //                 None => {
-    //                     p.freeproc();
+    //                     // p.freeproc();
     //                     drop(guard);
     //                     return None
     //                 }
@@ -127,6 +128,7 @@ impl ProcManager{
 
     //     None
     // }
+
 
     // Wake up all processes sleeping on chan.
     // Must be called without any p->lock.

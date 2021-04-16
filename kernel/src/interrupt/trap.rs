@@ -9,7 +9,6 @@ use crate::process::*;
 use super::*;
 
 static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
-// static mut TICKS:usize = 0;
 
 pub fn trapinit(){
     println!("trap init......");
@@ -100,7 +99,7 @@ unsafe fn usertrap_ret() {
         fn userret();
     }
 
-    let mut my_proc = CPU_MANAGER.myproc().unwrap();
+    let my_proc = CPU_MANAGER.myproc().unwrap();
 
     // we're about to switch the destination of traps from
     // kerneltrap() to usertrap(), so turn off interrupts until
@@ -139,11 +138,11 @@ unsafe fn usertrap_ret() {
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,
     // and switches to user mode with sret. 
-    let func = TRAMPOLINE + (userret as usize - trampoline as usize);
-    let func: extern "C" fn(usize, usize) -> ! = 
-    core::mem::transmute(func);
+    let userret_virt = TRAMPOLINE + (userret as usize - trampoline as usize);
+    let userret_virt: extern "C" fn(usize, usize) -> ! = 
+    core::mem::transmute(userret_virt);
 
-    func(TRAMPOLINE, satp);
+    userret_virt(TRAMPOLINE, satp);
 
 }
 
@@ -154,8 +153,8 @@ unsafe fn usertrap_ret() {
 // on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kerneltrap(
-    _: usize, _: usize, _: usize, _: usize,
-    _: usize, _: usize, _: usize, arg7: usize
+   arg0: usize, arg1: usize, arg2: usize, _: usize,
+   _: usize, _: usize, _: usize, which: usize
 ) {
 
     let mut sepc = sepc::read();
@@ -167,7 +166,7 @@ pub unsafe fn kerneltrap(
     // }
 
     if sstatus::intr_get() {
-        panic!("kerneltrap: interrupts enabled");
+        panic!("kerneltrap(): interrupts enabled");
     }
     
     let which_dev = devintr();
@@ -183,13 +182,13 @@ pub unsafe fn kerneltrap(
 
                 Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
-                Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
+                // Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
 
                 Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
 
                 Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
 
-                Trap::Exception(Exception::KernelEnvCall) => handler_kernel_syscall(arg7),
+                Trap::Exception(Exception::KernelEnvCall) => handler_kernel_syscall(arg0, arg1, arg2, which),
 
                 _ => panic!("Unresolved Trap!")
             }
@@ -246,10 +245,10 @@ unsafe fn devintr() -> usize {
             let irq = plic::plic_claim();
 
             if irq == UART0_IRQ as usize{
-                // TODO: uartinit
+                // TODO: uartintr
                 println!("uart interrupt")
             }else if irq == VIRTIO0_IRQ as usize{
-                // TODO: virtio_disk_init
+                // TODO: virtio_disk_intr
                 println!("virtio0 interrupt")
             }else if irq != 0{
                 println!("unexpected intrrupt, irq={}", irq);
@@ -263,7 +262,7 @@ unsafe fn devintr() -> usize {
         }
 
         Trap::Interrupt(Interrupt::SupervisorSoft) => {
-            // println!("Timer Interupt Occures!");
+
             // software interrupt from a machine-mode timer interrupt,
             // forwarded by timervec in kernelvec.S.
 
@@ -281,7 +280,6 @@ unsafe fn devintr() -> usize {
         }
 
         _ => {
-            println!("Exception and other Interrupts Occurs!");
             0
         }
     }
