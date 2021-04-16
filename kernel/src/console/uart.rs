@@ -2,6 +2,9 @@ use core::ptr;
 use core::convert::Into;
 
 use crate::define::memlayout::UART0;
+use crate::lock::spinlock::*;
+
+static mut UART_TX_LOCK: Spinlock<()> = Spinlock::new((), "uart_tx_lock");
 
 
 macro_rules! Reg {
@@ -57,6 +60,30 @@ pub fn uartinit() {
 }
 
 pub fn uartputc(c: u8) {
+    let guard = unsafe{ UART_TX_LOCK.acquire() };
     while (ReadReg!(LSR) & (1 << 5)) == 0 {}
     WriteReg!(THR, c);
+    drop(guard);
+}
+
+// read one input character from the UART.
+// return -1 if none is waiting.
+pub fn uartgetc() -> u8 {
+    if ReadReg!(LSR) & 1 != 0 {
+        ReadReg!(RHR)
+    }else {
+        1
+    }
+}
+
+// handle a uart interrupt, raised because input has
+// arrived, or the uart is ready for more output, or
+// both. called from trap.c.
+
+pub fn uartintr() {
+    // read and process incoming characters.
+    loop {
+        let c = uartgetc();
+        
+    }
 }
