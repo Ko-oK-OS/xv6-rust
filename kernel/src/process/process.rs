@@ -25,7 +25,6 @@ pub enum Procstate{
 pub struct Process {
     pub data: Spinlock<ProcData>,
     pub extern_data: UnsafeCell<ProcExtern>,
-    name: &'static str   // Process name (debugging)
 }
 
 pub struct ProcData {
@@ -72,6 +71,8 @@ pub struct ProcExtern {
     pub pagetable: Option<Box<PageTable>>, // User page table
     pub trapframe: *mut Trapframe, // data page for trampoline.S
     pub context: Context, // swtch() here to run processs
+
+    name: &'static str   // Process name (debugging)
     // TODO: Open files and Current directory
 }
 
@@ -83,7 +84,12 @@ impl ProcExtern {
             pagetable: None,
             trapframe: null_mut(),
             context: Context::new(),
+            name: "process"
         }
+    }
+
+    pub fn set_name(&mut self, name:&'static str) {
+        self.name = name;
     }
 
     pub fn set_kstack(&mut self, ksatck: usize) {
@@ -106,21 +112,21 @@ impl ProcExtern {
         &mut self.context as *mut Context
     }
 
-        // Create a user page table for a given process,
+    // Create a user page table for a given process,
     // with no user memory, but with trampoline pages
-    pub unsafe fn proc_pagetable(&mut self) -> Option<*mut PageTable> {
+    pub unsafe fn proc_pagetable(&mut self) -> Option<Box<PageTable>> {
 
         extern "C" {
             fn trampoline();
         }
 
         // An empty page table
-        if let Some(page_table) = PageTable::uvmcreate() {
+        if let Some(mut page_table) = PageTable::uvmcreate() {
             // map the trampoline code (for system call return )
             // at the highest user virtual address.
             // only the supervisor uses it, on the way
             // to/from user space, so not PTE_U. 
-            let page_table = &mut *page_table;
+            // let page_table = &mut *page_table;
             let is_ok = page_table.mappages(
                 VirtualAddress::new(TRAMPOLINE),
                 PhysicalAddress::new(trampoline as usize),
@@ -162,9 +168,9 @@ impl Process{
         Self{    
             data: Spinlock::new(ProcData::new(), "process"),
             extern_data: UnsafeCell::new(ProcExtern::new()),
-            name: "process"
         }
     }
+
 
     pub fn as_ptr(&self) -> *const Process{
         self as *const Process

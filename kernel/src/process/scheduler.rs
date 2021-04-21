@@ -1,5 +1,5 @@
 use array_macro::array;
-use core::ptr::NonNull;
+use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
 use super::*;
 use crate::define::{
@@ -11,8 +11,8 @@ use crate::register::sstatus::intr_on;
 use crate::memory::*;
 
 pub struct ProcManager{
-    // proc:[Spinlock<Process>; NPROC]
-    proc: [Process; NPROC]
+    proc: [Process; NPROC],
+    init_proc: Process
 }
 
 pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
@@ -30,7 +30,8 @@ pub static mut NEXT_PID:usize = 0;
 impl ProcManager{
     pub const fn new() -> Self {
         Self{
-            proc: array![_ => Process::new(); NPROC]
+            proc: array![_ => Process::new(); NPROC],
+            init_proc: Process::new()
         }
     }
 
@@ -70,6 +71,35 @@ impl ProcManager{
         }
     }
 
+    // Set up first user programe
+    pub unsafe fn userinit(&mut self) {
+        println!("first user process init......");
+        let p = self.allocproc().expect("Fail to get unused process");
+
+        // allocate one user page and copy init's instructions
+        // and data into it.
+        let extern_data = p.extern_data.get_mut();
+        extern_data.pagetable.as_mut().unwrap().uvminit(
+            &initcode,
+            size_of_val(&initcode)
+        );
+
+        extern_data.size = PGSIZE;
+
+        // prepare for the very first "return" from kernel to user. 
+        let tf =  &mut *extern_data.trapframe;
+        tf.epc = 0; // user program counter
+        tf.sp = PGSIZE; // user stack pointer
+
+        extern_data.set_name("initcode");
+        
+        let mut guard = p.data.acquire();
+        guard.set_state(Procstate::RUNNABLE);
+
+        drop(guard);
+
+    }
+
 
     // Look in the process table for an UNUSED proc.
     // If found, initialize state required to run in the kernel,
@@ -77,57 +107,55 @@ impl ProcManager{
     // If there are a free procs, or a memory allocation fails, return 0. 
 
     // TODO: possible error occurs here.
-    // pub fn allocproc(&mut self) -> Option<SpinlockGuard<'_, ProcData>> {
+    pub fn allocproc(&mut self) -> Option<&mut Process> {
+        for p in self.proc.iter_mut() {
+            let mut guard = p.data.acquire();
+            if guard.state == Procstate::UNUSED {
+                guard.pid = alloc_pid();
+                guard.set_state(Procstate::USED);
 
-    //     for p in self.proc.iter_mut() {
-    //         let mut guard = p.data.acquire();
-    //         // let extern_data = p.extern_data.get_mut();
-    //         if guard.state == Procstate::UNUSED {
-    //             guard.pid = alloc_pid();
-    //             guard.set_state(Procstate::USED);
+                let extern_data = p.extern_data.get_mut();
+                // Allocate a trapframe page.
+                match unsafe { kalloc() } {
+                    Some(ptr) => {
+                        extern_data.set_trapframe(ptr as *mut Trapframe);
 
-    //             let extern_data = p.extern_data.get_mut();
-    //             // Allocate a trapframe page.
-    //             match unsafe { kalloc() } {
-    //                 Some(ptr) => {
-    //                     extern_data.set_trapframe(ptr as *mut Trapframe);
-
-    //                     // An empty user page table
-    //                     if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
-    //                         unsafe {
-    //                             extern_data.set_pagetable(Box::<PageTable>::new_ptr(*page_table));
-    //                         }
-
-    //                         // Set up new context to start executing at forkret, 
-    //                         // which returns to user space. 
-    //                         let kstack = extern_data.kstack;
-    //                         extern_data.context.write_zero();
-    //                         // guard.context.write_ra(forkret as usize);
-    //                         extern_data.context.write_sp(kstack + PGSIZE);
-
-    //                         return Some(guard)
+                        // An empty user page table
+                        if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
+                           extern_data.set_pagetable(Some(page_table));
                             
-    //                     } else {
-    //                         // p.freeproc();
-    //                         drop(guard);
-    //                         return None
-    //                     }
-    //                 }
 
-    //                 None => {
-    //                     // p.freeproc();
-    //                     drop(guard);
-    //                     return None
-    //                 }
-    //             }
+                            // Set up new context to start executing at forkret, 
+                            // which returns to user space. 
+                            let kstack = extern_data.kstack;
+                            extern_data.context.write_zero();
+                            // guard.context.write_ra(forkret as usize);
+                            extern_data.context.write_sp(kstack + PGSIZE);
+                            drop(guard);
+                            return Some(p);
+                            // return Some(guard)
+                            
+                        } else {
+                            // p.freeproc();
+                            drop(guard);
+                            return None
+                        }
+                    }
+
+                    None => {
+                        // p.freeproc();
+                        drop(guard);
+                        // return None
+                    }
+                }
             
-    //         }else {
-    //             drop(guard);
-    //         }
-    //     }
+            }else {
+                drop(guard);
+            }
+        }
 
-    //     None
-    // }
+        None
+    }
 
 
     // Wake up all processes sleeping on chan.

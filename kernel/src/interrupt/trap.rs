@@ -175,7 +175,10 @@ pub unsafe fn kerneltrap(
         0 => {
             // modify sepc to countine running after restoring context
             sepc += 2;
-            println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
+
+            // debug
+            // println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
+            
             let scause = Scause::new(scause);
             match scause.cause(){
                 Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),

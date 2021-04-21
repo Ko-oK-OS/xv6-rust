@@ -1,4 +1,5 @@
 pub const SHUTDOWN: usize = 8;
+pub const REBOOT: usize = 9;
 
 #[inline]
 pub fn kernel_syscall(

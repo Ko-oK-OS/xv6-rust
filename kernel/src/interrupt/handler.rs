@@ -13,12 +13,20 @@ pub fn handler_kernel_syscall(
     }
     match which  {
         SHUTDOWN => {
-            println!("\x1b[1;31mshutdown! Bye~ \x1b[0m");
+            println!("\x1b[1;31mShutdown!\x1b[0m");
             system_reset(
                 RESET_TYPE_SHUTDOWN,
                 RESET_REASON_NO_REASON
             );
-        }
+        },
+
+        REBOOT => {
+            println!("\x1b[1;31mReboot!\x1b[0m");
+            system_reset(
+                RESET_TYPE_COLD_REBOOT,
+                RESET_REASON_NO_REASON
+            );
+        },
 
         _ => {
             panic!("Unresolved Kernel Syscall!");
