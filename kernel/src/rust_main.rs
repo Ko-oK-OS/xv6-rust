@@ -34,8 +34,8 @@ pub unsafe extern "C" fn rust_main() -> !{
         trapinithart(); // trap vectors
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
+        PROC_MANAGER.userinit(); // first user process
 
-        // llvm_asm!("ebreak"::::"volatile");
 
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // sstatus::intr_on();

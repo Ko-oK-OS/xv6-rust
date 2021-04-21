@@ -220,11 +220,12 @@ impl PageTable{
 
     // Create an empty user page table.
     // return None if out of memory
-    pub unsafe fn uvmcreate() -> Option<*mut PageTable>{
+    pub unsafe fn uvmcreate() -> Option<Box<PageTable>>{
         match Box::<PageTable>::new(){
             Some(mut page_table) => {
                 page_table.clear();
-                Some(&mut (*page_table))
+                // Some(&mut (*page_table))
+                Some(page_table)
             }
 
             None => None
@@ -235,7 +236,7 @@ impl PageTable{
     // for the very first process
     // sz must be less than a page
 
-    pub unsafe fn uvminit(&mut self, src: *const u8, size:usize){
+    pub unsafe fn uvminit(&mut self, src: &[u8], size:usize){
         if size >= PGSIZE{
             panic!("inituvm: more than a page");
         }
@@ -250,7 +251,7 @@ impl PageTable{
                 PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
             );
 
-            copy_nonoverlapping(src, mem, PGSIZE);
+            copy_nonoverlapping(src.as_ptr(), mem, PGSIZE);
         }
     }
 
