@@ -219,7 +219,7 @@ impl Process{
             extern_data.size = 0;
 
             guard.pid = 0;
-            guard.set_parent(None);
+            // guard.set_parent(None);
             guard.channel = 0;
             guard.killed = 0;
             guard.xstate = 0;
