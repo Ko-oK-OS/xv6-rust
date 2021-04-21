@@ -3,6 +3,7 @@
 use core::ops::{Deref, DerefMut, Drop};
 use core::sync::atomic::{AtomicBool, fence, Ordering};
 use core::cell::{Cell, UnsafeCell};
+use core::hint::spin_loop;
 
 use crate::process::{push_off, pop_off};
 
@@ -73,7 +74,9 @@ impl<T: ?Sized> SleepLock<T> {
         if self.holding() {
             panic!("sleeplock {} acquire", self.name);
         }
-        while self.lock.compare_and_swap(false, true, Ordering::Acquire) {}
+        while self.lock.swap(true, Ordering::Acquire) {
+            spin_loop();
+        }
         fence(Ordering::SeqCst);
     }
 
