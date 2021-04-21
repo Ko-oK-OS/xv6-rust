@@ -35,8 +35,6 @@ pub struct ProcData {
     pub xstate:usize, // Exit status to be returned to parent's wait
     pub pid: usize,   // Process ID
 
-    // proc_tree_lock must be held when using this:
-    pub parent: Option<NonNull<Process>>,
 
 }
 
@@ -48,7 +46,6 @@ impl ProcData {
             killed: 0,
             xstate: 0,
             pid: 0,
-            parent: None,
 
         }
     }
@@ -58,9 +55,6 @@ impl ProcData {
     }
 
 
-    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
-        self.parent = parent;
-    }
 
 }
 
@@ -72,7 +66,11 @@ pub struct ProcExtern {
     pub trapframe: *mut Trapframe, // data page for trampoline.S
     pub context: Context, // swtch() here to run processs
 
-    name: &'static str   // Process name (debugging)
+    pub name: &'static str,   // Process name (debugging)
+
+    // proc_tree_lock must be held when using this:
+    pub parent: Option<NonNull<Process>>,
+    
     // TODO: Open files and Current directory
 }
 
@@ -84,12 +82,17 @@ impl ProcExtern {
             pagetable: None,
             trapframe: null_mut(),
             context: Context::new(),
-            name: "process"
+            name: "process",
+            parent: None,
         }
     }
 
     pub fn set_name(&mut self, name:&'static str) {
         self.name = name;
+    }
+
+    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
+        self.parent = parent;
     }
 
     pub fn set_kstack(&mut self, ksatck: usize) {
