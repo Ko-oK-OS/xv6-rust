@@ -39,6 +39,7 @@ mod lock;
 mod process;
 mod interrupt;
 mod memory;
+mod syscall;
 
 
 

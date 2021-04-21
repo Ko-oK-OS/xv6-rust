@@ -394,7 +394,7 @@ impl PageTable{
 
     pub unsafe fn uvmcopy(
         &mut self, 
-        mut new: Self, 
+        new: &mut Self, 
         size: usize
     ) -> bool {
         let mut va = VirtualAddress::new(0);
