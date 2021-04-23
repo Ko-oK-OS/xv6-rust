@@ -23,7 +23,8 @@ static STARTED:AtomicBool = AtomicBool::new(false);
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() -> !{
     if cpu::cpuid() == 0{
-        console::consoleinit();
+        // console::consoleinit();
+        console::uart_init();
         println!("{}",LOGO);
         println!("xv6 kernel is booting!");
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
