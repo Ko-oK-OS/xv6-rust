@@ -5,3 +5,7 @@ pub fn sys_fork() -> isize {
         fork()
     }
 }
+
+// pub fn sys_exit() -> isize {
+
+// }

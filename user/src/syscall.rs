@@ -1,11 +1,60 @@
-global_asm!(include_str!("usys.S"));
+pub const SYS_FORK:usize = 0;
+pub const SYS_EXIT:usize = 1;
+pub const SYS_WAIT:usize = 2;
+pub const SYS_PIPE:usize = 3;
+pub const SYS_READ:usize = 4;
+pub const SYS_WRITE:usize = 5;
+pub const SYS_CLOSE:usize = 6;
+pub const SYS_KILL:usize = 7;
+pub const SYS_EXEC:usize = 8;
+pub const SYS_OPEN:usize = 9;
+pub const SYS_MKOND:usize = 10;
+pub const SYS_UNLINKE:usize = 11;
+pub const SYS_FSTAT:usize = 12;
+pub const SYS_LINK:usize = 13;
+pub const SYS_MKDIR:usize = 14;
+pub const SYS_CHDIR:usize = 15;
+pub const SYS_DUP:usize = 16;
+pub const SYS_GETPID:usize = 17;
+pub const SYS_SBRK:usize = 18;
+pub const SYS_SLEEP:usize = 19;
+pub const SYS_UPTIME:usize = 20;
 
-extern "C" {
-    pub fn __fork() -> isize;
-}
-
-pub fn fork() -> isize{
-    unsafe {
-        __fork()
+fn syscall(id: usize, args:[usize; 3]) -> isize {
+    let ret:isize;
+    unsafe{
+        llvm_asm!("ecall"
+            : "={x10}" (ret)
+            : "{x10}" (args[0]), "{x11}" (args[1]), "{x12}" (args[2]), "{x17}" (id)
+            : "memory"
+            : "volatile"
+        );
     }
+    ret
 }
+
+pub fn sys_fork() -> isize {
+    syscall(SYS_FORK, [0, 0, 0])
+}
+
+pub fn sys_exit(exit_code: i32) -> ! {
+    syscall(SYS_EXIT, [exit_code as usize, 0, 0]);
+    panic!("exit never return");
+}
+
+pub fn sys_wait(status: isize) -> isize {
+    syscall(SYS_WAIT, [status as usize, 0, 0])
+}
+
+pub fn sys_pipe(pipe: &mut [usize]) -> isize {
+    syscall(SYS_PIPE, [pipe.as_mut_ptr() as usize, 0, 0])
+}
+
+pub fn sys_read(fd:isize, buf: &mut [u8], n:usize) -> isize {
+    syscall(SYS_READ, [fd as usize, buf.as_mut_ptr() as usize, n])
+}
+
+pub fn sys_write(fd:isize, buf: &[u8], n:usize) -> isize {
+    syscall(SYS_WRITE, [fd as usize, buf.as_ptr() as usize, n])
+}
+
