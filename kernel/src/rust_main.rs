@@ -15,6 +15,7 @@ use crate::memory::{
 
 use crate::process::*;
 use crate::register::sstatus;
+use crate::fs::*;
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 
@@ -34,6 +35,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         trapinithart(); // trap vectors
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
+        BCACHELIST.binit(); // buffer cache
         PROC_MANAGER.userinit(); // first user process
 
 
