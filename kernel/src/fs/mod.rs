@@ -3,8 +3,10 @@ use core::ptr::NonNull;
 
 mod bio;
 pub use bio::*;
-
 pub const BSIZE:usize = 1024;
+
+
+#[derive(Clone)]
 pub struct Buf{
     valid:usize, // has data been read from disk?
     disk:usize,  // does disk "own" buf?
