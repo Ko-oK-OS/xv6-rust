@@ -2,7 +2,7 @@ use core::ptr;
 use core::convert::{ Into, TryInto };
 use core::fmt::{self, Write};
 
-use crate::define::memlayout::UART0;
+use crate::{define::memlayout::UART0, println};
 use crate::lock::spinlock::*;
 
 // static mut UART_TX_LOCK: Spinlock<()> = Spinlock::new((), "uart_tx_lock");
@@ -183,23 +183,41 @@ impl Write for Uart {
 
 
 pub fn uart_intr() {
-    let mut uart = UART.acquire();
-    if let Some(c) = uart.get() {
+    // let mut uart = UART.acquire();
+    // if let Some(c) = uart.get() {
+    //     drop(uart);
+    //     match c {
+    //         8 => {
+    //             // This is a backspace, so we
+    //             // essentially have to write a space and
+    //             // backup again:
+    //             println!("{} {}", 8 as char, 8 as char);
+    //         }
+
+    //         10 | 13 => {
+    //             println!("");
+    //         }
+
+    //         _ => {
+    //             println!("{}", c as char);
+    //         }
+    //     }
+    // }
+
+    loop {
+        let mut uart = UART.acquire();
+        let c = uart.get().unwrap();
         drop(uart);
         match c {
-            8 => {
-                // This is a backspace, so we
-                // essentially have to write a space and
-                // backup again:
-                println!("{} {}", 8 as char, 8 as char);
-            }
-
-            10 | 13 => {
-                println!("");
+            // new line
+            10 => {
+                break;
             }
 
             _ => {
-                println!("{}", c as char);
+                // println!("{}", c as char);
+                // TODO: consoleintr
+                // uart.put(c)
             }
         }
     }

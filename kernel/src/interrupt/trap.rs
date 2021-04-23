@@ -6,6 +6,7 @@ use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::memlayout::*;
 use crate::process::*;
+use crate::console::*;
 use super::*;
 
 static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
@@ -191,15 +192,16 @@ pub unsafe fn kerneltrap(
 
                 Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
 
-                Trap::Exception(Exception::KernelEnvCall) => handler_kernel_syscall(arg0, arg1, arg2, which),
+                Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
 
-                _ => panic!("Unresolved Trap!")
+                _ => panic!("Unresolved Trap! scause:{:?}", scause.cause())
             }
 
         }
 
         1 => {
             panic!("Unsolved solution!");
+            
 
         }
 
@@ -249,10 +251,12 @@ unsafe fn devintr() -> usize {
 
             if irq == UART0_IRQ as usize{
                 // TODO: uartintr
-                println!("uart interrupt")
+                uart_intr();
+                println!("uart interrupt");
+
             }else if irq == VIRTIO0_IRQ as usize{
                 // TODO: virtio_disk_intr
-                println!("virtio0 interrupt")
+                println!("virtio0 interrupt");
             }else if irq != 0{
                 println!("unexpected intrrupt, irq={}", irq);
             }

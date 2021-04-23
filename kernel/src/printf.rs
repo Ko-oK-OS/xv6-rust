@@ -77,8 +77,8 @@ macro_rules! println {
 #[panic_handler]
 fn panic(info: &PanicInfo<'_>) -> ! {
     println!("\x1b[1;31mpanic: '{}'\x1b[0m", info);
-    // shutdown();
-    reboot();
+    shutdown();
+    // reboot();
     loop {}
 }
 
