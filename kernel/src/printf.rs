@@ -55,6 +55,13 @@ pub fn _print(args: fmt::Arguments) {
 
     let mut uart = console::UART.acquire();
     uart.write_fmt(args).unwrap();
+    drop(uart);
+}
+
+pub fn console_ptr(c: u8) {
+    let mut uart = console::UART.acquire();
+    uart.put(c);
+    drop(uart);
 }
 
 /// implement print and println! macro

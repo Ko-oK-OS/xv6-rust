@@ -27,7 +27,6 @@ pub unsafe extern "C" fn rust_main() -> !{
         console::uart_init(); //  uart init
         println!("{}",LOGO);
         println!("xv6 kernel is booting!");
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         kinit(); // physical page allocator
         kvminit(); // create kernel page table
         kvminithart(); // turn on paging
