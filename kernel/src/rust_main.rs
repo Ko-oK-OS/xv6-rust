@@ -40,18 +40,18 @@ pub unsafe extern "C" fn rust_main() -> !{
         PROC_MANAGER.userinit(); // first user process
 
 
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        sstatus::intr_on();
-        STARTED.store(true, Ordering::SeqCst);
-        loop{};
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // sstatus::intr_on();
+        // STARTED.store(true, Ordering::SeqCst);
+        // loop{};
     }else{
         while !STARTED.load(Ordering::SeqCst){}
         println!("hart {} starting\n", cpu::cpuid());
         kvminithart(); // turn on paging
         trapinithart();   // install kernel trap vector
         plicinithart();   // ask PLIC for device interrupts
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        loop{}
+        panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // loop{}
     }
 
     #[cfg(feature = "unit_test")]
