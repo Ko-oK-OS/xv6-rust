@@ -23,10 +23,10 @@ static STARTED:AtomicBool = AtomicBool::new(false);
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() -> !{
     if cpu::cpuid() == 0{
-        console::consoleinit();
+        // console::consoleinit();
+        console::uart_init(); //  uart init
         println!("{}",LOGO);
         println!("xv6 kernel is booting!");
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         kinit(); // physical page allocator
         kvminit(); // create kernel page table
         kvminithart(); // turn on paging
@@ -42,7 +42,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // sstatus::intr_on();
         // STARTED.store(true, Ordering::SeqCst);
-        // loop{}
+        // loop{};
     }else{
         while !STARTED.load(Ordering::SeqCst){}
         println!("hart {} starting\n", cpu::cpuid());

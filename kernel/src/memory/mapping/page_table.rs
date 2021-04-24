@@ -485,6 +485,49 @@ impl PageTable{
     // }
 
 
+    // Copy from user to kernel.
+    // Copy len bytes to dst from virtual address srcva in a given page table.
+    // Return 0 on success, -1 on error.
+    
+    pub fn copy_in(&mut self, mut dst: *mut u8, src_va: usize, mut len: usize) -> bool {
+        let mut va = VirtualAddress::new(src_va);
+        let mut src_va = VirtualAddress::new(src_va);
+
+        while len > 0 {
+            va.pg_round_down();
+            let pa = PageTable::walkaddr(self, va).unwrap();
+                if pa.as_usize() == 0 {
+                    return false
+                }
+                let mut n = PGSIZE - (src_va.as_usize() -va.as_usize());
+
+                if n > len {
+                    n = len;
+                }
+
+                unsafe {
+                    // Write value from pagetable into dst
+                    for i in 0..n {
+                        let write_dst = (dst as usize + i) as *mut u8;
+                        let write_src = (pa.as_usize() + (src_va.as_usize() - va.as_usize())) as *const u8 ;
+                        let write_value = core::ptr::read(write_src);
+                        core::ptr::write(write_dst, write_value);
+                    }
+                }
+
+                len -= n;
+                
+                dst = ((dst as usize) + n) as *mut u8;
+                
+
+                src_va = VirtualAddress::new(va.as_usize());
+                src_va.add_page();
+        }
+        true
+    }
+
+
+
     // Free a process's page table, and free the
     // physical memory it refers to.
     pub fn proc_freepagetable(&mut self, size: usize) {

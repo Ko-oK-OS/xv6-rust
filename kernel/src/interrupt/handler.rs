@@ -1,8 +1,9 @@
-use crate::shutdown::*;
+use crate::{println, shutdown::*};
 use crate::kernel_syscall::*;
 use crate::register::satp;
+use crate::console::*;
  
-pub fn handler_kernel_syscall(
+pub fn kernel_syscall(
     _: usize, 
     _: usize, 
     _: usize, 
@@ -32,4 +33,11 @@ pub fn handler_kernel_syscall(
             panic!("Unresolved Kernel Syscall!");
         }
     }
+}
+
+pub fn supervisor_external() {
+    let mut uart = UART.acquire();
+    let c = uart.get().unwrap();
+    println!("{}", c);
+    drop(uart);
 }
