@@ -73,5 +73,7 @@ pub unsafe fn lazy_allocate(stval: usize) {
         ) {
             panic!("lazy_allocate(): fail to allocate physical address for invalid virtual address");
         }
+
+        kfree(pa);
     }
 }
