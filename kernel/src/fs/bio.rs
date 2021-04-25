@@ -37,10 +37,14 @@ impl BcacheList  {
             list: SleepLock::new(table, "bcachelist")
         }
     }
+
+
     pub fn binit(&mut self) {
         // Create linked list of buffers. 
         println!("binit......");
         let mut guard = self.list.lock();
+
+        // get the pointer of bcache head
         let head_ptr = &mut guard.head as *mut Buf;
 
         guard.head.prev = NonNull::new(head_ptr);
@@ -59,5 +63,16 @@ impl BcacheList  {
         drop(guard);
 
     }
+
+    // Look through buffer cache for block on device dev.
+    // If not found, allocate a buffer.
+    // In either case, return locked buffer.
+    // pub fn bget(&mut self, dev:usize, blockno:usize) -> Option<*mut Buf> {
+    //     let mut bcache_list = self.list.lock();
+
+    //     // Is the block already cached?
+    //     let b = bcache_list.head.next.unwrap();
+        
+    // }
 }
 

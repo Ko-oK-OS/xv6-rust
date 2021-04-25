@@ -3,11 +3,13 @@ pub mod cpu;
 mod context;
 mod trapframe;
 mod scheduler;
+mod elf;
 pub use context::*;
 pub use trapframe::*;
 pub use cpu::*;
 pub use process::*;
 pub use scheduler::*;
+pub use elf::*;
 
 use core::ptr::{ copy_nonoverlapping, NonNull };
 use core::mem::size_of;
@@ -31,7 +33,7 @@ pub unsafe fn fork() -> isize {
 
     // ALLOCATE process
     if let Some(other_proc) = PROC_MANAGER.allocproc() {
-        let mut guard = other_proc.data.acquire();
+        let guard = other_proc.data.acquire();
         let extern_data = my_proc.extern_data.get_mut();
         let other_extern_data = other_proc.extern_data.get_mut();
 
