@@ -67,12 +67,40 @@ impl BcacheList  {
     // Look through buffer cache for block on device dev.
     // If not found, allocate a buffer.
     // In either case, return locked buffer.
-    // pub fn bget(&mut self, dev:usize, blockno:usize) -> Option<*mut Buf> {
-    //     let mut bcache_list = self.list.lock();
+    pub unsafe fn bget(&mut self, dev:usize, blockno:usize) -> Option<*mut Buf> {
+        let mut bcache_list = self.list.lock();
 
-    //     // Is the block already cached?
-    //     let b = bcache_list.head.next.unwrap();
-        
-    // }
+        // Is the block already cached?
+        let mut b = bcache_list.head.next.unwrap().as_ptr();
+        let head_ptr = &mut bcache_list.head as *mut Buf;
+        while b != head_ptr {
+            if (*b).dev == dev && (*b).blockno == blockno {
+                (*b).refcnt = (*b).refcnt + 1; 
+                drop(bcache_list);
+                // TODO: acquiresleep
+                return Some(b)
+            }
+            b = (*b).next.unwrap().as_ptr();
+        }
+
+        // Not cached
+        // Recycle the least latest used(LRU) unused buffer. 
+        let mut b = bcache_list.head.prev.unwrap().as_ptr();
+        while b != head_ptr {
+            if (*b).refcnt == 0 {
+                (*b).dev = dev;
+                (*b).blockno = blockno;
+                (*b).valid = 0;
+                (*b).refcnt = 1;
+                drop(bcache_list);
+                // TODO: acquiresleep
+                return Some(b)
+            }
+            b = (*b).prev.unwrap().as_ptr();
+        }
+
+        panic!("bget(): no buffers");
+    }
+
 }
 

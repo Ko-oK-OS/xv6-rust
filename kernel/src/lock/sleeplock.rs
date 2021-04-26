@@ -53,7 +53,7 @@ impl<T: ?Sized> SleepLock<T> {
     }
 
     /// Called by its guard when dropped
-    fn unlock(&self) {
+    pub fn unlock(&self) {
         self.acquire();
         self.locked.set(false);
         self.wakeup();
