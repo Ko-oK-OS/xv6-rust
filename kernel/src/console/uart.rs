@@ -28,13 +28,23 @@ use crate::lock::spinlock::*;
 //     };
 // }
 
-// const RHR: usize = 0;
-// const THR: usize = 0;
-// const IER: usize = 1;
-// const FCR: usize = 2;
-// const ISR: usize = 2;
-// const LCR: usize = 3;
-// const LSR: usize = 5;
+const RHR: usize = 0; // receive holding register (for input bytes)
+const THR: usize = 0; // transmit holding register (for output bytes)
+const IER: usize = 1; // interrupt enable register
+const FCR: usize = 2; // FIFO control register
+const ISR: usize = 2; // interrupt status register
+const LCR: usize = 3; // line control register
+const LSR: usize = 5; // line status register
+
+const IER_RX_ENABLE: usize = 1 << 0;
+const IRX_TX_ENABLE: usize = 1 << 1;
+const FCR_FIFO_ENABLE: usize = 1 << 0;
+const FCR_FIFO_CLEAR: usize = 3 << 1; // clear the content of the two FIFOs
+const LCR_EIGHT_BITS: usize = 3 << 0;
+const LCR_BAUD_LATCH: usize = 1 << 7; // special mode to set baud rate
+const LSR_RX_READY: usize = 1 << 0; // input is waiting to be read from RHR
+const LSR_TX_IDLE: usize = 1 << 5; // THR can accept another character to send
+
 
 // pub fn uartinit() {
 //     // disable interrupts.

@@ -230,15 +230,10 @@ impl Process{
         }
     }
 
-
-
-
-
-
-
+    
     // Grow or shrink user memory by n bytes. 
     // Return true on success, false on failure. 
-    pub fn growproc(&mut self, n: isize) -> bool {
+    pub fn growproc(&mut self, n: isize) -> Result<(), &'static str> {
         let mut extern_data = self.extern_data.get_mut();
         let mut size = extern_data.size; 
         let page_table = extern_data.pagetable.as_mut().unwrap();
@@ -249,7 +244,7 @@ impl Process{
                 },
 
                 None => {
-                    return false
+                    return Err("Fail to allocate virtual memory for user")
                 }
             }
         }else if n < 0 {
@@ -259,7 +254,7 @@ impl Process{
 
         extern_data.size = size;
 
-        true
+        Ok(())
     }
 
 

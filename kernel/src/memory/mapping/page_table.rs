@@ -375,7 +375,7 @@ impl PageTable{
                     pte.write_zero();
                 }
 
-                None => panic!("uvmunmap: walk")
+                None => panic!("uvmunmap(): walk")
             }
 
             a.add_page()
