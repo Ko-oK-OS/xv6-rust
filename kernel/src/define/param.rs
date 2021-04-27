@@ -11,3 +11,9 @@ pub const LOGSIZE:usize = MAXOPBLOCKS*3; // max data blocks in on-disk log
 pub const NBUF:usize = MAXOPBLOCKS*3;  // size of disk block cache
 pub const FSSIZE:usize = 1000;  // size of file system in blocks
 pub const MAXPATH:usize = 128;   // maximum file path name
+
+// min leaf size for buddy system
+pub const LEAF_SIZE:usize = 16;
+
+// max memory size for buddy system
+pub const MAX_ALIGNMENT:usize = 1024*1024*128;

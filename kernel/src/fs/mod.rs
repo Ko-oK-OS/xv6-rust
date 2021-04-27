@@ -18,6 +18,8 @@ pub struct Buf{
     data: [u8;BSIZE]
 }
 
+
+
 impl Buf {
     const fn new() -> Self {
         Self {
