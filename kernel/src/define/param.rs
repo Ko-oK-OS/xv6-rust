@@ -16,4 +16,4 @@ pub const MAXPATH:usize = 128;   // maximum file path name
 pub const LEAF_SIZE:usize = 16;
 
 // max memory size for buddy system
-pub const MAX_ALIGNMENT:usize = 1024*1024*128;
+pub const MAX_ALIGNMENT:usize = 4096;

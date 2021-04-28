@@ -2,7 +2,7 @@ use crate::lock::spinlock::Spinlock;
 use crate::define::param::{ LEAF_SIZE, MAX_ALIGNMENT };
 use crate::define::memlayout::{PGSIZE, PHYSTOP};
 use super::address::{PhysicalAddress, Addr};
-use lazy_static::*;
+// use lazy_static::*;
 use core::alloc::{ GlobalAlloc, Layout };
 
 use allocator::*;
@@ -38,10 +38,19 @@ impl KernelHeap {
     }
 
     unsafe fn init(&self, start: usize, end: usize) {
-        self.0.acquire().init(start, end, LEAF_SIZE, MAX_ALIGNMENT);
+        let res = self.0.acquire().init(start, end, LEAF_SIZE, MAX_ALIGNMENT);
+        match res {
+            Ok(()) => {
+                println!("KernelHeap: success to init.");
+            },
+
+            Err(err) => {
+                println!("KernelHeap: init error: {}.", err);
+            }
+        }
     }
 
-    pub unsafe fn kinit(&self ) {
+    pub unsafe fn kinit(&self) {
         println!("kinit......");
         let end = end as usize;
         println!("KernelHeap: available memory: [{:#x}, {:#x})", end, PHYSTOP.as_usize());
@@ -78,17 +87,18 @@ impl Run{
 
 type FreeList = Run;
 
-lazy_static!{
-    static ref KMEM: Spinlock<FreeList> = Spinlock::new(FreeList { next: None }, "kmem");
-}
-// static KMEM: Spinlock<FreeList> = Spinlock::new(FreeList { next: None }, "kmem");
+// lazy_static!{
+//     static ref KMEM: Spinlock<FreeList> = Spinlock::new(FreeList { next: None }, "kmem");
+// }
+static KMEM: Spinlock<FreeList> = Spinlock::new(FreeList{ next: None }, "kmem");
+
 
 
 // first address after kernel.
-    // defined by kernel.ld.
-    extern "C"{
-        fn end();
-    }
+// defined by kernel.ld.
+extern "C"{
+    fn end();
+}
 
 pub unsafe fn kinit(){
     println!("kinit......");
@@ -100,14 +110,8 @@ pub unsafe fn kinit(){
 
 unsafe fn freerange(mut pa_start:PhysicalAddress, pa_end:PhysicalAddress){
     println!("enter freerange......");
-    // let mut p:PhysicalAddress = pa_start.pg_round_up();
     pa_start.pg_round_up();
-    // let end_addr:PhysAddr = pa_end.as_usize();
-    // println!("enter loop......");
-    // println!("start addr: {:#x}", p);
-    // println!("end addr: {:#x}", end_addr);
     while pa_start != pa_end{
-        // println!("page addr: {:#x}", p);
         kfree(pa_start);
         pa_start.add_page();
     }
@@ -133,7 +137,7 @@ pub unsafe fn kfree(pa: PhysicalAddress){
     // }
 
     let mut r:NonNull<FreeList> = FreeList::new(addr as *mut u8);
-    let mut guard = (*KMEM).acquire();
+    let mut guard = KMEM.acquire();
 
     r.as_mut().set_next(guard.get_next());
     guard.set_next(Some(r));
@@ -148,7 +152,7 @@ pub unsafe fn kfree(pa: PhysicalAddress){
 // Returns 0 if the memory cannot be allocated.
 
 pub unsafe fn kalloc() -> Option<*mut u8>{
-    let mut guard = (*KMEM).acquire();
+    let mut guard = KMEM.acquire();
     let r = guard.get_next();
     if let Some(mut addr) = r{
         guard.set_next(addr.as_mut().get_next());

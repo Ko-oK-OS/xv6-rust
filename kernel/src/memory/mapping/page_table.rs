@@ -5,8 +5,10 @@ use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc:: {kalloc, kfree}, 
-    container::boxed::Box,
+    // container::boxed::Box,
 };
+
+use alloc::boxed::Box;
 use super::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -109,17 +111,20 @@ impl PageTable{
                 if alloc == 0{
                     return None
                 }
-                match unsafe{Box::<PageTable>::new()}{
-                    Some(mut new_pagetable) => {
-                        new_pagetable.clear();
-                        pagetable = new_pagetable.into_raw();
-                        pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
+                // match unsafe{Box::<PageTable>::new()}{
+                //     Some(mut new_pagetable) => {
+                //         new_pagetable.clear();
+                //         pagetable = new_pagetable.into_raw();
+                //         pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
 
                         
-                    }
-                    None => return None,
-                }
-                
+                //     }
+                //     None => return None,
+                // }
+
+                let zeroed_pgt: Box<PageTable> = Box::new_zeroed().assume_init();
+                pagetable = Box::into_raw(zeroed_pgt);
+                pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
             }
         }
         Some(unsafe{&mut (*pagetable).entries[va.page_num(0)]})
@@ -221,15 +226,17 @@ impl PageTable{
     // Create an empty user page table.
     // return None if out of memory
     pub unsafe fn uvmcreate() -> Option<Box<PageTable>>{
-        match Box::<PageTable>::new(){
-            Some(mut page_table) => {
-                page_table.clear();
-                // Some(&mut (*page_table))
-                Some(page_table)
-            }
+        // match Box::<PageTable>::new(){
+        //     Some(mut page_table) => {
+        //         page_table.clear();
+        //         // Some(&mut (*page_table))
+        //         Some(page_table)
+        //     }
 
-            None => None
-        }
+        //     None => None
+        // }
+
+        Some(Box::new_zeroed().assume_init())
     }
 
     // Load the user initcode into address 0 of pagetable
