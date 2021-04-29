@@ -39,16 +39,24 @@ pub unsafe fn fork() -> isize {
 
         // Copy user memory from parent to child
 
-        extern_data.pagetable.as_mut().unwrap().uvmcopy(
+        match extern_data.pagetable.as_mut().unwrap().uvmcopy(
             other_extern_data.pagetable.as_mut().unwrap(),
             extern_data.size
-        );
+        ) {
+            Ok(_) => {
+                println!("Success to copy data from user");
+            }
+
+            Err(err) => {
+                panic!("fork(): -> uvmcopy(): fail to copy data from user\nerr: {}", err);
+            }
+        }
 
         // Copy saved user register;
         copy_nonoverlapping(
             extern_data.trapframe, 
             other_extern_data.trapframe, 
-            size_of::<Trapframe>()
+            1
         );
 
         // Cause fork to return 0 in the child

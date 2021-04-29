@@ -1,5 +1,6 @@
-use core::{alloc::GlobalAlloc, ptr::{write, read, write_bytes, copy_nonoverlapping}};
+use core::{alloc::GlobalAlloc, ops::Add, ptr::{write, read, write_bytes, copy_nonoverlapping}};
 use core::ptr::drop_in_place;
+use core::ptr::copy;
 use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
@@ -128,14 +129,14 @@ impl PageTable{
     // or 0 if not mapped.
     // Can only be used to look up user pages.
     pub fn walkaddr(
-        pagetable: &mut PageTable, 
+        &mut self, 
         va: VirtualAddress
     ) -> Option<PhysicalAddress> {
         let addr = va.as_usize();
         if addr > MAXVA{
             return None
         }
-        match pagetable.walk(va, 0){
+        match self.walk(va, 0){
             Some(pte) => {
                 if !pte.is_valid(){
                     return None
@@ -165,8 +166,6 @@ impl PageTable{
         size:usize, 
         perm:PteFlags
     ) -> bool{
-        // let mut start:VirtualAddress = VirtualAddress::new(va.page_round_down());
-        // let mut end:VirtualAddress = VirtualAddress::new(va.add_addr(size -1).page_round_down());
         let mut last = VirtualAddress::new(va.as_usize() + size);
         va.pg_round_down();
         last.pg_round_up();
@@ -353,8 +352,6 @@ impl PageTable{
                     if do_free != 0 {
                         unsafe{
                             let pa = (&(*pte.as_pagetable())).as_addr();
-                            // kfree(PhysicalAddress::new(pa));
-                            // drop(*(pa as *mut RawPage));
                             drop_in_place(pa as *mut RawPage);
                         }
                     }
@@ -440,29 +437,53 @@ impl PageTable{
     // Copy len bytes from src to virtual address dstva in a given page table.
     // Return true on success, false on error.
 
-    // pub fn copyout(
-    //     &mut self, 
-    //     src_va: VirtualAddress, 
-    //     src: &mut [u8] 
-    // ) -> bool {
-    //     let mut i: usize = 0;
+    pub fn copy_out(
+        &mut self, 
+        mut dst_va: VirtualAddress, 
+        src: &mut [u8] 
+    ) -> Result<(), &'static str> {
+        let total_len = src.len();
+        let mut len = src.len();
+        while len > 0 {
+            // iterate through the raw content page by page
+            let mut va = dst_va.clone();
+            // page align by dst_va;
+            va.pg_round_down();
+            // get pa by va;
+            let pa = self.walkaddr(va).expect("Invalid physical address from virtual address");
 
-    //     // iterate through the raw content page by page
-    //     while i < dst.len() {
-    //         let mut base = src_va;
-    //         base.pg_round_up();
-    //         let distance = (va - base).as_usize();
+            let mut n = PGSIZE - (dst_va.as_usize() - va.as_usize());
 
-    //     }
+            if n > len {
+                n = len;
+            }
 
-    // }
+            let write_addr: *mut u8 = (pa.as_usize() + (dst_va.as_usize() - va.as_usize())) as *mut u8;
+            unsafe {
+                let x = total_len - len;
+                let src_addr = (&mut src[x]) as *mut u8;
+                copy(src_addr, write_addr, n);
+            }
+
+            len -= n;
+            va.add_page();
+            dst_va = va;
+        }
+
+        Ok(())
+    }
 
 
     // Copy from user to kernel.
     // Copy len bytes to dst from virtual address srcva in a given page table.
     // Return 0 on success, -1 on error.
     
-    pub fn copy_in(&mut self, mut dst: *mut u8, src_va: usize, mut len: usize) -> bool {
+    pub fn copy_in(
+        &mut self, 
+        mut dst: *mut u8, 
+        src_va: usize, 
+        mut len: usize
+    ) -> Result<(), &'static str> {
         let mut va = VirtualAddress::new(src_va);
         let mut src_va = VirtualAddress::new(src_va);
 
@@ -470,7 +491,7 @@ impl PageTable{
             va.pg_round_down();
             let pa = PageTable::walkaddr(self, va).unwrap();
                 if pa.as_usize() == 0 {
-                    return false
+                    return Err("copy_in(): fail to transfer pa from va.")
                 }
                 let mut n = PGSIZE - (src_va.as_usize() -va.as_usize());
 
@@ -496,7 +517,7 @@ impl PageTable{
                 src_va = VirtualAddress::new(va.as_usize());
                 src_va.add_page();
         }
-        true
+        Ok(())
     }
 
 
