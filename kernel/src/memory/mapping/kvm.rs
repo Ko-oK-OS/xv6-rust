@@ -1,8 +1,11 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
+use crate::memory::RawPage;
 use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE, PHYSTOP, TRAMPOLINE };
 use crate::register::{satp, sfence_vma};
 use crate::process::*;
+
+use core::mem::{ size_of, align_of };
 
 
 pub static mut KERNEL_PAGETABLE:PageTable = PageTable::empty();
@@ -14,6 +17,12 @@ extern "C" {
 // Initialize the one kernel_pagetable
 #[no_mangle]
 pub unsafe fn kvminit(){
+    // check if RawPage and PageTable have the same memory layout
+    assert_eq!(size_of::<RawPage>(), PGSIZE);
+    assert_eq!(align_of::<RawPage>(), PGSIZE);
+    assert_eq!(size_of::<RawPage>(), size_of::<PageTable>());
+    assert_eq!(align_of::<RawPage>(), align_of::<PageTable>());
+
     println!("kvminit......");
     kvmmake();
     println!("kvminit done......");

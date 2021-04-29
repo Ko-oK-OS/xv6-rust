@@ -14,6 +14,8 @@ spin = "0.5.2"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 array-macro = "2.0.0"
 
+allocator = { git = "https://github.com/Ko-oK-OS/allocator.git", branch = "main" }
+
 [features]
 unit_test = []
 

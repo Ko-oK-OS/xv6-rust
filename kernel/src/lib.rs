@@ -11,12 +11,17 @@
 #![allow(unused_imports)]
 #![feature(const_option)]
 #![feature(const_fn_union)]
+#![feature(alloc_error_handler)]
+#![feature(new_uninit)]
 
 
 
 #[macro_use]
 extern crate bitflags;
 extern crate lazy_static;
+
+// use buddy system allocator
+extern crate alloc;
 
 global_asm!(include_str!("asm/entry.S"));
 global_asm!(include_str!("asm/kernelvec.S"));
