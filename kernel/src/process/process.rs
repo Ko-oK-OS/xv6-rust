@@ -5,10 +5,12 @@ use crate::memory::{
     kalloc::*,
     address::{ PhysicalAddress, VirtualAddress, Addr },
     mapping::{ page_table::PageTable, page_table_entry::PteFlags},
-    container::boxed::Box
+    RawPage
 };
 use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use super::*;
+
+use alloc::boxed::Box;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum Procstate{
@@ -124,42 +126,41 @@ impl ProcExtern {
         }
 
         // An empty page table
-        if let Some(mut page_table) = PageTable::uvmcreate() {
-            // map the trampoline code (for system call return )
-            // at the highest user virtual address.
-            // only the supervisor uses it, on the way
-            // to/from user space, so not PTE_U. 
-            // let page_table = &mut *page_table;
-            let is_ok = page_table.mappages(
-                VirtualAddress::new(TRAMPOLINE),
-                PhysicalAddress::new(trampoline as usize),
-                PGSIZE,
-                PteFlags::R | PteFlags::X
-            );
+        let mut page_table = PageTable::uvmcreate();
+        // map the trampoline code (for system call return )
+        // at the highest user virtual address.
+        // only the supervisor uses it, on the way
+        // to/from user space, so not PTE_U. 
+        // let page_table = &mut *page_table;
+        let is_ok = page_table.mappages(
+            VirtualAddress::new(TRAMPOLINE),
+            PhysicalAddress::new(trampoline as usize),
+            PGSIZE,
+            PteFlags::R | PteFlags::X
+        );
 
-            if !is_ok {
-                page_table.uvmfree(0);
+        if !is_ok {
+            page_table.uvmfree(0);
 
-                return None
-            }
-
-            // map the trapframe just below TRAMPOLINE, for trampoline.S 
-            let is_ok = page_table.mappages(
-                VirtualAddress::new(TRAPFRAME), 
-                PhysicalAddress::new(self.trapframe as usize),
-                PGSIZE,
-                PteFlags::R | PteFlags::X
-            );
-
-            if !is_ok {
-                page_table.uvmfree(0);
-                return None
-            }
-
-            return Some(page_table)
+            return None
         }
 
-        None
+        // map the trapframe just below TRAMPOLINE, for trampoline.S 
+        let is_ok = page_table.mappages(
+            VirtualAddress::new(TRAPFRAME), 
+            PhysicalAddress::new(self.trapframe as usize),
+            PGSIZE,
+            PteFlags::R | PteFlags::X
+        );
+
+        if !is_ok {
+            page_table.uvmfree(0);
+            return None
+        }
+
+        return Some(page_table)
+    
+
 
     }
 }
@@ -203,7 +204,8 @@ impl Process{
         let mut extern_data = self.extern_data.get_mut();
         if !extern_data.trapframe.is_null() {
             unsafe {
-                kfree(PhysicalAddress::new(extern_data.trapframe as usize));
+                // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
+                drop(extern_data.trapframe as *mut RawPage)
             }
 
             extern_data.set_trapframe(0 as *mut Trapframe);

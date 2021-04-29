@@ -9,8 +9,7 @@ use crate::interrupt::{
 
 use crate::memory::{
     kalloc::*,
-    mapping::{kvm::{ kvminit, kvminithart}},
-    container::{boxed::Box, vec::Vec}
+    mapping::{kvm::{ kvminit, kvminithart}}
 };
 
 use crate::process::*;

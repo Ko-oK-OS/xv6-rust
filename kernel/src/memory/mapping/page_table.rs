@@ -1,12 +1,16 @@
-use core::ptr::{write, read, write_bytes, copy_nonoverlapping};
+use core::{alloc::GlobalAlloc, ptr::{write, read, write_bytes, copy_nonoverlapping}};
+use core::ptr::drop_in_place;
 use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
-    kalloc:: {kalloc, kfree}, 
+    // kalloc:: {kalloc, kfree}, 
     // container::boxed::Box,
+    kalloc::KERNEL_HEAP,
+    RawPage
 };
+
 
 use alloc::boxed::Box;
 use super::*;
@@ -70,9 +74,7 @@ impl PageTable{
             }
         }
 
-        unsafe {
-            kfree(PhysicalAddress::new(self.entries.as_ptr() as usize));
-        }
+        drop(self);
     }
 
     
@@ -111,18 +113,10 @@ impl PageTable{
                 if alloc == 0{
                     return None
                 }
-                // match unsafe{Box::<PageTable>::new()}{
-                //     Some(mut new_pagetable) => {
-                //         new_pagetable.clear();
-                //         pagetable = new_pagetable.into_raw();
-                //         pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
 
-                        
-                //     }
-                //     None => return None,
-                // }
-
-                let zeroed_pgt: Box<PageTable> = Box::new_zeroed().assume_init();
+                let zeroed_pgt: Box<PageTable> = unsafe{ 
+                    Box::new_zeroed().assume_init()
+                };
                 pagetable = Box::into_raw(zeroed_pgt);
                 pte.0 = (((pagetable as usize) >> 12) << 10) | (PteFlags::V.bits());
             }
@@ -225,18 +219,8 @@ impl PageTable{
 
     // Create an empty user page table.
     // return None if out of memory
-    pub unsafe fn uvmcreate() -> Option<Box<PageTable>>{
-        // match Box::<PageTable>::new(){
-        //     Some(mut page_table) => {
-        //         page_table.clear();
-        //         // Some(&mut (*page_table))
-        //         Some(page_table)
-        //     }
-
-        //     None => None
-        // }
-
-        Some(Box::new_zeroed().assume_init())
+    pub unsafe fn uvmcreate() -> Box<PageTable>{
+        Box::new_zeroed().assume_init()
     }
 
     // Load the user initcode into address 0 of pagetable
@@ -248,18 +232,17 @@ impl PageTable{
             panic!("inituvm: more than a page");
         }
 
-        if let Some(mem) = kalloc(){
-            write_bytes(mem, 0, PGSIZE);
+        let mem = RawPage::new_zeroed() as *mut u8;
+        write_bytes(mem, 0, PGSIZE);
 
-            self.mappages(
-                VirtualAddress::new(0), 
-                PhysicalAddress::new(mem as usize), 
-                PGSIZE, 
-                PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
-            );
+        self.mappages(
+            VirtualAddress::new(0), 
+            PhysicalAddress::new(mem as usize), 
+            PGSIZE, 
+            PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
+        );
 
-            copy_nonoverlapping(src.as_ptr(), mem, PGSIZE);
-        }
+        copy_nonoverlapping(src.as_ptr(), mem, PGSIZE);
     }
 
 
@@ -277,27 +260,22 @@ impl PageTable{
         old_size = page_round_up(old_size);
         let mut a = old_size;
         while a < new_size {
-            match kalloc(){
-                Some(mem) => {
-                
-                    write_bytes(mem, 0, PGSIZE);
-                    
-                    if self.mappages(
-                        VirtualAddress::new(a), 
-                        PhysicalAddress::new(mem as usize), 
-                        PGSIZE, 
-                        PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
-                    ){
-                        kfree(PhysicalAddress::new(mem as usize));
-                        self.uvmdealloc(a, old_size);
-                        return None
-                    }
-                }
 
-                None => {
-                    self.uvmdealloc(a, old_size);
-                    return None
-                }
+            let mem = RawPage::new_zeroed() as *mut u8;
+
+            write_bytes(mem, 0, PGSIZE);
+
+            if self.mappages(
+                VirtualAddress::new(a), 
+                PhysicalAddress::new(mem as usize), 
+                PGSIZE, 
+                PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
+            ){
+                // drop RawPage , maybe UB?
+                // drop(*(mem as *mut RawPage));
+                drop_in_place(mem as *mut RawPage);
+                self.uvmdealloc(a, old_size);
+                return None
             }
 
             a += PGSIZE;
@@ -375,7 +353,9 @@ impl PageTable{
                     if do_free != 0 {
                         unsafe{
                             let pa = (&(*pte.as_pagetable())).as_addr();
-                            kfree(PhysicalAddress::new(pa));
+                            // kfree(PhysicalAddress::new(pa));
+                            // drop(*(pa as *mut RawPage));
+                            drop_in_place(pa as *mut RawPage);
                         }
                     }
 
@@ -403,7 +383,7 @@ impl PageTable{
         &mut self, 
         new: &mut Self, 
         size: usize
-    ) -> bool {
+    ) -> Result<(), &'static str> {
         let mut va = VirtualAddress::new(0);
         while va.as_usize() != size {
             match self.walk(va, 0) {
@@ -416,36 +396,22 @@ impl PageTable{
                     let flags = pte.as_flags();
                     let flags = PteFlags::new(flags);
 
-                    match Box::<PageTable>::new() {
-                        Some(mut new_page_table) => {
-                            
-                            new_page_table.write(& *page_table);
-                            
-                            if !new.mappages(
-                                va,
-                                PhysicalAddress::new(new_page_table.as_addr()), 
-                                PGSIZE,
-                                flags
-                            ) {
-                                kfree(PhysicalAddress::new(new_page_table.as_addr()));
-                                new.uvmunmap(
-                                    VirtualAddress::new(0), 
-                                    va.as_usize() / PGSIZE, 
-                                    1
-                                );
-                                return false
-                            }
-                        },
+                    let mut new_page_table = &mut *(RawPage::new_zeroed() as *mut PageTable);
+                    new_page_table.write(& *page_table);
 
-                        None => {
-                            new.uvmunmap(
-                                VirtualAddress::new(0), 
-                                va.as_usize() / PGSIZE, 
-                                1
-                            );
-
-                            return false
-                        }
+                    if !new.mappages(
+                        va,
+                        PhysicalAddress::new(new_page_table.as_addr()),
+                        PGSIZE,
+                        flags
+                    ) {
+                        drop(new_page_table);
+                        new.uvmunmap(
+                            VirtualAddress::new(0), 
+                            va.as_usize() / PGSIZE, 
+                            1
+                        );
+                        return Err("uvmcopy(): fail.")
                     }
                 },
 
@@ -456,7 +422,7 @@ impl PageTable{
             va.add_page();
         }
 
-        true
+        Ok(())
     }
 
     // mark a PTE invalid for user access.

@@ -58,7 +58,8 @@ impl ProcManager{
     // group page
     pub unsafe fn proc_mapstacks(&mut self) {
         for (pos, _) in self.proc.iter_mut().enumerate() {
-            let pa = kalloc().expect("Fail to allocate physical page.");
+            // let pa = kalloc().expect("Fail to allocate physical page.");
+            let pa = RawPage::new_zeroed() as *mut u8;
             let va = kstack(pos);
 
             KERNEL_PAGETABLE.kvmmap(
@@ -116,38 +117,64 @@ impl ProcManager{
 
                 let extern_data = p.extern_data.get_mut();
                 // Allocate a trapframe page.
-                match unsafe { kalloc() } {
-                    Some(ptr) => {
-                        extern_data.set_trapframe(ptr as *mut Trapframe);
+                // match unsafe { kalloc() } {
+                //     Some(ptr) => {
+                //         extern_data.set_trapframe(ptr as *mut Trapframe);
 
-                        // An empty user page table
-                        if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
-                           extern_data.set_pagetable(Some(page_table));
+                //         // An empty user page table
+                //         if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
+                //            extern_data.set_pagetable(Some(page_table));
                             
 
-                            // Set up new context to start executing at forkret, 
-                            // which returns to user space. 
-                            let kstack = extern_data.kstack;
-                            extern_data.context.write_zero();
-                            // guard.context.write_ra(forkret as usize);
-                            extern_data.context.write_sp(kstack + PGSIZE);
-                            drop(guard);
-                            return Some(p);
-                            // return Some(guard)
+                //             // Set up new context to start executing at forkret, 
+                //             // which returns to user space. 
+                //             let kstack = extern_data.kstack;
+                //             extern_data.context.write_zero();
+                //             // guard.context.write_ra(forkret as usize);
+                //             extern_data.context.write_sp(kstack + PGSIZE);
+                //             drop(guard);
+                //             return Some(p);
+                //             // return Some(guard)
                             
-                        } else {
-                            // p.freeproc();
-                            drop(guard);
-                            return None
-                        }
-                    }
+                //         } else {
+                //             // p.freeproc();
+                //             drop(guard);
+                //             return None
+                //         }
+                //     }
 
-                    None => {
-                        // p.freeproc();
-                        drop(guard);
-                        // return None
-                    }
+                //     None => {
+                //         // p.freeproc();
+                //         drop(guard);
+                //         // return None
+                //     }
+                // }
+
+                let ptr = unsafe{ RawPage::new_zeroed() as *mut u8 };
+
+                extern_data.set_trapframe(ptr as *mut Trapframe);
+
+                // An empty user page table
+                if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
+                    extern_data.set_pagetable(Some(page_table));
+                    
+
+                    // Set up new context to start executing at forkret, 
+                    // which returns to user space. 
+                    let kstack = extern_data.kstack;
+                    extern_data.context.write_zero();
+                    // guard.context.write_ra(forkret as usize);
+                    extern_data.context.write_sp(kstack + PGSIZE);
+                    drop(guard);
+                    return Some(p);
+                    // return Some(guard)
+                    
+                } else {
+                    // p.freeproc();
+                    drop(guard);
+                    return None
                 }
+
             
             }else {
                 drop(guard);
