@@ -70,7 +70,7 @@ rustup component add llvm-tools-preview
 Finally, you run this OS on your machine by excuteing following commands:  
 
 ```
-git clone https://github.com/KuangjuX/xv6-rust.git
+git clone https://github.com/Ko-oK-OS/xv6-rust.git
 cd xv6-rust/kernel
 make run
 ```
