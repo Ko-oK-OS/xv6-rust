@@ -92,6 +92,26 @@ terminal 2:
 
 You can also use `make debug` .
 
+## Finished
+- [x] Bootloader
+- [x] UART start
+- [x] Memory Allocate(Buddy System Allocator)  
+- [x] Page Table Mapping
+- [x] Process, Thread
+- [x] Sceduler
+- [x] Kernel Trap
+- [x] Timer Interrupt
+- [x] PLIC start  
+
+## TODO
+- [ ] File System
+- [ ] Syscall     
+- [ ] Lazy Allocate
+- [ ] Copy On Write
+- [ ] ELF Load
+- [ ] User Programe
+- [ ] Smart Pointer
+
 ## Some Useful Links
 
 - [Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
