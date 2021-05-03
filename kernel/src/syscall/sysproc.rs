@@ -7,6 +7,14 @@ pub fn sys_fork() -> isize {
     }
 }
 
+pub fn sys_getpid() -> usize {
+    let my_proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
+    let proc_data= my_proc.data.acquire();
+    let pid = proc_data.pid;
+    drop(proc_data);
+    pid
+}
+
 // pub fn sys_exit() -> isize {
 
 // }
@@ -31,3 +39,7 @@ pub fn sys_sbrk() -> usize {
 
     
 }
+
+// pub fn sys_sleep() -> usize {
+
+// }
