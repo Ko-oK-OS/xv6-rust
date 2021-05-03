@@ -110,4 +110,176 @@ kernelvec:
         sret
 ```
   
-可以看到，我们将必要的寄存器值保存进栈里，然后调用`kerneltrap`这个函数进行内核陷阱的处理，当我们执行完`kerneltrap`函数返回后，我们将栈内容恢复，并将保存的上下文内容恢复，随后执行`sret`指令返回发生陷阱的指令后继续进行运行。
+可以看到，我们将必要的寄存器值保存进栈里，然后调用`kerneltrap`这个函数进行内核陷阱的处理，当我们执行完`kerneltrap`函数返回后，我们将栈内容恢复，并将保存的上下文内容恢复，随后执行`sret`指令返回发生陷阱的指令后继续进行运行。  
+
+### 开启PLIC
+`PLIC`为`the riscv Platform Level Interrupt Controller`，其作用如下图所示:
+![](static/PLIC.jpg)  
+![](static/PLICArch.jpg)
+可以看到`PLIC`接收到中断后将其转发给不同的`Hart`来使其处理。
+  
+`PLIC`结构如上图所示, 当`PLIC`接收到中断信号后，在内部进行逻辑的信号处理，最后输出信号给对应的CPU进行处理。  
+  
+而在`QEMU`平台下，我们不需要去接入具体的外部设备，只需要向`QEMU`提供的测试地址内写入一些值，即可开启外部中断的检测。  
+  
+例如在`xv6-rust`中的`plicinit`函数：
+```Rust
+pub unsafe fn plicinit(){
+    println!("plic init......");
+    // set desired IRQ priorities non-zero (otherwise disabled).
+    let plic:usize = Into::<usize>::into(memlayout::PLIC);
+    let mut addr = plic + memlayout::UART0_IRQ*4;
+    ptr::write_volatile(addr as *mut u32, 1);
+
+    addr  = plic + memlayout::UART0_IRQ*4;
+    ptr::write_volatile(addr as *mut u32, 1);
+}
+```  
+  
+我们只需要将对应的外设的值按规定写入对应的物理地址中，即可开启外设的外部中断机制。  
+   
+### 内核中断处理  
+当我们进入内核中断处理函数（即`kerneltrap`）后，我们需要通过`scause`寄存器的值来获取发生中断或异常的原因，从而根据不同的原因进行处理。而与此同时，我们也需要获取去读取`sstatus`和`sepc`寄存器来进行中断间的上下文切换。  
+  
+其中，`sepc`寄存器记录了中断或者异常发生的虚拟地址，当我们的中断结束之后，RISC-V会将`sepc`寄存器的值写入程序计数器以便继续执行，因此我们需要将`sepc`的值进行修改并重新写入`sepc`以保存上下文。  
+  
+同样，`sstatus`寄存器保存的是当前发生中断或者异常所在特权级，当中断或异常发生在U态的时候，`sstatus`的`SPP`位被置为0，然后`sret`指令后将返回U态；当`sstatus`的`SPP`位被置为1时，`sret`指令将返回S态，这时`SPP`位仍然被置为0。  
+  
+```Rust
+// interrupts and exceptions from kernel code go here via kernelvec,
+// on whatever the current kernel stack is.
+#[no_mangle]
+pub unsafe fn kerneltrap(
+   arg0: usize, arg1: usize, arg2: usize, _: usize,
+   _: usize, _: usize, _: usize, which: usize
+) {
+
+    let mut sepc = sepc::read();
+    let sstatus = sstatus::read();
+    let scause = scause::read();
+
+    // if !sstatus::is_from_supervisor() {
+    //     panic!("kerneltrap: not from supervisor mode");
+    // }
+
+    if sstatus::intr_get() {
+        panic!("kerneltrap(): interrupts enabled");
+    }
+    
+    let which_dev = devintr();
+
+    match which_dev {
+        0 => {
+            // modify sepc to countine running after restoring context
+            sepc += 2;
+            
+            let scause = Scause::new(scause);
+            match scause.cause(){
+                Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
+
+                Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
+
+                Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
+
+                Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+
+                Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
+
+                _ => panic!("Unresolved Trap! scause:{:?}", scause.cause())
+            }
+
+        }
+
+        1 => {
+            panic!("Unsolved solution!");
+            
+
+        }
+
+        2 => {
+            CPU_MANAGER.yield_proc();
+        }
+
+        _ => {
+            unreachable!();
+        }
+    }
+
+    // store context
+    sepc::write(sepc);
+    sstatus::write(sstatus);
+
+}
+
+
+pub unsafe fn clockintr(){
+    let mut ticks = TICKSLOCK.acquire();
+    *ticks = *ticks + 1;
+    if *ticks % 100 == 0{
+        println!("TICKS: {}", *ticks);
+    }
+    drop(ticks);
+}
+
+// check if it's an external interrupt or software interrupt,
+// and handle it.
+// returns 2 if timer interrupt,
+// 1 if other device,
+// 0 if not recognized.
+unsafe fn devintr() -> usize {
+    let scause = scause::read();
+    let scause = Scause::new(scause);
+
+    match scause.cause(){
+            Trap::Interrupt(Interrupt::SupervisorExternal) => {
+                println!("Supervisor Enternal Interrupt Occures!");
+            // this is a supervisor external interrupt, via PLIC.
+
+            // irq indicates which device interrupted.
+            let irq = plic::plic_claim();
+
+            if irq == UART0_IRQ as usize{
+                // TODO: uartintr
+                uart_intr();
+                println!("uart interrupt");
+
+            }else if irq == VIRTIO0_IRQ as usize{
+                // TODO: virtio_disk_intr
+                println!("virtio0 interrupt");
+            }else if irq != 0{
+                println!("unexpected intrrupt, irq={}", irq);
+            }
+
+            if irq != 0 {
+                plic::plic_complete(irq);
+            }
+
+            1
+        }
+
+        Trap::Interrupt(Interrupt::SupervisorSoft) => {
+
+            // software interrupt from a machine-mode timer interrupt,
+            // forwarded by timervec in kernelvec.S.
+
+            if cpu::cpuid() == 0{
+                // TODO: clockintr
+                clockintr();
+                // println!("clockintr!");
+            }
+
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            sip::write(sip::read() & !2);
+
+            2
+        }
+
+        _ => {
+            0
+        }
+    }
+    
+
+}
+```

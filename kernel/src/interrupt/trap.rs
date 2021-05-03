@@ -176,17 +176,12 @@ pub unsafe fn kerneltrap(
         0 => {
             // modify sepc to countine running after restoring context
             sepc += 2;
-
-            // debug
-            // println!("sepc=0x{:x} stval=0x{:x}", sepc::read(), stval::read());
             
             let scause = Scause::new(scause);
             match scause.cause(){
                 Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
                 Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
-
-                // Trap::Exception(Exception::UserEnvCall) => panic!("User System Call!"),
 
                 Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
 
@@ -206,9 +201,7 @@ pub unsafe fn kerneltrap(
         }
 
         2 => {
-            // println!("Timer Interrupt!");
             CPU_MANAGER.yield_proc();
-
         }
 
         _ => {
