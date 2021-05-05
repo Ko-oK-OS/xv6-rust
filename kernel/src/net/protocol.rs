@@ -1,3 +1,5 @@
+use core::u16;
+
 
 const ETHADDR_LEN:usize = 6;
 // an Ethernet packet header (start of the packet)
@@ -44,6 +46,8 @@ struct ARP {
     arp_tip:u32, // target IP address
 }
 
+const ARP_HRD_ETHER:u8 = 1; // Ethernet
+
 // a UDP packet header (comes after an IP header)
 struct UDP {
     udp_sport:u16, // source port
@@ -63,6 +67,41 @@ struct TCP {
     tcp_window:u16, /* window size */
     tcp_checksum:u16, /* checksum */
     tcp_urgent:u16, /* urgent data pointer */
+}
+
+// an DNS packet (comes after an UDP header)
+struct DNS {
+    id:u16, // request ID
+
+    rd:u8, // recursion desired
+    tc:u8, // truncated
+    aa:u8, // authoritive
+    opcode: u8,
+    qr:u8, // query/response 
+    rcode:u8, // response code
+    cd:u8, // checking disabled
+    ad:u8, // authenticated data
+    z:u8, 
+    ra:u8, // recursion availavle
+
+    qdcount:u16, // number of question entries
+    ancount:u16, // number of resource records in answer section
+    nscount:u16, // number of NS resource records in authority section
+    arcount:u16, // number of resource records in additional records
+}
+
+#[repr(C, packed)]
+struct DnsQuestion {
+    qtype:u16, 
+    qclass:u16
+}
+
+#[repr(C, packed)]
+struct DnsData {
+    dns_type:u16,
+    dns_class:u16,
+    dns_ttl:u32,
+    dns_len:u16
 }
 
 pub fn make_ip_addr(a:u32, b:u32, c:u32, d:u32) -> u32 {
