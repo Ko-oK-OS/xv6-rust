@@ -9,9 +9,15 @@ OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
 QEMU 		:= qemu-system-riscv64
 
+FWDPORT = $(shell expr `id -u` % 5000 + 25999)
+
 QEMUOPTS     = -machine virt -bios none -kernel $(KERNEL_FILE) -m 3G -smp $(CPUS) -nographic
 QEMUOPTS    += -drive file=fs.img,if=none,format=raw,id=x0 
 QEMUOPTS	+= -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+QEMUOPTS 	+= -netdev user,id=net0,hostfwd=udp::$(FWDPORT)-:2000 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
+QEMUOPTS 	+= -device e1000,netdev=net0,bus=pcie.0
+
+
 QEMUGDB 	:= -gdb tcp::26000
 
 

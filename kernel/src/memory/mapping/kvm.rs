@@ -1,7 +1,11 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::memory::RawPage;
-use crate::define::memlayout::{ PGSIZE, MAXVA, UART0, VIRTIO0, PLIC, KERNBASE, PHYSTOP, TRAMPOLINE };
+use crate::define::memlayout::{ 
+    PGSIZE, MAXVA, UART0, VIRTIO0,
+    PLIC, KERNBASE, PHYSTOP, TRAMPOLINE,
+    E1000_REGS, ECAM
+};
 use crate::register::{satp, sfence_vma};
 use crate::process::*;
 
@@ -60,6 +64,24 @@ unsafe fn kvmmake() {
         VirtualAddress::new(VIRTIO0), 
         PhysicalAddress::new(VIRTIO0), 
         PGSIZE, 
+        PteFlags::R | PteFlags::W
+    );
+
+    // PCI-E ECAM (configuration space), for pci.c
+    println!("PCL_E ECAM map......");
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(ECAM),
+        PhysicalAddress::new(ECAM),
+        0x10000000,
+        PteFlags::R | PteFlags::W
+    );
+
+    // pci.c maps the e1000's registers here.
+    println!("e1000's registers map......");
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(E1000_REGS),
+        PhysicalAddress::new(E1000_REGS),
+        0x20000,
         PteFlags::R | PteFlags::W
     );
 
