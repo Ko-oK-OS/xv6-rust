@@ -46,7 +46,7 @@ pub fn pci_init() {
                 // physical address 0x40000000.
                 ptr::write((base + 4*size_of::<u32>()) as *mut u32, E1000_REGS as u32);
 
-                e1000_init(E1000_REGS as *mut u32);
+                e1000_init();
             }
 
         }

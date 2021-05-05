@@ -17,7 +17,7 @@ const E1000_CTL_FRCDPLX:usize = 0x00001000;    /* force duplex */
 const E1000_CTL_RST:usize = 0x00400000;    /* full reset */
 
 // Legacy Transmit Descriptor Format
-pub struct TRANSMIT_DESC {
+pub struct TransmitDesc {
     addr:usize, // Buffer Address
     length:u16, // Length is each segment
     cso:u8, // Checksum Offset
@@ -27,7 +27,7 @@ pub struct TRANSMIT_DESC {
     special:u16, // Special Fiels
 }
 
-impl TRANSMIT_DESC {
+impl TransmitDesc {
     const fn new() -> Self {
         Self {
             addr:0,
@@ -42,7 +42,7 @@ impl TRANSMIT_DESC {
 }
 
 // Receive Descriptor Format
-pub struct RECEIVE_DESC {
+pub struct ReceiveDesc {
     addr:usize, /* Address of the descriptor's data buffer */
     length:u16, /* Length of data DMAed into data buffer */
     csum:u16, /* Packet checksum */
@@ -51,7 +51,7 @@ pub struct RECEIVE_DESC {
     special:u16, 
 }
 
-impl RECEIVE_DESC {
+impl ReceiveDesc {
     const fn new() -> Self {
         Self {
             addr:0,
@@ -68,8 +68,11 @@ static E1000_LOCK:Spinlock<()> = Spinlock::new((), "e1000");
 
 static mut REGS:*mut u32 = E1000_REGS as *mut u32;
 
-static mut TRANSMIT_RING:[TRANSMIT_DESC;16] = [TRANSMIT_DESC::new();16];
-static mut RECEIVE_RING:[RECEIVE_DESC;16] = [RECEIVE_DESC::new();16];
+const TRANSMIT_RING_SIZE:usize = 16;
+static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = [TransmitDesc::new();TRANSMIT_RING_SIZE];
+
+const RECEIVE_RING_SIZE:usize = 16;
+static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = [ReceiveDesc::new();RECEIVE_RING_SIZE];
 
 // called by pci_init().
 // xregs is the memory address at which the
