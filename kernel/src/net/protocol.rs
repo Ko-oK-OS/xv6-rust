@@ -1,4 +1,11 @@
 use super::mbuf::MBuf;
+
+// qemu's idea of the guest IP
+static local_ip:u32 = make_ip_addr(10, 0, 2, 15);
+static local_mac:[u8;ETHADDR_LEN] = [0x52, 0x54, 0x00, 0x12, 0x34, 0x56];
+static broadcast_mac:[u8;ETHADDR_LEN] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+
+
 #[inline]
 pub fn bswaps(val: u16) -> u16 {
     ((val & 0x00FF) << 8) | ((val & 0xFF00) >> 8)
@@ -137,7 +144,7 @@ struct DnsData {
     dns_len:u16
 }
 
-pub fn make_ip_addr(a:u32, b:u32, c:u32, d:u32) -> u32 {
+pub const fn make_ip_addr(a:u32, b:u32, c:u32, d:u32) -> u32 {
     (a << 24) | (b << 16) | (c << 8) | d
 }
 
@@ -148,6 +155,7 @@ impl Protocol for UDP{}
 impl Protocol for TCP{}
 
 impl Eth {
+    // sends an ethernet packet
     pub fn send_eth(m:MBuf, eth_type:u16) {
 
     }
