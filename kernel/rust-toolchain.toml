@@ -1,2 +1,6 @@
 [toolchain]
+<<<<<<< HEAD
+channel = "nightly-2021-04-01" 
+=======
 channel = "nightly-2021-04-01"
+>>>>>>> main

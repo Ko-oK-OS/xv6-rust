@@ -205,7 +205,11 @@ impl Process{
         if !extern_data.trapframe.is_null() {
             // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
             drop(extern_data.trapframe as *mut RawPage);
+<<<<<<< HEAD
+            
+=======
 
+>>>>>>> main
             extern_data.set_trapframe(0 as *mut Trapframe);
 
             if let Some(page_table) = extern_data.pagetable.as_mut() {

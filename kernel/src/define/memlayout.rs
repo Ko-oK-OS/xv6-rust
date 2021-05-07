@@ -117,13 +117,6 @@ pub const MAXVA:usize =  1 << (9 + 9 + 9 + 12 - 1);
 pub const TRAMPOLINE:usize = MAXVA - PGSIZE;
 
 
-// map kernel stacks beneath the trampoline,
-// each surrounded by invalid guard pages.
-#[inline]
-pub fn KSTACK(addr: usize) -> usize{
-    TRAMPOLINE - (addr + 1)*2*PGSIZE 
-}
-
 // User memory layout.
 // Address zero first:
 //   text
@@ -135,3 +128,13 @@ pub fn KSTACK(addr: usize) -> usize{
 //   TRAMPOLINE (the same page as in the kernel)
 
 pub const TRAPFRAME:usize = TRAMPOLINE - PGSIZE;
+
+// we'll place the e1000 registers at this address.
+// vm.c maps this range.
+pub const E1000_REGS:usize = 0x40000000;
+
+// qemu -machine virt puts PCIe config space here.
+// vm.c maps this range.
+pub const ECAM:usize = 0x30000000;
+
+
