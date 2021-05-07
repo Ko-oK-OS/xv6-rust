@@ -84,7 +84,7 @@ impl PageTableEntry{
 
     #[inline]
     pub fn rm_user_bit(&mut self) {
-        self.0 & (!(PteFlags::U.bits()));
+        self.0 &= !(PteFlags::U.bits());
     }
 
     // implement PTE2PA

@@ -393,7 +393,7 @@ impl PageTable{
                     let flags = pte.as_flags();
                     let flags = PteFlags::new(flags);
 
-                    let mut new_page_table = &mut *(RawPage::new_zeroed() as *mut PageTable);
+                    let new_page_table = &mut *(RawPage::new_zeroed() as *mut PageTable);
                     new_page_table.write(& *page_table);
 
                     if !new.mappages(

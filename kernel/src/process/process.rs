@@ -203,10 +203,8 @@ impl Process{
     pub fn freeproc(&mut self) {
         let mut extern_data = self.extern_data.get_mut();
         if !extern_data.trapframe.is_null() {
-            unsafe {
-                // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
-                drop(extern_data.trapframe as *mut RawPage)
-            }
+            // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
+            drop(extern_data.trapframe as *mut RawPage);
 
             extern_data.set_trapframe(0 as *mut Trapframe);
 
