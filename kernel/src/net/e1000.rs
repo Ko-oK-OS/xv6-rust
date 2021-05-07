@@ -69,10 +69,10 @@ static E1000_LOCK:Spinlock<()> = Spinlock::new((), "e1000");
 static mut REGS:*mut u32 = E1000_REGS as *mut u32;
 
 const TRANSMIT_RING_SIZE:usize = 16;
-static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = [TransmitDesc::new();TRANSMIT_RING_SIZE];
+// static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = [TransmitDesc::new();TRANSMIT_RING_SIZE];
 
 const RECEIVE_RING_SIZE:usize = 16;
-static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = [ReceiveDesc::new();RECEIVE_RING_SIZE];
+// static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = [ReceiveDesc::new();RECEIVE_RING_SIZE];
 
 // called by pci_init().
 // xregs is the memory address at which the

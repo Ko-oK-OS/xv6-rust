@@ -42,6 +42,8 @@ pub struct ProgHeader {
 // and the pages from va to va+sz must already be mapped.
 // Returns 0 on success, -1 on failure.
 
+#[allow(unused_variables)]
+#[allow(unused_assignments)]
 fn load_seg(
     mut page_table: PageTable, 
     va:usize, 

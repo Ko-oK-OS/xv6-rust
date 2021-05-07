@@ -81,8 +81,8 @@ impl ProcManager{
         // and data into it.
         let extern_data = p.extern_data.get_mut();
         extern_data.pagetable.as_mut().unwrap().uvminit(
-            &initcode,
-            size_of_val(&initcode)
+            &INITCODE,
+            size_of_val(&INITCODE)
         );
 
         extern_data.size = PGSIZE;

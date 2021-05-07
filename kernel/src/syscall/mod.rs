@@ -5,11 +5,11 @@ use crate::{println, process::*};
 
 use core::mem::size_of;
 
-type syscall_fn = fn() -> isize;
+type SyscallFn = fn() -> isize;
 
 pub const SYSCALL_NUM:usize = 1;
 
-pub static SYSCALL:[syscall_fn; SYSCALL_NUM] = [
+pub static SYSCALL:[SyscallFn; SYSCALL_NUM] = [
     sys_fork
 ];
 

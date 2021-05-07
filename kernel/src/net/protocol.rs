@@ -157,7 +157,7 @@ impl Protocol for TCP{}
 impl Eth {
     // sends an ethernet packet
     pub fn send_eth(m:MBuf, eth_type:u16) {
-
+        
     }
 
     // called by e1000 driver's interrupt handler to deliver a packet to the
