@@ -94,3 +94,6 @@ pub unsafe fn e1000_init() {
 
 
 }
+
+
+

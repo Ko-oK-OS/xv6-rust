@@ -7,7 +7,7 @@ const MBUF_DEFAULT_HEADROOM:usize = 128;
 pub struct MBuf {
     next: Option<Box<*mut MBuf>>, // the next mbuf in the chain
     head: *mut u8, // the current start position of the buffer
-    len: u32, // the length of the buffer
+    pub len: u32, // the length of the buffer
     buf: [u8;MBUF_SIZE], // the backing store
 }
 
@@ -75,5 +75,9 @@ impl MBuf {
 
         self.len -= len;
         Some((self.head as usize + self.len as usize) as *mut u8)
+    }
+
+    pub fn e1000_transmit(&mut self) -> Result<(), &'static str> {
+        Ok(())
     }
 }
