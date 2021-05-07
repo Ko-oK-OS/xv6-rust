@@ -1,3 +1,10 @@
+use core::ptr::{ copy_nonoverlapping, NonNull };
+use core::mem::size_of;
+
+use crate::fs;
+use crate::define::fs::ROOTDEV;
+use crate::interrupt::trap::usertrap_ret;
+
 mod process;
 pub mod cpu;
 mod context;
@@ -10,10 +17,6 @@ pub use cpu::*;
 pub use process::*;
 pub use scheduler::*;
 pub use elf::*;
-
-use core::ptr::{ copy_nonoverlapping, NonNull };
-use core::mem::size_of;
-
 
 static INITCODE: [u8; 52] = [
     0x17, 0x05, 0x00, 0x00, 0x13, 0x05, 0x45, 0x02,
@@ -86,7 +89,21 @@ pub unsafe fn fork() -> isize {
     -1
 }
 
+/// A fork child's very first scheduling by scheduler()
+/// will swtch to forkret.
+/// 
+/// Need to be handled carefully, because CPU use ra to jump here
+unsafe fn forkret() -> ! {
+    static mut FIRST: bool = true;
+    
+    // Still holding p->lock from scheduler
+    CPU_MANAGER.myproc().unwrap().data.release();
+    
+    if FIRST {
+        // File system initialization
+        FIRST = false;
+        fs::init(ROOTDEV);
+    }
 
-
-
-
+    usertrap_ret();
+}

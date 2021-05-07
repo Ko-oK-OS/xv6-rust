@@ -18,6 +18,7 @@ allocator = { git = "https://github.com/Ko-oK-OS/allocator.git", branch = "main"
 
 [features]
 unit_test = []
+verbose_init_info = []
 
 [profile.dev]
 panic = "abort"

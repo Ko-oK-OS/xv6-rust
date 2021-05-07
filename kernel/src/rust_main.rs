@@ -15,6 +15,7 @@ use crate::memory::{
 use crate::process::*;
 use crate::register::sstatus;
 use crate::fs::*;
+use crate::driver::virtio_disk::DISK;
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 
@@ -35,7 +36,8 @@ pub unsafe extern "C" fn rust_main() -> !{
         trapinithart(); // trap vectors
         plicinit(); // set up interrupt controller
         plicinithart(); // ask PLIC for device interrupts
-        BCACHELIST.binit(); // buffer cache
+        BCACHE.binit();             // buffer cache
+        DISK.acquire().init();         // emulated hard disk
         PROC_MANAGER.userinit(); // first user process
 
 

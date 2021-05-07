@@ -93,7 +93,7 @@ pub unsafe fn usertrap() {
 //
 
 #[no_mangle]
-unsafe fn usertrap_ret() {
+pub unsafe fn usertrap_ret() -> ! {
     extern "C" {
         fn uservec();
         fn trampoline();

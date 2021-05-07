@@ -45,6 +45,7 @@ mod interrupt;
 mod memory;
 mod syscall;
 mod fs;
+mod driver;
 
 
 

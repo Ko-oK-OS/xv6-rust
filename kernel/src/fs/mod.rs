@@ -1,36 +1,25 @@
-use core::ptr::NonNull;
-// use crate::lock::sleeplock::{Sleeplock, SleeplockGuard};
+//! File system
 
+use core::ops::DerefMut;
+
+mod log;
 mod bio;
-pub use bio::*;
-pub const BSIZE:usize = 1024;
+mod superblock;
 
+pub use bio::Buf;
+pub use bio::BCACHE;
+pub use log::LOG;
 
-#[derive(Clone)]
-pub struct Buf{
-    valid:usize, // has data been read from disk?
-    disk:usize,  // does disk "own" buf?
-    dev:usize,
-    blockno:usize,
-    refcnt:usize,
-    prev: Option<NonNull<Buf>>, // LRU cache list
-    next: Option<NonNull<Buf>>,
-    data: [u8;BSIZE]
-}
+use superblock::SUPER_BLOCK;
+use log::Log;
+use bio::BufData;
 
-
-
-impl Buf {
-    const fn new() -> Self {
-        Self {
-            valid: 0,
-            disk: 0,
-            dev: 0,
-            blockno: 0,
-            refcnt: 0,
-            prev: None,
-            next: None,
-            data: [0;BSIZE]
-        }
-    }
+/// Init fs.
+/// Read super block info.
+/// Init log info and recover if necessary.
+pub unsafe fn init(dev: u32) {
+    SUPER_BLOCK.init(dev);
+    let log_ptr = LOG.acquire().deref_mut() as *mut Log;
+    log_ptr.as_mut().unwrap().init(dev);
+    println!("file system: setup done");
 }

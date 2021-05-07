@@ -130,7 +130,7 @@ impl ProcManager{
                     // which returns to user space. 
                     let kstack = extern_data.kstack;
                     extern_data.context.write_zero();
-                    // guard.context.write_ra(forkret as usize);
+                    extern_data.context.write_ra(forkret as usize);
                     extern_data.context.write_sp(kstack + PGSIZE);
                     drop(guard);
                     return Some(p);
