@@ -1,9 +1,10 @@
 use super::mbuf::MBuf;
+use core::mem::size_of;
 
 // qemu's idea of the guest IP
-static local_ip:u32 = make_ip_addr(10, 0, 2, 15);
-static local_mac:[u8;ETHADDR_LEN] = [0x52, 0x54, 0x00, 0x12, 0x34, 0x56];
-static broadcast_mac:[u8;ETHADDR_LEN] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+static LOCAL_IP:u32 = make_ip_addr(10, 0, 2, 15);
+static LOCAL_MAC:[u8;ETHADDR_LEN] = [0x52, 0x54, 0x00, 0x12, 0x34, 0x56];
+static BROADCAST_MAC:[u8;ETHADDR_LEN] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
 
 #[inline]
@@ -17,6 +18,36 @@ pub fn bswapl(val: u32) -> u32 {
     ((val & 0x0000FF00) << 8)  |
     ((val & 0x00FF0000) >> 8)  |
     ((val & 0xFF000000) >> 24) 
+}
+
+// This code is lifted from FreeBSD's ping.c, and is copyright by the Regents
+// of the University of California. 
+#[deny(arithmetic_overflow)]
+pub fn in_cksum(addr:*mut u8, len:u32) -> u16 {
+    let mut sum:u32 = 0;
+    let mut nleft = len;
+    let mut w = addr;
+    
+     // Our algorithm is simple, using a 32 bit accmulator (sum), we add
+     // sequential 16 bit words to it, and at the end, fold back all the 
+     // carry bits from the top 16 bits into the lower 16 bits. 
+     while nleft > 0 {
+        sum += unsafe{ *w as u32 };
+        w = (w as usize + 1) as *mut u8;
+        nleft -= 2;
+     }
+
+     // mop up an odd byte, if necessary
+     // emmm, I think it is unnecessary
+
+     // add back carry outs from top 16 bits to low bits
+     sum = (sum & 0xFFFF) + (sum >> 16);
+     sum = sum + (sum >> 16);
+     // guaranted now that lower 16 bits of sum are correct
+
+     let answer:u16 = !sum as u16;
+
+     answer
 }
 
 pub trait Protocol {
@@ -42,9 +73,9 @@ const ETHADDR_LEN:usize = 6;
 // an Ethernet packet header (start of the packet)
 #[repr(C, packed)]
 struct Eth {
-    dhost:[u8;ETHADDR_LEN],
-    shost:[u8;ETHADDR_LEN],
-    eth_type:u16,
+    pub dhost:[u8;ETHADDR_LEN],
+    pub shost:[u8;ETHADDR_LEN],
+    pub eth_type:u16,
 }
 
 
@@ -53,16 +84,16 @@ const ETHTYPE_ARP:u16 = 0x0806; // Address Resolution Protocol
 
 // an IP packet header(comes after an Ethernet header).
 struct IP {
-    ip_vhl:u8, // version << 4 | header length >> 2
-    ip_tos:u8, // type of service
-    ip_len:u16, // total length
-    ip_id:u16, // identification 
-    ip_off:u16, // fragment offset field
-    ip_ttl:u8, // time to live
-    ip_p:u8, // protocol
-    ip_sum:u16, // checksum
-    ip_src:u32,
-    ip_dst:u32,
+    pub ip_vhl:u8, // version << 4 | header length >> 2
+    pub ip_tos:u8, // type of service
+    pub ip_len:u16, // total length
+    pub ip_id:u16, // identification 
+    pub ip_off:u16, // fragment offset field
+    pub ip_ttl:u8, // time to live
+    pub ip_p:u8, // protocol
+    pub ip_sum:u16, // checksum
+    pub ip_src:u32,
+    pub ip_dst:u32,
 }
 
 const IPPROTO_ICMP:u8 = 1; // Control message protocol
@@ -156,13 +187,122 @@ impl Protocol for TCP{}
 
 impl Eth {
     // sends an ethernet packet
-    pub fn send_eth(m:MBuf, eth_type:u16) {
-        
+    pub fn send(mut m:MBuf, eth_type:u16) {
+        let eth_header = unsafe{ &mut *(m.push(size_of::<Eth>() as u32) as *mut Eth) };
+        eth_header.shost = LOCAL_MAC.clone();
+
+        // In a real networking stack, dhost would be set to the address discovered
+        // through ARP. Because we don't support enough of the ARP protocol, set it 
+        // to broadcast instead. 
+        eth_header.dhost = BROADCAST_MAC.clone();
+        eth_header.eth_type = eth_type;
+
+        if m.e1000_transmit().is_ok() {
+            m.free();
+        }
+
     }
 
     // called by e1000 driver's interrupt handler to deliver a packet to the
     // networking stack
-    pub fn rece_eth(m:MBuf) {
+    pub fn receive(mut m:MBuf) {
+        // let eth_hdr = m.pull(size_of::<Eth>() as u32);
+        match m.pull(size_of::<Eth>() as u32) {
+            Some(eth_header) => {
+                let eth_header = unsafe{ &mut *(eth_header as *mut Eth) };
+                let eth_type = Eth::ntohs(eth_header.eth_type);
 
+                match eth_type {
+                    ETHTYPE_IP => {
+                        IP::receive(m);
+                    },
+
+                    ETHTYPE_ARP => {
+                        ARP::receive(m);
+                    },
+
+                    _ => {
+                        m.free();
+                    }
+                }
+            },
+
+            None => {
+                m.free();
+            }
+        }
+    }
+}
+
+impl IP {
+    pub fn send(mut m:MBuf, proto:u8, dip:u32) {
+        // push the IP header
+        let ip_header = unsafe{ &mut *(m.push(size_of::<IP>() as u32) as *mut IP) };
+        ip_header.ip_vhl = (4 << 4) | (20 >> 2);
+        ip_header.ip_p = proto;
+        ip_header.ip_src = IP::htonl(LOCAL_IP);
+        ip_header.ip_dst = IP::htonl(dip);
+        ip_header.ip_len = IP::htons(m.len as u16);
+        ip_header.ip_ttl = 100;
+        ip_header.ip_sum = in_cksum((ip_header as *mut _) as *mut u8, size_of::<IP>() as u32);
+    }
+
+    // receive an IP packet
+    pub fn receive(mut m: MBuf) {
+        match m.pull(size_of::<IP>() as u32) {
+            Some(ip_header) => {
+                let ip_header = unsafe{ &mut *(ip_header as *mut IP) };
+
+                // check IP version and header len
+                if ip_header.ip_vhl != ((4 << 4) | (20 >> 2)) {
+                    m.free();
+                    return
+                }
+
+                // validate IP checksum
+                // TODO: in_cksum
+
+                // can't support fragmented IP packets
+                if IP::htons(ip_header.ip_off) != 0 {
+                    m.free();
+                    return
+                }
+
+                // is the packet addressed to us ?
+                if IP::htonl(ip_header.ip_dst) != LOCAL_IP {
+                    m.free();
+                    return
+                }
+
+                match ip_header.ip_p {
+                    IPPOTO_UDP => {
+                        println!("IP receive: UDP.");
+                    },
+
+                    IPPOTO_TCP => {
+                        println!("IP receive: TCP.");
+                    }
+
+                    _ => {
+                        println!("IP receive: unsupported protocol.");
+                        m.free();
+                        return
+                    }
+                }
+
+            },
+
+            None => {
+                m.free();
+                return
+            }
+        }
+    }
+}
+
+impl ARP {
+    // receives an ARP packet
+    pub fn receive(mut _m: MBuf) {
+        panic!("no implemented!");
     }
 }
