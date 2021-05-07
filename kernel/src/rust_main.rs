@@ -1,4 +1,4 @@
-use cpu::cpuid;
+use crate::process::cpu::cpuid;
 
 use crate::logo::LOGO;
 use crate::console;

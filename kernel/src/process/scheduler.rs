@@ -4,7 +4,7 @@ use core::ops::{ DerefMut };
 use super::*;
 use crate::define::{
     param::NPROC,
-    memlayout::{ KSTACK, PGSIZE, TRAMPOLINE }
+    memlayout::{ PGSIZE, TRAMPOLINE }
 };
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
