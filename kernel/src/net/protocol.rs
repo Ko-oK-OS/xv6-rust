@@ -119,25 +119,26 @@ struct ARP {
 const ARP_HRD_ETHER:u8 = 1; // Ethernet
 
 // a UDP packet header (comes after an IP header)
+#[repr(C, packed)]
 struct UDP {
-    udp_sport:u16, // source port
-    udp_dport:u16, // destination port
-    udp_len:u16, // length, including udp header, not including IP header
-    udp_sum:u16, // checksum
+    pub udp_sport:u16, // source port
+    pub udp_dport:u16, // destination port
+    pub udp_len:u16, // length, including udp header, not including IP header
+    pub udp_sum:u16, // checksum
 }
 
 
 // a TCP packet header (comes after an IP header)
 struct TCP {
-    tcp_sport:u16, /* source port */
-    tcp_dport:u16, /* destination port */
-    tcp_seq:u32,  /* sequence number */
-    tcp_ack:u32, /* acknowledgment number */
-    tcp_offset:u8, /* data offset, in bytes */
-    tcp_flags:u8, /* flags */
-    tcp_window:u16, /* window size */
-    tcp_checksum:u16, /* checksum */
-    tcp_urgent:u16, /* urgent data pointer */
+    pub tcp_sport:u16, /* source port */
+    pub tcp_dport:u16, /* destination port */
+    pub tcp_seq:u32,  /* sequence number */
+    pub tcp_ack:u32, /* acknowledgment number */
+    pub tcp_offset:u8, /* data offset, in bytes */
+    pub tcp_flags:u8, /* flags */
+    pub tcp_window:u16, /* window size */
+    pub tcp_checksum:u16, /* checksum */
+    pub tcp_urgent:u16, /* urgent data pointer */
 }
 
 // an DNS packet (comes after an UDP header)
@@ -304,5 +305,62 @@ impl ARP {
     // receives an ARP packet
     pub fn receive(mut _m: MBuf) {
         panic!("no implemented!");
+    }
+}
+
+impl UDP {
+    // sends the UDP packet
+    pub fn send(mut m: MBuf, dip:u32, sport:u16, dport:u16) {
+        // put the UDP header
+        let udp_header = unsafe{ &mut *(m.push(size_of::<UDP>() as u32) as *mut UDP) };
+        udp_header.udp_sport = UDP::htons(sport);
+        udp_header.udp_dport = UDP::htons(dport);
+        udp_header.udp_len = UDP::htons(m.len as u16);
+        udp_header.udp_sum = 0; // zero means to checksum is provided
+
+        // now on to the IP layer
+        IP::send(m, IPPOTO_UDP, dip);
+    }
+
+    // receives a UDP packet
+    pub fn receive(mut m:MBuf, len:u16, ip_header: &IP) {
+        if let Some(udp_header) = m.pull(size_of::<UDP> as u32) {
+            let udp_header = unsafe{ &mut *(udp_header as *mut UDP) };
+            // TODO: validate UDP checksum
+
+            // validate lengths reported in headers
+            if UDP::ntohs(udp_header.udp_len) != len {
+                m.free();
+                return
+            }
+
+            // minium packet size could be larger than the payload
+            
+        }
+
+        m.free();
+    }
+}
+
+impl TCP {
+    // sends the TCP packet
+    // try to implement TCP myself
+    pub fn send(mut m:MBuf, dip:u32, sport:u16, dport:u16) {
+        // put the TCP header
+        let tcp_header = unsafe{ &mut *(m.push(size_of::<TCP>() as u32) as *mut TCP) };
+        tcp_header.tcp_sport = TCP::htons(sport);
+        tcp_header.tcp_dport = TCP::htons(dport);
+        
+        // make zero only
+        tcp_header.tcp_ack = 0;
+        tcp_header.tcp_checksum = 0;
+        tcp_header.tcp_flags = 0;
+        tcp_header.tcp_offset = 0;
+        tcp_header.tcp_window = 0;
+        tcp_header.tcp_seq = 0;
+        tcp_header.tcp_urgent = 0;
+        
+        // now on the IP layer
+        IP::send(m, IPPOTO_TCP, dip);
     }
 }
