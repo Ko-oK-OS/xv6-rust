@@ -1,4 +1,5 @@
 use super::mbuf::MBuf;
+use crate::syscall::sock_recv_udp;
 use core::mem::size_of;
 
 // qemu's idea of the guest IP
@@ -323,7 +324,7 @@ impl UDP {
     }
 
     // receives a UDP packet
-    pub fn receive(mut m:MBuf, len:u16, ip_header: &IP) {
+    pub fn receive(mut m:MBuf, mut len:u16, ip_header: &IP) {
         if let Some(udp_header) = m.pull(size_of::<UDP> as u32) {
             let udp_header = unsafe{ &mut *(udp_header as *mut UDP) };
             // TODO: validate UDP checksum
@@ -334,8 +335,21 @@ impl UDP {
                 return
             }
 
+            len = len - size_of::<UDP>() as u16;
+            if len > m.len as u16 {
+                m.free();
+                return
+            }
+
             // minium packet size could be larger than the payload
-            
+            m.trim(m.len - (len as u32));
+
+            // parse the necessary fields
+            let sip = IP::ntohl(ip_header.ip_src);
+            let sport = UDP::ntohs(udp_header.udp_sport);
+            let dport = UDP::ntohs(udp_header.udp_dport);
+            sock_recv_udp(m, sip, dport, sport);
+            return 
         }
 
         m.free();

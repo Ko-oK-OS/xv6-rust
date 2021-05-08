@@ -1,5 +1,7 @@
 mod sysproc;
+mod sysnet;
 pub use sysproc::*;
+pub use sysnet::*;
 
 use crate::{println, process::*};
 

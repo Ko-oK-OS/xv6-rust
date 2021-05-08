@@ -12,6 +12,17 @@ pub struct MBuf {
 }
 
 impl MBuf {
+    // pub fn new() -> Self {
+    //     match Self::allocate(MBUF_SIZE as u32) {
+    //         Ok(m) => {
+                
+    //         }
+
+    //         Err(err) => {
+    //             panic!("err: {}.", err);
+    //         }
+    //     }
+    // }
 
     // Strips data from start of the buffer and returns a pointer to it. 
     // Returns 0 if less than the full requestes length is available. 
