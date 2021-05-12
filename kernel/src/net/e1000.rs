@@ -2,6 +2,7 @@ use crate::lock::spinlock::Spinlock;
 use crate::define::memlayout::E1000_REGS;
 use crate::define::e1000::*;
 use super::mbuf::*;
+use super::protocol::*;
 
 use core::ptr;
 use core::sync::atomic::{fence, Ordering};
@@ -11,8 +12,7 @@ use alloc::boxed::Box;
 
 use array_macro::array;
 use lazy_static::*;
-
-
+use bit_field::BitField;
 
 
 // Legacy Transmit Descriptor Format
@@ -117,14 +117,19 @@ pub fn e1000_init() {
         RECEIVE_RING[i].addr = mbuf.head as usize;
     }
 
-    assert_eq!(size_of::<ReceiveDesc>()%128!=0, "e1000(): Bytes of ReceiveDesc is not align.");
+    // write receive_ring address into RDBAL reg. 
+    write_regs(regs, E1000_RDBAL, RECEIVE_RING.as_ptr() as u32);
+    // write receive-ring address into RDBAH reg.
+    write_regs(regs, E1000_RDBAH, 0);
+
+    assert_eq!(size_of::<ReceiveDesc>()%128==0, "e1000(): Bytes of ReceiveDesc is not align.");
     write_regs(regs, E1000_RDH, 0);
     write_regs(regs, E1000_RDT, (RECEIVE_RING_SIZE-1) as u32);
     write_regs(regs, E1000_RDLEN, size_of::<ReceiveDesc>() as u32);
 
     // filter by qemu's MAC address, 52:54:00:12:34:56
     write_regs(regs, E1000_RA, 0x12005452);
-    write_regs(regs, E1000_RA+1, 0x5634|(1<<31));
+    write_regs(regs, E1000_RA+4, 0x5634|(1<<31));
 
     // multicast table
     for i in 0..(4096/32) {
@@ -134,7 +139,7 @@ pub fn e1000_init() {
     // receive control bits
     let recv_ctrl_bits:u32 = (E1000_RCTL_EN | // enable receiver
                              E1000_RCTL_BAM | // enable broadcast
-                             E1000_RCTL_SZ_2048 | // 2038-byte rx buffers
+                             E1000_RCTL_SZ_2048 | // 2048-byte rx buffers
                              E1000_RCTL_SECRC) as u32; // strip CRC
     write_regs(regs, E1000_RCTL, recv_ctrl_bits);
 
@@ -149,8 +154,33 @@ pub fn e1000_recv() {
     // Check for packets that have arrived from e1000
     // Create and deliver an mbuf for each packet. 
 
-    
-    
+    // acquire e1000
+    let guard = E1000_LOCK.acquire();
+    for (index, recv_desc) in RECEIVE_RING.iter().enumerate() {
+        if recv_desc.errors != 0 {
+            println!("Some errors occur in receive message.");
+            match recv_desc.errors {
+                1 => {println!("CRC Error or Alignment Error.");}
+                2 => {println!("Symbol Error.");}
+                4 => {println!("Sequence Error.");}
+                16 => {println!("Carrier Extension Error.");}
+                32 => {println!("TCP/UDP Checksum Error.");}
+                64 => {println!("IP Checksum Error.");}
+                128 => {println!("RX Data Error.")}
+                _ => {println!("Mutiple Errors.")}
+            }
+            continue;
+        }
+        if recv_desc.length != 0 {
+            let mbuf = MBuf::new();
+            // copy data from receive_mbuf to new allocated mbuf. 
+            ptr::copy_nonoverlapping(&mut mbuf as *mut MBuf, &mut RECEIVE_MBUF[index] as *mut MBuf, 1);
+            // deliver message buffer to Eth Protocol. 
+            Eth::receive(mbuf);
+        }
+    }
+    // realise e1000
+    drop(guard); 
 }
 
 

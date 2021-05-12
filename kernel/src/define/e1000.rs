@@ -6,6 +6,7 @@ pub const E1000_RCTL:usize = 0x00100; /* RX Control - RW */
 pub const E1000_TCTL:usize = 0x00400; /* TX Control - RW */
 pub const E1000_TIPG:usize = 0x00410;  /* TX Inter-packet gap -RW */
 pub const E1000_RDBAL:usize = 0x02800;  /* RX Descriptor Base Address Low - RW */
+pub const E1000_RDBAH:usize = 0x02804; /* RX Descriptor Base Address High */
 pub const E1000_RDTR:usize  = 0x02820;  /* RX Delay Timer */
 pub const E1000_RADV:usize  = 0x0282C;  /* RX Interrupt Absolute Delay Timer */
 pub const E1000_RDH:usize = 0x02810;  /* RX Descriptor Head - RW */

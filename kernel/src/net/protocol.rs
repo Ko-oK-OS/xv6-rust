@@ -73,7 +73,7 @@ pub trait Protocol {
 const ETHADDR_LEN:usize = 6;
 // an Ethernet packet header (start of the packet)
 #[repr(C, packed)]
-struct Eth {
+pub struct Eth {
     pub dhost:[u8;ETHADDR_LEN],
     pub shost:[u8;ETHADDR_LEN],
     pub eth_type:u16,
