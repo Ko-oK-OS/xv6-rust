@@ -77,31 +77,28 @@ make run
 
 ## GDB Usage
 
-terminal 1:
-```
-./kernel $ make qemu-gdb
-```
-terminal 2:
-```
-./kernel $ riscv64-unknown-elf-gdb
-... (an example)
-(gdb) b kvminit
-(gdb) c
-...
-```
-
-You can also use `make debug` .
+We support gdb in OS kernel, you can exectue this command in `xv6-rust/kernel` directory:   
+```shell
+make debug
+```  
+And then you can debug this programe step by step. 
 
 ## Finished
 - [x] Bootloader
-- [x] UART start
+- [x] UART Start
 - [x] Memory Allocate(Buddy System Allocator)  
 - [x] Page Table Mapping
 - [x] Process, Thread
 - [x] Sceduler
 - [x] Kernel Trap
 - [x] Timer Interrupt
-- [x] PLIC start  
+- [x] PLIC Start  
+- [x] Virtio Disk
+
+## Doing
+- [x] NetWork 
+- [x] File System
+- [x] Arc
 
 ## TODO
 - [ ] File System
@@ -111,6 +108,7 @@ You can also use `make debug` .
 - [ ] ELF Load
 - [ ] User Programe
 - [ ] Smart Pointer
+- [ ] NetWork
 
 ## Some Useful Links
 
