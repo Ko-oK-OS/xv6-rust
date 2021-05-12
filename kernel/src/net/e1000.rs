@@ -1,20 +1,19 @@
 use crate::lock::spinlock::Spinlock;
 use crate::define::memlayout::E1000_REGS;
+use crate::define::e1000::*;
+use super::mbuf::*;
 
 use core::ptr;
 use core::sync::atomic::{fence, Ordering};
+use core::mem::size_of;
 
-const E1000_CTL:usize = 0x00000; /* Device Control Register - RW */
-const E1000_IDR:usize = 0x000C0; /* Interrupt Cause Read - R */
-const E1000_IMS:usize = 0x000D0; /* Interrupt Mask Set - RW */
-const E1000_RCTL:usize = 0x00100; /* RX Control - RW */
-const E1000_TCTL:usize = 0x00400; /* TX Control - RW */
+use alloc::boxed::Box;
 
-/* Device Control */
-const E1000_CTL_SLU:usize = 0x00000040;    /* set link up */
-const E1000_CTL_FRCSPD:usize = 0x00000800;    /* force speed */
-const E1000_CTL_FRCDPLX:usize = 0x00001000;    /* force duplex */
-const E1000_CTL_RST:usize = 0x00400000;    /* full reset */
+use array_macro::array;
+use lazy_static::*;
+
+
+
 
 // Legacy Transmit Descriptor Format
 pub struct TransmitDesc {
@@ -28,7 +27,7 @@ pub struct TransmitDesc {
 }
 
 impl TransmitDesc {
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             addr:0,
             length:0,
@@ -69,30 +68,89 @@ static E1000_LOCK:Spinlock<()> = Spinlock::new((), "e1000");
 static mut REGS:*mut u32 = E1000_REGS as *mut u32;
 
 const TRANSMIT_RING_SIZE:usize = 16;
-// static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = [TransmitDesc::new();TRANSMIT_RING_SIZE];
+static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = array![_ => TransmitDesc::new();TRANSMIT_RING_SIZE];
 
 const RECEIVE_RING_SIZE:usize = 16;
-// static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = [ReceiveDesc::new();RECEIVE_RING_SIZE];
+static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = array![_ => ReceiveDesc::new();RECEIVE_RING_SIZE];
+
+lazy_static! {
+    static ref RECEIVE_MBUF:[MBuf;RECEIVE_RING_SIZE] = array![_ => MBuf::new();RECEIVE_RING_SIZE];
+    static ref TRANSMIT_RING:[MBuf;TRANSMIT_RING_SIZE] = array![_ => MBuf::new();TRANSMIT_RING_SIZE];
+}
+
+fn write_regs(regs:usize, pos:usize, value:u32) {
+    unsafe{
+        ptr::write((regs + pos) as *mut u32, value);
+    }
+}
+
+fn read_regs(regs:usize, pos:usize) -> u32 {
+    let res:u32;
+    unsafe{
+        res = ptr::read((regs+pos) as *const u32);
+    }
+    res
+}
 
 // called by pci_init().
 // xregs is the memory address at which the
 // e1000's registers are mapped.
-pub unsafe fn e1000_init() {
+pub fn e1000_init() {
     // Reset the device
     let regs = REGS as usize;
 
     // disable interrupts
-    ptr::write((regs + E1000_IMS) as *mut u32, 0);
+    write_regs(regs, E1000_IMS, 0);
 
-    let mut e1000_ctl = ptr::read(regs as *mut u32);
+    // let mut e1000_ctl = ptr::read(regs as *mut u32);
+    let mut e1000_ctl = read_regs(regs, 0);
     e1000_ctl |= E1000_CTL_RST as u32;
-    ptr::write(regs as *mut u32, e1000_ctl);
+    write_regs(regs, 0, e1000_ctl);
 
     // redisable interrupts
-    ptr::write((regs + E1000_IMS) as *mut u32, 0);
+    write_regs(regs, E1000_IMS, 0);
     fence(Ordering::SeqCst);
 
+    // [E1000 14.4] Receive initialization
+    // set receive ring to each mbuf head address
+    for (i, mbuf) in RECEIVE_MBUF.iter_mut().enumerate() {
+        RECEIVE_RING[i].addr = mbuf.head as usize;
+    }
 
+    assert_eq!(size_of::<ReceiveDesc>()%128!=0, "e1000(): Bytes of ReceiveDesc is not align.");
+    write_regs(regs, E1000_RDH, 0);
+    write_regs(regs, E1000_RDT, (RECEIVE_RING_SIZE-1) as u32);
+    write_regs(regs, E1000_RDLEN, size_of::<ReceiveDesc>() as u32);
+
+    // filter by qemu's MAC address, 52:54:00:12:34:56
+    write_regs(regs, E1000_RA, 0x12005452);
+    write_regs(regs, E1000_RA+1, 0x5634|(1<<31));
+
+    // multicast table
+    for i in 0..(4096/32) {
+        write_regs(regs, E1000_MTA+i, 0);
+    }
+
+    // receive control bits
+    let recv_ctrl_bits:u32 = (E1000_RCTL_EN | // enable receiver
+                             E1000_RCTL_BAM | // enable broadcast
+                             E1000_RCTL_SZ_2048 | // 2038-byte rx buffers
+                             E1000_RCTL_SECRC) as u32; // strip CRC
+    write_regs(regs, E1000_RCTL, recv_ctrl_bits);
+
+    // ask e1000 for receive interrupts
+    write_regs(regs, E1000_RDTR, 0); // interrupt after every received packet(no timer)
+    write_regs(regs, E1000_RADV, 0); // interrupt after every packet (no timer)
+    write_regs(regs, E1000_IMS, 1<<7); // RXDW -- Receiver Descriptor Write Back
+
+}
+
+pub fn e1000_recv() {
+    // Check for packets that have arrived from e1000
+    // Create and deliver an mbuf for each packet. 
+
+    
+    
 }
 
 

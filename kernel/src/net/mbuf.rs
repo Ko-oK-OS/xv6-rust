@@ -1,28 +1,21 @@
 use alloc::boxed::Box;
 use core::ptr::drop_in_place;
 
-const MBUF_SIZE:usize = 2048;
-const MBUF_DEFAULT_HEADROOM:usize = 128;
+pub const MBUF_SIZE:usize = 2048;
+pub const MBUF_DEFAULT_HEADROOM:u32 = 128;
 
 pub struct MBuf {
-    next: Option<Box<*mut MBuf>>, // the next mbuf in the chain
-    head: *mut u8, // the current start position of the buffer
+    pub next: Option<Box<*mut MBuf>>, // the next mbuf in the chain
+    pub head: *mut u8, // the current start position of the buffer
     pub len: u32, // the length of the buffer
-    buf: [u8;MBUF_SIZE], // the backing store
+    pub buf: [u8;MBUF_SIZE], // the backing store
 }
 
 impl MBuf {
-    // pub fn new() -> Self {
-    //     match Self::allocate(MBUF_SIZE as u32) {
-    //         Ok(m) => {
-                
-    //         }
 
-    //         Err(err) => {
-    //             panic!("err: {}.", err);
-    //         }
-    //     }
-    // }
+    pub fn new() -> Self {
+        *MBuf::allocate(0).expect("Fail to allocate message buffer")
+    }
 
     // Strips data from start of the buffer and returns a pointer to it. 
     // Returns 0 if less than the full requestes length is available. 
