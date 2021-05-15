@@ -10,7 +10,7 @@ use crate::process::{cpu};
 //
 
 
-pub unsafe fn plicinit(){
+pub unsafe fn plic_init(){
     println!("plic init......");
     // set desired IRQ priorities non-zero (otherwise disabled).
     let plic:usize = Into::<usize>::into(memlayout::PLIC);
@@ -21,7 +21,7 @@ pub unsafe fn plicinit(){
     ptr::write_volatile(addr as *mut u32, 1);
 }
 
-pub unsafe fn plicinithart(){
+pub unsafe fn plic_init_hart(){
     println!("plic init hart......");
     let hart = cpu::cpuid();
 

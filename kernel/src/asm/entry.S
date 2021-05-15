@@ -18,8 +18,6 @@ _entry:
     add sp, sp, a0
 	# jump to start() in start.rs
     call start
-junk:
-    j junk
 
     .section .data
     .align 4

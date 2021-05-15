@@ -2,7 +2,6 @@ use crate::lock::spinlock::Spinlock;
 use crate::define::param::{ LEAF_SIZE, MAX_ALIGNMENT };
 use crate::define::memlayout::{PGSIZE, PHYSTOP};
 use super::address::{PhysicalAddress, Addr};
-// use lazy_static::*;
 use core::alloc::{ GlobalAlloc, Layout };
 
 use allocator::*;

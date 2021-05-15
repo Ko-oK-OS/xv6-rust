@@ -11,12 +11,12 @@ use super::*;
 
 static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
 
-pub fn trapinit(){
+pub fn trap_init(){
     println!("trap init......");
 }
 
 // set up to take exceptions and traps while in the kernel.
-pub unsafe fn trapinithart() {
+pub unsafe fn trap_init_hart() {
     println!("trap init hart......");
     extern "C" {
         fn kernelvec();

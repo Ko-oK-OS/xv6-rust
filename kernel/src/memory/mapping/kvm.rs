@@ -20,7 +20,7 @@ extern "C" {
 
 // Initialize the one kernel_pagetable
 #[no_mangle]
-pub unsafe fn kvminit(){
+pub unsafe fn kvm_init(){
     // check if RawPage and PageTable have the same memory layout
     assert_eq!(size_of::<RawPage>(), PGSIZE);
     assert_eq!(align_of::<RawPage>(), PGSIZE);
@@ -28,14 +28,14 @@ pub unsafe fn kvminit(){
     assert_eq!(align_of::<RawPage>(), align_of::<PageTable>());
 
     println!("kvminit......");
-    kvmmake();
+    kvm_make();
     println!("kvminit done......");
    
 }
 
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
-pub unsafe fn kvminithart(){
+pub unsafe fn kvm_init_hart(){
     println!("kvminithart......");
     satp::write(KERNEL_PAGETABLE.as_satp());
     sfence_vma();
@@ -44,7 +44,7 @@ pub unsafe fn kvminithart(){
 
 
 // Make a direct-map page table for the kernel.
-unsafe fn kvmmake() {
+unsafe fn kvm_make() {
     println!("kvmmake start......");
 
     // println!("virt test map......");

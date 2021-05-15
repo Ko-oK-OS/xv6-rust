@@ -44,7 +44,7 @@ impl ProcManager{
 
     // initialize the proc table at boot time.
     // Only used in boot.
-    pub unsafe fn procinit(&mut self){
+    pub unsafe fn proc_init(&mut self){
         println!("procinit......");
         for (pos, p) in self.proc.iter_mut().enumerate() {
             p.extern_data.get_mut().set_kstack(kstack(pos));
@@ -73,7 +73,7 @@ impl ProcManager{
     }
 
     // Set up first user programe
-    pub unsafe fn userinit(&mut self) {
+    pub unsafe fn user_init(&mut self) {
         println!("first user process init......");
         let p = self.allocproc().expect("Fail to get unused process");
 
