@@ -14,9 +14,6 @@ pub fn kernel_syscall(
     _: usize, 
     which: usize
 ) {
-    unsafe{
-        satp::write(0);
-    }
     match which  {
         SHUTDOWN => {
             println!("\x1b[1;31mShutdown!\x1b[0m");

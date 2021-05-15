@@ -14,8 +14,22 @@ use array_macro::array;
 use lazy_static::*;
 use bit_field::BitField;
 
+static E1000_LOCK:Spinlock<()> = Spinlock::new((), "e1000");
+const TRANSMIT_RING_SIZE:usize = 16;
+const RECEIVE_RING_SIZE:usize = 16;
+
+static mut REGS:*mut u32 = E1000_REGS as *mut u32;
+static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = array![_ => TransmitDesc::new();TRANSMIT_RING_SIZE];
+static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = array![_ => ReceiveDesc::new();RECEIVE_RING_SIZE];
+
+// use lock to avoid to defermut recursively. 
+lazy_static! {
+    static ref RECEIVE_MBUF:Spinlock<[MBuf;RECEIVE_RING_SIZE]> = Spinlock::new(array![_ => MBuf::new();RECEIVE_RING_SIZE], "receive_mbuf");
+    static ref TRANSMIT_MBUF:Spinlock<[MBuf;TRANSMIT_RING_SIZE]> = Spinlock::new(array![_ => MBuf::new();TRANSMIT_RING_SIZE], "transmit_mbuf");
+}
 
 // Legacy Transmit Descriptor Format
+#[repr(C, align(128))]
 pub struct TransmitDesc {
     addr:usize, // Buffer Address
     length:u16, // Length is each segment
@@ -41,6 +55,7 @@ impl TransmitDesc {
 }
 
 // Receive Descriptor Format
+#[repr(C, align(128))]
 pub struct ReceiveDesc {
     addr:usize, /* Address of the descriptor's data buffer */
     length:u16, /* Length of data DMAed into data buffer */
@@ -63,20 +78,7 @@ impl ReceiveDesc {
     }
 }
 
-static E1000_LOCK:Spinlock<()> = Spinlock::new((), "e1000");
 
-static mut REGS:*mut u32 = E1000_REGS as *mut u32;
-
-const TRANSMIT_RING_SIZE:usize = 16;
-static mut TRANSMIT_RING:[TransmitDesc;TRANSMIT_RING_SIZE] = array![_ => TransmitDesc::new();TRANSMIT_RING_SIZE];
-
-const RECEIVE_RING_SIZE:usize = 16;
-static mut RECEIVE_RING:[ReceiveDesc;RECEIVE_RING_SIZE] = array![_ => ReceiveDesc::new();RECEIVE_RING_SIZE];
-
-lazy_static! {
-    static ref RECEIVE_MBUF:[MBuf;RECEIVE_RING_SIZE] = array![_ => MBuf::new();RECEIVE_RING_SIZE];
-    static ref TRANSMIT_RING:[MBuf;TRANSMIT_RING_SIZE] = array![_ => MBuf::new();TRANSMIT_RING_SIZE];
-}
 
 fn write_regs(regs:usize, pos:usize, value:u32) {
     unsafe{
@@ -97,7 +99,7 @@ fn read_regs(regs:usize, pos:usize) -> u32 {
 // e1000's registers are mapped.
 pub fn e1000_init() {
     // Reset the device
-    let regs = REGS as usize;
+    let regs = unsafe{ REGS as usize };
 
     // disable interrupts
     write_regs(regs, E1000_IMS, 0);
@@ -113,16 +115,23 @@ pub fn e1000_init() {
 
     // [E1000 14.4] Receive initialization
     // set receive ring to each mbuf head address
-    for (i, mbuf) in RECEIVE_MBUF.iter_mut().enumerate() {
-        RECEIVE_RING[i].addr = mbuf.head as usize;
+    // acquire RECEIVE_MBUF
+    let mut recv_guard = RECEIVE_MBUF.acquire();
+    for (i, mbuf) in recv_guard.iter_mut().enumerate() {
+        unsafe{
+            RECEIVE_RING[i].addr = mbuf.head as usize;
+        }
     }
+    // realise 
+    drop(recv_guard);
 
     // write receive_ring address into RDBAL reg. 
-    write_regs(regs, E1000_RDBAL, RECEIVE_RING.as_ptr() as u32);
+    write_regs(regs, E1000_RDBAL, unsafe{ RECEIVE_RING.as_ptr() as u32} );
     // write receive-ring address into RDBAH reg.
     write_regs(regs, E1000_RDBAH, 0);
 
-    assert_eq!(size_of::<ReceiveDesc>()%128==0, "e1000(): Bytes of ReceiveDesc is not align.");
+    assert_eq!(size_of::<ReceiveDesc>(), 128 , "e1000(): Bytes of ReceiveDesc is not align.");
+
     write_regs(regs, E1000_RDH, 0);
     write_regs(regs, E1000_RDT, (RECEIVE_RING_SIZE-1) as u32);
     write_regs(regs, E1000_RDLEN, size_of::<ReceiveDesc>() as u32);
@@ -150,12 +159,14 @@ pub fn e1000_init() {
 
 }
 
-pub fn e1000_recv() {
+pub unsafe fn e1000_recv() {
     // Check for packets that have arrived from e1000
     // Create and deliver an mbuf for each packet. 
 
     // acquire e1000
     let guard = E1000_LOCK.acquire();
+    // acquire receive mbuf lists
+    let mut recv_guard = RECEIVE_MBUF.acquire();
     for (index, recv_desc) in RECEIVE_RING.iter().enumerate() {
         if recv_desc.errors != 0 {
             println!("Some errors occur in receive message.");
@@ -172,13 +183,15 @@ pub fn e1000_recv() {
             continue;
         }
         if recv_desc.length != 0 {
-            let mbuf = MBuf::new();
+            let mut mbuf = MBuf::new();
             // copy data from receive_mbuf to new allocated mbuf. 
-            ptr::copy_nonoverlapping(&mut mbuf as *mut MBuf, &mut RECEIVE_MBUF[index] as *mut MBuf, 1);
+            ptr::copy_nonoverlapping(&mut mbuf as *mut MBuf, &mut recv_guard[index] as *mut MBuf, 1);
             // deliver message buffer to Eth Protocol. 
             Eth::receive(mbuf);
         }
     }
+    // realise receive mbuf
+    drop(recv_guard);
     // realise e1000
     drop(guard); 
 }

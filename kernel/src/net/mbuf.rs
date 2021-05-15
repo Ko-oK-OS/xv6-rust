@@ -1,15 +1,22 @@
 use alloc::boxed::Box;
 use core::ptr::drop_in_place;
+use core::ops::Deref;
 
 pub const MBUF_SIZE:usize = 2048;
 pub const MBUF_DEFAULT_HEADROOM:u32 = 128;
 
+#[derive(Clone)]
 pub struct MBuf {
     pub next: Option<Box<*mut MBuf>>, // the next mbuf in the chain
     pub head: *mut u8, // the current start position of the buffer
     pub len: u32, // the length of the buffer
     pub buf: [u8;MBUF_SIZE], // the backing store
 }
+
+unsafe impl Send for MBuf{}
+unsafe impl Sync for MBuf{}
+
+
 
 impl MBuf {
 

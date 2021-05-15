@@ -4,7 +4,7 @@ use crate::memory::RawPage;
 use crate::define::memlayout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
     PLIC, KERNBASE, PHYSTOP, TRAMPOLINE,
-    E1000_REGS, ECAM
+    E1000_REGS, ECAM, VIRT_TEST
 };
 use crate::register::{satp, sfence_vma};
 use crate::process::*;
@@ -47,9 +47,16 @@ pub unsafe fn kvminithart(){
 unsafe fn kvmmake() {
     println!("kvmmake start......");
 
+    // println!("virt test map......");
+    // map VIRT_TEST for shutdown or reboot
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(VIRT_TEST),
+        PhysicalAddress::new(VIRT_TEST),
+        PGSIZE,
+        PteFlags::R | PteFlags::W
+    );
 
     println!("uart map......");
-
     // uart registers
     KERNEL_PAGETABLE.kvmmap(
         VirtualAddress::new(UART0), 

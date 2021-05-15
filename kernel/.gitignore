@@ -6,3 +6,6 @@ target/
 .idea
 
 kernel.S
+
+# net
+*.pcap

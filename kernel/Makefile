@@ -4,6 +4,9 @@ KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 CPUS		:= 3
 
+FS_IMG		:= ../mkfs/fs.img
+KERNEL_ASM	:= kernel.S
+
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
@@ -12,13 +15,15 @@ QEMU 		:= qemu-system-riscv64
 FWDPORT = $(shell expr `id -u` % 5000 + 25999)
 
 QEMUOPTS     = -machine virt -bios none -kernel $(KERNEL_FILE) -m 3G -smp $(CPUS) -nographic
-QEMUOPTS    += -drive file=fs.img,if=none,format=raw,id=x0 
+QEMUOPTS    += -drive file=${FS_IMG},if=none,format=raw,id=x0 
 QEMUOPTS	+= -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 QEMUOPTS 	+= -netdev user,id=net0,hostfwd=udp::$(FWDPORT)-:2000 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
 QEMUOPTS 	+= -device e1000,netdev=net0,bus=pcie.0
 
 
 QEMUGDB 	:= -gdb tcp::26000
+
+
 
 
 .PHONY: doc kernel build clean qemu run test
@@ -41,7 +46,7 @@ $(BIN_FILE): kernel
 # 查看反汇编结果
 asm:
 	@cargo build
-	@$(OBJDUMP) -d $(KERNEL_FILE) > kernel.S
+	@$(OBJDUMP) -d $(KERNEL_FILE) > $(KERNEL_ASM)
 
 # 清理编译出的文件
 clean:
@@ -49,12 +54,7 @@ clean:
 
 # 运行 QEMU
 qemu: build
-	@qemu-system-riscv64 \
-            -machine virt \
-			-m 3G -smp 3 \
-			-nographic \
-            -bios none \
-            -device loader,file=$(BIN_FILE),addr=0x80000000 \
+	$(QEMU) $(QEMUOPTS)
 
 qemu-gdb:
 	cargo build
