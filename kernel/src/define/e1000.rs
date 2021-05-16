@@ -27,6 +27,22 @@ pub const E1000_CTL_FRCDPLX:usize = 0x00001000;    /* force duplex */
 pub const E1000_CTL_RST:usize = 0x00400000;    /* full reset */
 
 
+/* Transmit Control */
+pub const E1000_TCTL_RST:usize = 0x00000001;    /* software reset */
+pub const E1000_TCTL_EN:usize = 0x00000002;    /* enable tx */
+pub const E1000_TCTL_BCE:usize = 0x00000004;    /* busy check enable */
+pub const E1000_TCTL_PSP:usize = 0x00000008;    /* pad short packets */
+pub const E1000_TCTL_CT:usize = 0x00000ff0;    /* collision threshold */
+pub const E1000_TCTL_CT_SHIFT:usize = 4;
+pub const E1000_TCTL_COLD:usize = 0x003ff000;    /* collision distance */
+pub const E1000_TCTL_COLD_SHIFT:usize = 12;
+pub const E1000_TCTL_SWXOFF:usize = 0x00400000;    /* SW Xoff transmission */
+pub const E1000_TCTL_PBE:usize = 0x00800000;    /* Packet Burst Enable */
+pub const E1000_TCTL_RTLC:usize = 0x01000000;    /* Re-transmit on late collision */
+pub const E1000_TCTL_NRTU:usize = 0x02000000;    /* No Re-transmit on underrun */
+pub const E1000_TCTL_MULR:usize = 0x10000000;    /* Multiple request support */
+
+
 /* Receive Control */
 pub const E1000_RCTL_RST:usize = 0x00000001;    /* Software reset */
 pub const E1000_RCTL_EN:usize = 0x00000002;    /* enable */
@@ -69,3 +85,12 @@ pub const E1000_RCTL_BSEX:usize = 0x02000000;    /* Buffer size extension */
 pub const E1000_RCTL_SECRC:usize = 0x04000000;    /* Strip Ethernet CRC */
 pub const E1000_RCTL_FLXBUF_MASK:usize = 0x78000000;    /* Flexible buffer size */
 pub const E1000_RCTL_FLXBUF_SHIFT:usize = 27;            /* Flexible buffer shift */
+
+pub const DATA_MAX:usize = 1518;
+
+/* Transmit Descriptor command definitions [E1000 3.3.3.1] */
+pub const E1000_TXD_CMD_EOP:usize = 0x01; /* End of Packet */
+pub const E1000_TXD_CMD_RS:usize = 0x08; /* Report Status */
+
+/* Transmit Descriptor status definitions [E1000 3.3.3.2] */
+pub const E1000_TXD_STAT_DD:u8 = 0x00000001; /* Descriptor Done */

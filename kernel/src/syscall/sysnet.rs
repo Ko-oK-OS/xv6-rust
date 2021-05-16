@@ -2,8 +2,11 @@ use crate::net::{ mbuf::MBuf };
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use alloc::boxed::Box;
 
+use lazy_static::lazy_static;
 
-// static mut UDPSOCKET_LIST:Spinlock<UdpSocket> = Spinlock::new(UdpSocket::new(), "udpsock");
+lazy_static! {
+    static ref UDPSOCKET_LIST:Spinlock<UdpSocket> = Spinlock::new(UdpSocket::new(), "udpsock");
+}
 
 struct UdpSocket {
     next: Spinlock<Box<UdpSocket>>, // the next socket in the list
@@ -14,15 +17,15 @@ struct UdpSocket {
 }
 
 impl UdpSocket {
-    // const fn new() -> Self {
-    //     Self{
-    //         next: Spinlock::new(Box::<UdpSocket>::new_zeroed().assume_init(), "udpsock"),
-    //         raddr: 0,
-    //         lport: 0,
-    //         rport: 0,
-    //         rxq: MBuf::new()
-    //     }
-    // }
+    pub fn new() -> Self {
+        Self{
+            next: Spinlock::new(unsafe{ Box::<UdpSocket>::new_zeroed().assume_init() }, "udpsock"),
+            raddr: 0,
+            lport: 0,
+            rport: 0,
+            rxq: MBuf::new()
+        }
+    }
 
     pub fn alloc<'a>(raddr:u32, lport:u16, rport:u16) -> Result<SpinlockGuard<'a, UdpSocket>, &'static str> {
 

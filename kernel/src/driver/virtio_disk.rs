@@ -60,6 +60,7 @@ impl Disk {
     /// Init the Disk.
     /// Only called once when the kernel boots.
     pub unsafe fn init(&mut self) {
+        println!("virtio init......");
         debug_assert_eq!((&self.desc as *const _ as usize) % PGSIZE, 0);
         debug_assert_eq!((&self.used as *const _ as usize) % PGSIZE, 0);
         debug_assert_eq!((&self.free as *const _ as usize) % PGSIZE, 0);

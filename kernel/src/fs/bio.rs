@@ -29,6 +29,7 @@ impl Bcache {
     /// Init the bcache.
     /// Should only be called once when the kernel inits itself.
     pub fn binit(&self) {
+        println!("binit......");
         let mut ctrl = self.ctrl.acquire();
         let len = ctrl.inner.len();
 

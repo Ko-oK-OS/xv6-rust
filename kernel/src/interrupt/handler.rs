@@ -44,6 +44,10 @@ pub fn supervisor_external() {
     drop(uart);
 }
 
+pub fn instr_handler(sepc: usize) {
+    panic!("Instruction Fault occuer in 0x{:x}", sepc);
+}
+
 // lazy allocate memory when user call sys_sbrk
 // we add the size of user process but not allocate
 // memory, so it'll generate a page fault when user

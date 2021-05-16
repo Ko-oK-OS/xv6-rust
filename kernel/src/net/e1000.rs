@@ -104,7 +104,6 @@ pub fn e1000_init() {
     // disable interrupts
     write_regs(regs, E1000_IMS, 0);
 
-    // let mut e1000_ctl = ptr::read(regs as *mut u32);
     let mut e1000_ctl = read_regs(regs, 0);
     e1000_ctl |= E1000_CTL_RST as u32;
     write_regs(regs, 0, e1000_ctl);
@@ -112,6 +111,22 @@ pub fn e1000_init() {
     // redisable interrupts
     write_regs(regs, E1000_IMS, 0);
     fence(Ordering::SeqCst);
+
+    // [E1000 14.5] Transmit initialization
+    // acquire 
+    let mut trans_guard = TRANSMIT_MBUF.acquire();
+    for(i, _) in trans_guard.iter_mut().enumerate() {
+        unsafe{
+            RECEIVE_RING[i].status = E1000_TXD_STAT_DD;
+        }
+    }
+
+    // realise
+    drop(trans_guard);
+
+    write_regs(regs, E1000_TDBAL, unsafe{ TRANSMIT_RING.as_ptr() } as u32);
+    write_regs(regs, E1000_TDH, 0);
+    write_regs(regs, E1000_TDT, 0);
 
     // [E1000 14.4] Receive initialization
     // set receive ring to each mbuf head address
@@ -145,6 +160,14 @@ pub fn e1000_init() {
         write_regs(regs, E1000_MTA+i, 0);
     }
 
+    // transmitter control bits
+    let trans_ctrl_bits:u32 = (E1000_TCTL_EN | // enable
+                            E1000_TCTL_PSP | // pad short packets
+                            (0x10 << E1000_TCTL_CT_SHIFT) | // collision stuff
+                            (0x40 << E1000_TCTL_COLD_SHIFT)) as u32;
+    write_regs(regs, E1000_TCTL, trans_ctrl_bits);
+    write_regs(regs, E1000_TIPG, 10 | (8 << 10) | (6 << 20)); // inter-pkt gap
+
     // receive control bits
     let recv_ctrl_bits:u32 = (E1000_RCTL_EN | // enable receiver
                              E1000_RCTL_BAM | // enable broadcast
@@ -157,6 +180,12 @@ pub fn e1000_init() {
     write_regs(regs, E1000_RADV, 0); // interrupt after every packet (no timer)
     write_regs(regs, E1000_IMS, 1<<7); // RXDW -- Receiver Descriptor Write Back
 
+}
+
+pub unsafe fn e1000_transmit(m: MBuf) {
+    // the mbuf contains an ethernet frame; programe it into
+    // the TX descriptor ring so that the e1000 sends it. Stash
+    // a pointer so that it can be freed after sending. 
 }
 
 pub unsafe fn e1000_recv() {

@@ -161,6 +161,7 @@ pub unsafe fn kerneltrap(
     let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
+    // let stval = stval::read();
 
     // if !sstatus::is_from_supervisor() {
     //     panic!("kerneltrap: not from supervisor mode");
@@ -188,6 +189,8 @@ pub unsafe fn kerneltrap(
                 Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
 
                 Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
+
+                Trap::Exception(Exception::InstructionFault) => instr_handler(sepc),
 
                 _ => panic!("Unresolved Trap! scause:{:?}", scause.cause())
             }

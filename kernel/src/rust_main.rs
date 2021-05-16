@@ -11,6 +11,7 @@ use crate::memory::{
     kalloc::*,
     mapping::kvm::{ kvm_init, kvm_init_hart }
 };
+use crate::driver::pci::pci_init;
 
 use crate::process::*;
 use crate::register::sstatus;
@@ -36,6 +37,7 @@ pub unsafe extern "C" fn rust_main() -> !{
         plic_init_hart(); // ask PLIC for device interrupts
         BCACHE.binit();             // buffer cache
         DISK.acquire().init();         // emulated hard disk
+        pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
 
 
