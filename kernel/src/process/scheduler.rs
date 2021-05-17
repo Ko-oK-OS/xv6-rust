@@ -58,7 +58,6 @@ impl ProcManager{
     // group page
     pub unsafe fn proc_mapstacks(&mut self) {
         for (pos, _) in self.proc.iter_mut().enumerate() {
-            // let pa = kalloc().expect("Fail to allocate physical page.");
             let pa = RawPage::new_zeroed() as *mut u8;
             let va = kstack(pos);
 

@@ -27,9 +27,7 @@ pub fn pci_init() {
             unsafe{
                 ptr::write((base + size_of::<u32>()) as *mut u32, 7);
 
-                // println!("before sync......");
                 fence(Ordering::SeqCst);
-                // println!("after sync......");
 
                 for i in 0..6 {
                     let old_addr = base + (4+i)*size_of::<u32>();
@@ -39,9 +37,7 @@ pub fn pci_init() {
                     // replaced with its size.
                     ptr::write(old_addr as *mut u32, 0xffffffff);
 
-                    println!("before sync......");
                     fence(Ordering::SeqCst);
-                    println!("after sync......");
 
                     ptr::write(old_addr as *mut u32, old_value);
                     

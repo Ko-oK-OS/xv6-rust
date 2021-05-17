@@ -110,35 +110,47 @@ pub fn e1000_init() {
 
     // redisable interrupts
     write_regs(regs, E1000_IMS, 0);
+
     fence(Ordering::SeqCst);
+
+    
+    // let trans_mbuf:[MBuf;16] = array![_ => MBuf::new(); 16];
+    // println!("addr: 0x{:x}", trans_mbuf.as_ptr() as usize);
+
+    let mbuf = MBuf::allocate(0).unwrap();
+    println!("addr: 0x{:x}", Box::into_raw(mbuf) as usize);
+
 
     // [E1000 14.5] Transmit initialization
     // acquire 
-    let mut trans_guard = TRANSMIT_MBUF.acquire();
-    for(i, _) in trans_guard.iter_mut().enumerate() {
-        unsafe{
-            RECEIVE_RING[i].status = E1000_TXD_STAT_DD;
-        }
-    }
 
-    // realise
-    drop(trans_guard);
+    // let mut trans_guard = TRANSMIT_MBUF.acquire();
+    // for(i, _) in trans_guard.iter_mut().enumerate() {
+    //     unsafe{
+    //         RECEIVE_RING[i].status = E1000_TXD_STAT_DD;
+    //     }
+    // }
+
+    // // realise
+    // drop(trans_guard);
 
     write_regs(regs, E1000_TDBAL, unsafe{ TRANSMIT_RING.as_ptr() } as u32);
     write_regs(regs, E1000_TDH, 0);
     write_regs(regs, E1000_TDT, 0);
 
+
     // [E1000 14.4] Receive initialization
     // set receive ring to each mbuf head address
     // acquire RECEIVE_MBUF
-    let mut recv_guard = RECEIVE_MBUF.acquire();
-    for (i, mbuf) in recv_guard.iter_mut().enumerate() {
-        unsafe{
-            RECEIVE_RING[i].addr = mbuf.head as usize;
-        }
-    }
-    // realise 
-    drop(recv_guard);
+
+    // let mut recv_guard = RECEIVE_MBUF.acquire();
+    // for (i, mbuf) in recv_guard.iter_mut().enumerate() {
+    //     unsafe{
+    //         RECEIVE_RING[i].addr = mbuf.head as usize;
+    //     }
+    // }
+    // // realise 
+    // drop(recv_guard);
 
     // write receive_ring address into RDBAL reg. 
     write_regs(regs, E1000_RDBAL, unsafe{ RECEIVE_RING.as_ptr() as u32} );
@@ -179,7 +191,7 @@ pub fn e1000_init() {
     write_regs(regs, E1000_RDTR, 0); // interrupt after every received packet(no timer)
     write_regs(regs, E1000_RADV, 0); // interrupt after every packet (no timer)
     write_regs(regs, E1000_IMS, 1<<7); // RXDW -- Receiver Descriptor Write Back
-
+    
 }
 
 pub unsafe fn e1000_transmit(m: MBuf) {

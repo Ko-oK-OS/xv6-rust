@@ -8,6 +8,7 @@ use crate::interrupt::{
 };
 
 use crate::memory::{
+    BigPage, RawPage,
     kalloc::*,
     mapping::kvm::{ kvm_init, kvm_init_hart }
 };
@@ -37,6 +38,15 @@ pub unsafe extern "C" fn rust_main() -> !{
         plic_init_hart(); // ask PLIC for device interrupts
         BCACHE.binit();             // buffer cache
         DISK.acquire().init();         // emulated hard disk
+
+        // let pa = BigPage::new_zeroed();
+        // println!("pa: 0x{:x}", pa);
+
+        for _ in 0..16 {
+            let pa = RawPage::new_zeroed();
+            println!("pa: 0x{:x}", pa);
+        }
+
         pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
 
@@ -46,13 +56,13 @@ pub unsafe extern "C" fn rust_main() -> !{
         // STARTED.store(true, Ordering::SeqCst);
         // loop{};
     }else{
-        while !STARTED.load(Ordering::SeqCst){}
-        println!("hart {} starting\n", cpu::cpuid());
-        kvm_init_hart(); // turn on paging
-        trap_init_hart();   // install kernel trap vector
-        plic_init_hart();   // ask PLIC for device interrupts
-        panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        // loop{}
+        // while !STARTED.load(Ordering::SeqCst){}
+        // println!("hart {} starting\n", cpu::cpuid());
+        // kvm_init_hart(); // turn on paging
+        // trap_init_hart();   // install kernel trap vector
+        // plic_init_hart();   // ask PLIC for device interrupts
+        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        loop{}
     }
 
     #[cfg(feature = "unit_test")]

@@ -4,7 +4,7 @@ use crate::memory::RawPage;
 use crate::define::memlayout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
     PLIC, KERNBASE, PHYSTOP, TRAMPOLINE,
-    E1000_REGS, ECAM, VIRT_TEST
+    E1000_REGS, ECAM, VIRT_TEST, CLINT
 };
 use crate::register::{satp, sfence_vma};
 use crate::process::*;
@@ -89,6 +89,15 @@ unsafe fn kvm_make() {
         VirtualAddress::new(E1000_REGS),
         PhysicalAddress::new(E1000_REGS),
         0x20000,
+        PteFlags::R | PteFlags::W
+    );
+
+    println!("clint map......");
+    // CLINT
+    KERNEL_PAGETABLE.kvmmap(
+        VirtualAddress::new(CLINT.as_usize()),
+        PhysicalAddress::new(CLINT.as_usize()),
+        0x10000,
         PteFlags::R | PteFlags::W
     );
 
