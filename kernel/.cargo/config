@@ -7,13 +7,16 @@ rustflags = [
     "-C", "link-arg=-Tsrc/kernel.ld",
 ]
 
+
 runner = """
     qemu-system-riscv64 \
     -machine virt -bios none \
     -m 3G -smp 3 -nographic \
-    -drive file=fs.img,if=none,format=raw,id=x0 \
+    -drive file=../mkfs/fs.img,if=none,format=raw,id=x0 \
     -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-    -kernel 
+    -netdev user,id=net0,hostfwd=udp::26999-:2000 -object filter-dump,id=net0,netdev=net0,file=packets.pcap \
+    -device e1000,netdev=net0,bus=pcie.0 \
+    -kernel
     """
 
 [term]
