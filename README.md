@@ -1,22 +1,17 @@
 # xv6-rust
 ## Introduction
 
-```
-____   ___   _____      ____   ,--.     .______       __    __      _______.___________.  
- \\  \./ //   \\   \    //  /  /  /      |   _  \     |  |  |  |    /       |           |  
-  \\    //     \\   \  //  /  /  / ---.  |  |_)  |    |  |  |  |   |   (----`---|  |----`
-   \\   \\      \\    '   /   |   .-.  ' |      /     |  |  |  |    \   \       |  |
-  //     \\      \\      /    \\  |  | | |  |\  ----. |  `--'  |.----)   |      |  |
- //  /'\  \\      \\    /      \\  `' /  | _| `._____| \______/ |_______/       |__|           
- '--'   '--'        `--'        `----'               
+![](run.jpg)
 
-```
+This is a try to re-implement xv6 OS in Rust. 
 
-
-
-This is a try to implement xv6 OS in Rust. 
-
-What's more, we are desired to add something new to our OS, like GUI and network.
+What's more, we are desired to add something new features into our OS, like network and GUI.  
+   
+The further goal of this project is to support multiple architecture and mutiple boards, finally making our OS running in our own CPU.   
+    
+For the purpose of supporting the feature of Rust language, I also intend to use async/await feature to implement kernel thread scheduler renewedly.  
+    
+Due to the complexity of the project and the busy course-work, I think it's hard to complete above work independently, so I'm sincerely hope others can interest on this project and join our teams.
 
 ## Start  
 ### QEMU
@@ -30,8 +25,8 @@ make -j$(nproc)
 sudo make install  
 ```
 If you find some errors when building, you can slove by following hints:  
-`ERROR: pkg-config binary 'pkg-config' not found` : `sudo apt-get install pkg-config`  
-`ERROR: glib-2.48 gthread-2.0 is required to compile QEMU`: `sudo apt-get install libglib2.0-dev`  
+`ERROR: pkg-config binary 'pkg-config' not found` : `sudo apt-get install pkg-config`           
+`ERROR: glib-2.48 gthread-2.0 is required to compile QEMU`: `sudo apt-get install libglib2.0-dev`       
 `ERROR: pixman >= 0.21.8 not present`: `sudo apt-get install libpixman-1-dev` 
 
 ### Rust
@@ -83,32 +78,36 @@ make debug
 ```  
 And then you can debug this programe step by step. 
 
-## Finished
-- [x] Bootloader
-- [x] UART Start
-- [x] Memory Allocate(Buddy System Allocator)  
-- [x] Page Table Mapping
-- [x] Process, Thread
-- [x] Sceduler
-- [x] Kernel Trap
-- [x] Timer Interrupt
-- [x] PLIC Start  
-- [x] Virtio Disk
+## Functions
 
-## Doing
-- [x] NetWork 
-- [x] File System
-- [x] Arc
+- Virtual Memory and Management   
+    - [x] Virtulal Memory Map
+    - [x] Kernel Allocator(Buddy System Allocator)  
+    - [ ] Load ELF Files From Memory
+- Traps,Interrupts, and drivers
+    - [x] Kernel Trap
+    - [x] Users Trap
+    - [x] UART Drivers
+    - [x] Machine-Mode Timer Interrupt
+    - [x] Virtio Disk Drivers
+    - [x] PCI and E1000 Drivers
+- Locking
+    - [x] Spinlock
+    - [x] Sleeplock
+- Process and Scheduing
+    - [x] Process
+    - [x] Scheduing
+    - [x] Muti-Core Support
+    - [ ] Syscall
+- File System
+    - [x] Block Driver
+    - [x] Log System
+    - [x] Super Block
+- NetWork
+    - [x] PCI and E1000 Initialize
+    - [x] Protocol Headers
 
-## TODO
-- [ ] File System
-- [ ] Syscall     
-- [ ] Lazy Allocate
-- [ ] Copy On Write
-- [ ] ELF Load
-- [ ] User Programe
-- [ ] Smart Pointer
-- [ ] NetWork
+
 
 ## Some Useful Links
 

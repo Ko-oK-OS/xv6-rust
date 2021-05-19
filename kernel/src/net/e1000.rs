@@ -117,8 +117,8 @@ pub fn e1000_init() {
     // let trans_mbuf:[MBuf;16] = array![_ => MBuf::new(); 16];
     // println!("addr: 0x{:x}", trans_mbuf.as_ptr() as usize);
 
-    let mbuf = MBuf::allocate(0).unwrap();
-    println!("addr: 0x{:x}", Box::into_raw(mbuf) as usize);
+    // let mbuf = MBuf::allocate(0).unwrap();
+    // println!("addr: 0x{:x}", Box::into_raw(mbuf) as usize);
 
 
     // [E1000 14.5] Transmit initialization
