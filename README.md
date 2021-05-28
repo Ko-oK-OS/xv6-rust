@@ -107,7 +107,9 @@ And then you can debug this programe step by step.
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers
 
+## DOCS
 
+[项目设计文档](docs/项目设计文档.pdf)
 
 ## Some Useful Links
 
