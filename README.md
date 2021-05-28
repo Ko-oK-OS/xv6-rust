@@ -6,11 +6,11 @@
 This is a try to re-implement xv6 OS in Rust. 
 
 What's more, we are desired to add something new features into our OS, like network and GUI.  
-   
-The further goal of this project is to support multiple architecture and mutiple boards, finally making our OS running in our own CPU.   
-    
-For the purpose of supporting the feature of Rust language, I also intend to use async/await feature to implement kernel thread scheduler renewedly.  
-    
+
+The further goal of this project is to support multiple architecture and multiple boards, finally making our OS running in our own CPU.   
+
+For the purpose of supporting the feature of Rust language, I also intend to use `async/await` feature to implement kernel thread scheduler renewedly.  
+
 Due to the complexity of the project and the busy course-work, I think it's hard to complete above work independently, so I'm sincerely hope others can interest on this project and join our teams.
 
 ## Start  
@@ -75,7 +75,7 @@ make run
 We support gdb in OS kernel, you can exectue this command in `xv6-rust/kernel` directory:   
 ```shell
 make debug
-```  
+```
 And then you can debug this programe step by step. 
 
 ## Functions
