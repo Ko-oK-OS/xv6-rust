@@ -117,9 +117,17 @@ impl ProcExtern {
         &mut self.context as *mut Context
     }
 
+    pub fn init_context(&mut self) {
+
+        let kstack = self.kstack;
+        self.context.write_zero();
+        self.context.write_ra(fork_ret as usize);
+        self.context.write_sp(kstack + PGSIZE);
+    }
+
     // Create a user page table for a given process,
     // with no user memory, but with trampoline pages
-    pub unsafe fn proc_pagetable(&mut self) -> Option<Box<PageTable>> {
+    pub unsafe fn proc_pagetable(&mut self) {
 
         extern "C" {
             fn trampoline();
@@ -141,8 +149,6 @@ impl ProcExtern {
 
         if !is_ok {
             page_table.uvmfree(0);
-
-            return None
         }
 
         // map the trapframe just below TRAMPOLINE, for trampoline.S 
@@ -155,13 +161,9 @@ impl ProcExtern {
 
         if !is_ok {
             page_table.uvmfree(0);
-            return None
         }
 
-        return Some(page_table)
-    
-
-
+        self.pagetable = Some(page_table);
     }
 }
 

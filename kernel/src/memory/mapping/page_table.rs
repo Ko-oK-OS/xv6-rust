@@ -165,7 +165,7 @@ impl PageTable{
         mut pa: PhysicalAddress, 
         size:usize, 
         perm:PteFlags
-    ) -> bool{
+    ) -> bool {
         let mut last = VirtualAddress::new(va.as_usize() + size);
         va.pg_round_down();
         last.pg_round_up();

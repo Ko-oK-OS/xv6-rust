@@ -8,7 +8,7 @@ use crate::interrupt::{
 };
 
 use crate::memory::{
-    BigPage, RawPage,
+    RawPage,
     kalloc::*,
     mapping::kvm::{ kvm_init, kvm_init_hart }
 };

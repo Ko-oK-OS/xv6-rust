@@ -74,7 +74,7 @@ impl ProcManager{
     // Set up first user programe
     pub unsafe fn user_init(&mut self) {
         println!("first user process init......");
-        let p = self.allocproc().expect("Fail to get unused process");
+        let p = self.alloc_proc().expect("Fail to get unused process");
 
         // allocate one user page and copy init's instructions
         // and data into it.
@@ -107,7 +107,7 @@ impl ProcManager{
     // If there are a free procs, or a memory allocation fails, return 0. 
 
     // TODO: possible error occurs here.
-    pub fn allocproc(&mut self) -> Option<&mut Process> {
+    pub fn alloc_proc(&mut self) -> Option<&mut Process> {
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             if guard.state == Procstate::UNUSED {
@@ -121,26 +121,17 @@ impl ProcManager{
                 extern_data.set_trapframe(ptr as *mut Trapframe);
 
                 // An empty user page table
-                if let Some(page_table) = unsafe { extern_data.proc_pagetable() } {
-                    extern_data.set_pagetable(Some(page_table));
-                    
-
-                    // Set up new context to start executing at forkret, 
-                    // which returns to user space. 
-                    let kstack = extern_data.kstack;
-                    extern_data.context.write_zero();
-                    extern_data.context.write_ra(forkret as usize);
-                    extern_data.context.write_sp(kstack + PGSIZE);
-                    drop(guard);
-                    return Some(p);
-                    
-                } else {
-                    // p.freeproc();
-                    drop(guard);
-                    return None
+                unsafe{
+                    extern_data.proc_pagetable();
                 }
+                
+                // Set up new context to start executing at forkret, 
+                // which returns to user space. 
+                extern_data.init_context();
+                drop(guard);
 
-            
+                return Some(p);
+        
             }else {
                 drop(guard);
             }

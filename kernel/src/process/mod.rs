@@ -35,7 +35,7 @@ pub unsafe fn fork() -> isize {
     let my_proc = CPU_MANAGER.myproc().expect("Fail to get my cpu");
 
     // ALLOCATE process
-    if let Some(other_proc) = PROC_MANAGER.allocproc() {
+    if let Some(other_proc) = PROC_MANAGER.alloc_proc() {
         let guard = other_proc.data.acquire();
         let extern_data = my_proc.extern_data.get_mut();
         let other_extern_data = other_proc.extern_data.get_mut();
@@ -93,7 +93,7 @@ pub unsafe fn fork() -> isize {
 /// will swtch to forkret.
 /// 
 /// Need to be handled carefully, because CPU use ra to jump here
-unsafe fn forkret() -> ! {
+unsafe fn fork_ret() -> ! {
     static mut FIRST: bool = true;
     
     // Still holding p->lock from scheduler
