@@ -50,9 +50,9 @@ pub struct Spinlock<T: ?Sized>{
     }
 ```
 
-在我们的实现中，对于`acquire`方法，我们首先需要等待获取锁变量并对其进行原子上锁操作，在对变量上锁之后返回一个`SpinlockGuard`变量。
+在我们的实现中，对于`acquire`方法，我们首先需要关闭中断并等待获取锁变量并对其进行原子上锁操作，在对变量上锁之后返回一个`SpinlockGuard`变量。
 
-而对于`release`方法，我们只需要将其原子性地释放锁即可。
+而对于`release`方法，我们则首先需要判断当前锁的状态，当锁为`acquire`状态时我们将其解锁并进行开启中断。
 
 而`SpinlockGuard`的定义如下：
 
@@ -84,3 +84,8 @@ impl<T> DerefMut for SpinlockGuard<'_, T>{
 }
 ```
 
+
+
+## 睡眠锁（Sleeplock）
+
+待开发......
