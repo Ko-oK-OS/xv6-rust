@@ -9,7 +9,7 @@
 pub struct Spinlock<T: ?Sized>{
     locked:AtomicBool,
     name: &'static str,
-    cpu_id: isize,
+    cpu_id: Cell<isize>,
     data:UnsafeCell<T>,
 }
 ```
@@ -19,20 +19,40 @@ pub struct Spinlock<T: ?Sized>{
 对于一个锁变量，我们需要对其实现`acquire()`和`release()`方法：
 
 ```rust
-pub fn acquire(&self) -> SpinlockGuard<'_, T> {
-        while !self.locked.swap(true, Ordering::AcqRel){
+    pub fn acquire(&self) -> SpinlockGuard<'_, T> {
+
+        push_off();
+        if self.holding() {
+            panic!("acquire");
+        }
+        
+        while self.locked.swap(true, Ordering::Acquire){
             // Now we signals the processor that it is inside a busy-wait spin-loop 
             spin_loop();
         }
+        fence(Ordering::SeqCst);
+        unsafe {
+            self.cpu_id.set(cpuid() as isize);
+        }
+
         SpinlockGuard{spinlock: &self}
     }
 
     pub fn release(&self) {
+        if !self.holding() {
+            panic!("release");
+        }
+        self.cpu_id.set(-1);
+        fence(Ordering::SeqCst);
         self.locked.store(false, Ordering::Release);
+
+        pop_off();
     }
 ```
 
-在我们的实现中，对于`acquire`方法，我们首先需要等待获取锁变量并对其进行原子上锁操作，在对变量上锁之后返回一个`SpinlockGuard`变量。而对于`release`方法，我们只需要将其原子性地释放锁即可。
+在我们的实现中，对于`acquire`方法，我们首先需要关闭中断并等待获取锁变量并对其进行原子上锁操作，在对变量上锁之后返回一个`SpinlockGuard`变量。
+
+而对于`release`方法，我们则首先需要判断当前锁的状态，当锁为`acquire`状态时我们将其解锁并进行开启中断。
 
 而`SpinlockGuard`的定义如下：
 
@@ -64,5 +84,8 @@ impl<T> DerefMut for SpinlockGuard<'_, T>{
 }
 ```
 
-由于没有实现线程，所以暂时没有`acquire`,`release`对于进程上下文的处理。
 
+
+## 睡眠锁（Sleeplock）
+
+待开发......
