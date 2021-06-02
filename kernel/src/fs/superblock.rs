@@ -70,6 +70,8 @@ impl SuperBlock {
         let sb = self.read();
         sb.size
     }
+
+    
 }
 
 /// Raw super block describes the disk layout.

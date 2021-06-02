@@ -5,6 +5,9 @@ use core::ops::DerefMut;
 mod log;
 mod bio;
 mod superblock;
+mod fs;
+mod file;
+mod pipe;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
