@@ -1,9 +1,12 @@
 mod sysproc;
 mod sysnet;
+mod sysfile;
 pub use sysproc::*;
 pub use sysnet::*;
+pub use sysfile::*;
 
 use crate::{println, process::*};
+use crate::fs::AbstractFile;
 
 use core::mem::size_of;
 
@@ -37,24 +40,24 @@ pub fn fetchaddr(addr: usize, arg: *mut u8, len: usize) -> Result<(), &'static s
 
 
 // Fetch the syscall arguments
-pub fn argraw(id: usize) -> usize {
+pub fn argraw(id: usize) -> Result<usize, &'static str> {
     let tf = unsafe{
         &mut *CPU_MANAGER.myproc().unwrap().
         extern_data.get_mut().trapframe
     };
 
     match id {
-        0 => { tf.a0 }
+        0 => { Ok(tf.a0) }
 
-        1 => { tf.a1 }
+        1 => { Ok(tf.a1) }
 
-        2 => { tf.a2 }
+        2 => { Ok(tf.a2) }
 
-        3 => { tf.a3 }
+        3 => { Ok(tf.a3) }
 
-        4 => { tf.a4 }
+        4 => { Ok(tf.a4) }
 
-        5 => { tf.a5 }
+        5 => { Ok(tf.a5) }
 
         _ => {
             panic!("argraw(): cannot get arguments out of limit!");
@@ -63,10 +66,14 @@ pub fn argraw(id: usize) -> usize {
 }
 
 // Fetch the nth arguments in current syscall
-pub fn argint(id: usize, arg: &mut usize) -> usize {
+pub fn argint(id: usize, arg: &mut usize) -> Result<(), &'static str> {
     // get arguments by call argraw
-    *arg = argraw(id);
-    0
+    *arg = argraw(id).unwrap();
+    Ok(())
+}
+
+pub fn argfd(id: usize, pfd: &mut usize, pfs: &mut AbstractFile) -> Result<(), &'static str> {
+    Ok(())
 }
 
 pub unsafe fn syscall() {

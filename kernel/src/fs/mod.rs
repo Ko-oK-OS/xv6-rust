@@ -5,17 +5,26 @@ use core::ops::DerefMut;
 mod log;
 mod bio;
 mod superblock;
-mod fs;
 mod file;
 mod pipe;
+mod stdio;
+mod inode;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
 pub use log::LOG;
+pub use file::AbstractFile;
 
 use superblock::SUPER_BLOCK;
 use log::Log;
 use bio::BufData;
+
+pub trait File: Send + Sync {
+    fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str>;
+    fn write(&self, addr: usize, buf: &[u8]) -> Result <usize, &'static str>;
+    fn readable(&self) -> bool;
+    fn writeable(&self) -> bool;
+}
 
 /// Init fs.
 /// Read super block info.
