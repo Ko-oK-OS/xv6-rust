@@ -6,7 +6,6 @@ use super::pipe::Pipe;
 use super::inode::Inode;
 use super::devices::DEVICES;
 
-use array_macro::array;
 
 pub enum FileType {
     None,
@@ -51,7 +50,7 @@ impl VFS {
 
         match self.file_type {
             FileType::Pipe => {
-                r = (&*(self.pipe.unwrap())).read(addr, buf).unwrap();
+                r = unsafe{ (&*(self.pipe.unwrap())).read(addr, buf).unwrap() };
                 return Ok(r)
             },
 
@@ -78,11 +77,11 @@ impl VFS {
     }
 
     fn readable(&self) -> bool {
-        self.readable()
+        self.readable
     }
 
     fn writeable(&self) -> bool {
-        self.writeable()
+        self.writeable
     }
 }
 

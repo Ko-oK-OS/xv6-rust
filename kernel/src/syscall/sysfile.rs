@@ -1,5 +1,4 @@
 use crate::fs::VFS;
-use crate::fs::File;
 use super::*;
 
 pub fn sys_read() -> bool {
