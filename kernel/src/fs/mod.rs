@@ -9,22 +9,25 @@ mod file;
 mod pipe;
 mod stdio;
 mod inode;
+mod devices;
+mod file_table;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
 pub use log::LOG;
-pub use file::AbstractFile;
+pub use file::VFS;
 
 use superblock::SUPER_BLOCK;
 use log::Log;
 use bio::BufData;
+use devices::DEVICES;
 
-pub trait File: Send + Sync {
-    fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str>;
-    fn write(&self, addr: usize, buf: &[u8]) -> Result <usize, &'static str>;
-    fn readable(&self) -> bool;
-    fn writeable(&self) -> bool;
-}
+// pub trait File: Send + Sync {
+//     fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str>;
+//     fn write(&self, addr: usize, buf: &[u8]) -> Result <usize, &'static str>;
+//     fn readable(&self) -> bool;
+//     fn writeable(&self) -> bool;
+// }
 
 /// Init fs.
 /// Read super block info.

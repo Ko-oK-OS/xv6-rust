@@ -8,7 +8,7 @@ pub const SYS_CLOSE:usize = 6;
 pub const SYS_KILL:usize = 7;
 pub const SYS_EXEC:usize = 8;
 pub const SYS_OPEN:usize = 9;
-pub const SYS_MKOND:usize = 10;
+pub const SYS_MKNOD:usize = 10;
 pub const SYS_UNLINKE:usize = 11;
 pub const SYS_FSTAT:usize = 12;
 pub const SYS_LINK:usize = 13;
@@ -58,3 +58,24 @@ pub fn sys_write(fd:isize, buf: &[u8], n:usize) -> isize {
     syscall(SYS_WRITE, [fd as usize, buf.as_ptr() as usize, n])
 }
 
+pub fn sys_open(path: &str, flags: u32) -> isize {
+    syscall(SYS_OPEN, [path.as_ptr() as usize, flags as usize, 0])
+}
+
+pub fn sys_close(fd: usize) -> isize {
+    syscall(SYS_CLOSE, [fd, 0, 0])
+}
+
+pub fn sys_dup(fd: usize) -> isize {
+    syscall(SYS_DUP, [fd, 0, 0])
+}
+
+pub fn sys_mknod(path: &str, mode: usize, dev: usize) -> isize {
+    syscall(SYS_MKNOD, [path.as_ptr() as usize, mode, dev])
+}
+
+pub fn sys_exec(path: &str, args: &[*const u8]) -> isize {
+    syscall(SYS_EXEC, [path.as_ptr() as usize, args.as_ptr() as usize, 0])
+}
+
+ 

@@ -12,6 +12,10 @@
 #![feature(const_fn_union)]
 #![feature(alloc_error_handler)]
 #![feature(new_uninit)]
+#![feature(fn_traits)]
+#![feature(const_fn_fn_ptr_basics)]
+#![feature(const_mut_refs)]
+#![feature(const_in_array_repeat_expressions)]
 
 
 

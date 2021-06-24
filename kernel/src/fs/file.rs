@@ -1,12 +1,12 @@
-use crate::define::fs::NFILE;
+use crate::define::param::NDEV;
 use crate::lock::spinlock::Spinlock;
-use super::File;
+use crate::lock::sleeplock::SleepLock;
+// use super::File;
 use super::pipe::Pipe;
 use super::inode::Inode;
+use super::devices::DEVICES;
 
 use array_macro::array;
-
-pub static mut FILE_TABLE:Spinlock<[AbstractFile; NFILE]> = Spinlock::new(array![_ => AbstractFile::init(); NFILE], "file_table");
 
 pub enum FileType {
     None,
@@ -16,19 +16,21 @@ pub enum FileType {
     Socket,
 }
 
-pub struct AbstractFile {
+/// Virtual File System, which can abstract struct to dispatch 
+/// syscall to specific file. 
+pub struct VFS {
     file_type: FileType,
     file_ref: usize,
     readable: bool,
     writeable: bool,
-    pipe: Option<Pipe>,
-    inode: Option<Inode>,
+    pipe: Option<*mut Pipe>,
+    inode: Option<SleepLock<Inode>>,
     off: usize,
     major: u16
 }
 
-impl AbstractFile {
-    pub const fn init() -> AbstractFile {
+impl VFS {
+    pub const fn init() -> VFS {
         Self{
             file_type: FileType::None,
             file_ref: 0,
@@ -40,11 +42,35 @@ impl AbstractFile {
             major: 0
         }
     }
-}
 
-impl File for AbstractFile {
     fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
-        Err("No implement")
+        let r;
+        if !self.readable() {
+            return Err("vfs: file not be read.")
+        }
+
+        match self.file_type {
+            FileType::Pipe => {
+                r = (&*(self.pipe.unwrap())).read(addr, buf).unwrap();
+                return Ok(r)
+            },
+
+            FileType::Device => {
+                if self.major < 0 || self.major as usize >= NDEV || unsafe{ DEVICES[self.major as usize].read.is_none() } {
+                    return Err("vfs: fail to read device")
+                }
+                r = unsafe{ DEVICES[self.major as usize].read.unwrap().call((1, addr, buf))} as usize;
+                return Ok(r)
+            },
+
+            FileType::Inode => {
+                Err("No implement")
+            },
+
+            _ => {
+                return Err("vfs: fail to read")
+            },
+        }
     }
 
     fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
@@ -52,11 +78,11 @@ impl File for AbstractFile {
     }
 
     fn readable(&self) -> bool {
-        true
+        self.readable()
     }
 
     fn writeable(&self) -> bool {
-        true
+        self.writeable()
     }
 }
 

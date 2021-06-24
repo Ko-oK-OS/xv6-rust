@@ -1,22 +1,22 @@
-use super::File;
+// use super::File;
 pub struct Pipe {
 
 }
 
-impl File for Pipe {
-    fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
+impl Pipe {
+    pub fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
         Err("No implement")
     }
 
-    fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
+    pub fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
         Err("No implement")
     }
 
-    fn readable(&self) -> bool {
+    pub fn readable(&self) -> bool {
         false
     }
 
-    fn writeable(&self) -> bool {
+    pub fn writeable(&self) -> bool {
         false
     }
 }

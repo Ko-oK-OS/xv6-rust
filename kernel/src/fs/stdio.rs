@@ -1,9 +1,9 @@
-use super::File;
+// use super::File;
 
 pub struct Stdin ();
 pub struct Stdout ();
 
-impl File for Stdin {
+impl Stdin {
     fn readable(&self) -> bool { true }
     fn writeable(&self) -> bool { false }
     fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
@@ -15,7 +15,7 @@ impl File for Stdin {
     }
 }
 
-impl File for Stdout {
+impl Stdout {
     fn readable(&self) -> bool { false }
     fn writeable(&self) -> bool { true }
     fn read(&self, _addr: usize, _buf: &mut [u8]) -> Result<usize, &'static str> {

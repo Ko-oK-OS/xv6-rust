@@ -6,7 +6,7 @@ pub use sysnet::*;
 pub use sysfile::*;
 
 use crate::{println, process::*};
-use crate::fs::AbstractFile;
+use crate::fs::VFS;
 
 use core::mem::size_of;
 
@@ -72,7 +72,7 @@ pub fn argint(id: usize, arg: &mut usize) -> Result<(), &'static str> {
     Ok(())
 }
 
-pub fn argfd(id: usize, pfd: &mut usize, pfs: &mut AbstractFile) -> Result<(), &'static str> {
+pub fn argfd(id: usize, pfd: &mut usize, pfs: &mut VFS) -> Result<(), &'static str> {
     Ok(())
 }
 
