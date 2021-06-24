@@ -73,7 +73,27 @@ impl VFS {
     }
 
     fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
-        Err("No implement")
+        let mut r = 0;
+        let mut ret = 0; 
+        if !self.writeable() {
+            return Err("vfs: file not be written")
+        }
+
+        match self.file_type {
+            FileType::Pipe => {
+                r = unsafe{ (&*(self.pipe.unwrap())).write(addr, buf).unwrap() };
+            },
+
+            FileType::Device => {
+
+            },
+
+            FileType::Inode => {
+
+            }
+        }
+
+        Ok(ret)
     }
 
     fn readable(&self) -> bool {

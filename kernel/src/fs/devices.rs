@@ -1,9 +1,12 @@
 use crate::define::param::NDEV;
 
+type ReadFn = fn(usize, usize, &mut [u8]) -> usize;
+type WriteFn = fn(usize, usize, &[u8]) -> usize;
+
 /// map major device number to device functions.
 pub struct Device {
-    pub read: Option<fn(usize, usize, &mut [u8]) -> usize>,
-    pub write: Option<fn(usize, usize, &[u8]) -> usize> 
+    pub read: Option<ReadFn>,
+    pub write: Option<WriteFn> 
 }
 
 impl Device {
