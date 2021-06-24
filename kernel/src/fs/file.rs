@@ -85,10 +85,18 @@ impl VFS {
             },
 
             FileType::Device => {
+                if self.major < 0 || self.major as usize>= NDEV || DEVICES[self.major as usize].write.is_none() {
+                    return Err("vfs: fail to write")
+                }
 
+                ret = DEVICES[self.major as usize].write.unwrap().call((1, addr, buf)) as usize;
             },
 
             FileType::Inode => {
+
+            },
+
+            _ => {
 
             }
         }
