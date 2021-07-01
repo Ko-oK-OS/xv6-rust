@@ -34,7 +34,7 @@ impl UdpSocket {
 }
 
 // called by protocol handler to deliver UDP packets
-pub fn sock_recv_udp(mut m: MBuf, raddr:u32, lport:u16, rport:u16) {
+pub fn sock_recv_udp(mut m: Box<MBuf>, raddr:u32, lport:u16, rport:u16) {
     // Find the socket that handles this mbuf and deliver it, waking
     // any sleeping reader. Free the mbuf if there no sockets 
     // registered to handle it.

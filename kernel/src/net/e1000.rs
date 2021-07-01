@@ -114,13 +114,6 @@ pub fn e1000_init() {
 
     fence(Ordering::SeqCst);
 
-    
-    // let trans_mbuf:[Box<MBuf>; 16] = array![_ => MBuf::new(); 16];
-    // println!("e1000 addr: 0x{:x}", trans_mbuf.as_ptr() as usize);
-
-
-
-
     // [E1000 14.5] Transmit initialization
     // acquire 
 
@@ -227,7 +220,7 @@ pub unsafe fn e1000_recv() {
             let mut mbuf = MBuf::new();
             // copy data from receive_mbuf to new allocated mbuf. 
             // ptr::copy_nonoverlapping(&mut mbuf as *mut MBuf, &mut recv_guard[index] as *mut MBuf, 1);
-            // // deliver message buffer to Eth Protocol. 
+            // deliver message buffer to Eth Protocol. 
             // Eth::receive(mbuf);
         }
     }

@@ -2,6 +2,8 @@ use super::mbuf::MBuf;
 use crate::syscall::sock_recv_udp;
 use core::mem::size_of;
 
+use alloc::boxed::Box;
+
 // qemu's idea of the guest IP
 static LOCAL_IP:u32 = make_ip_addr(10, 0, 2, 15);
 static LOCAL_MAC:[u8;ETHADDR_LEN] = [0x52, 0x54, 0x00, 0x12, 0x34, 0x56];
@@ -189,7 +191,7 @@ impl Protocol for TCP{}
 
 impl Eth {
     // sends an ethernet packet
-    pub fn send(mut m:MBuf, eth_type:u16) {
+    pub fn send(mut m: Box<MBuf>, eth_type: u16) {
         let eth_header = unsafe{ &mut *(m.push(size_of::<Eth>() as u32) as *mut Eth) };
         eth_header.shost = LOCAL_MAC.clone();
 
@@ -207,7 +209,7 @@ impl Eth {
 
     // called by e1000 driver's interrupt handler to deliver a packet to the
     // networking stack
-    pub fn receive(mut m:MBuf) {
+    pub fn receive(mut m: Box<MBuf>) {
         // let eth_hdr = m.pull(size_of::<Eth>() as u32);
         match m.pull(size_of::<Eth>() as u32) {
             Some(eth_header) => {
@@ -237,7 +239,7 @@ impl Eth {
 }
 
 impl IP {
-    pub fn send(mut m:MBuf, proto:u8, dip:u32) {
+    pub fn send(mut m:Box<MBuf>, proto:u8, dip:u32) {
         // push the IP header
         let ip_header = unsafe{ &mut *(m.push(size_of::<IP>() as u32) as *mut IP) };
         ip_header.ip_vhl = (4 << 4) | (20 >> 2);
@@ -250,7 +252,7 @@ impl IP {
     }
 
     // receive an IP packet
-    pub fn receive(mut m: MBuf) {
+    pub fn receive(mut m: Box<MBuf>) {
         match m.pull(size_of::<IP>() as u32) {
             Some(ip_header) => {
                 let ip_header = unsafe{ &mut *(ip_header as *mut IP) };
@@ -304,14 +306,14 @@ impl IP {
 
 impl ARP {
     // receives an ARP packet
-    pub fn receive(mut _m: MBuf) {
+    pub fn receive(mut _m: Box<MBuf>) {
         panic!("no implemented!");
     }
 }
 
 impl UDP {
     // sends the UDP packet
-    pub fn send(mut m: MBuf, dip:u32, sport:u16, dport:u16) {
+    pub fn send(mut m: Box<MBuf>, dip:u32, sport:u16, dport:u16) {
         // put the UDP header
         let udp_header = unsafe{ &mut *(m.push(size_of::<UDP>() as u32) as *mut UDP) };
         udp_header.udp_sport = UDP::htons(sport);
@@ -324,7 +326,7 @@ impl UDP {
     }
 
     // receives a UDP packet
-    pub fn receive(mut m:MBuf, mut len:u16, ip_header: &IP) {
+    pub fn receive(mut m:Box<MBuf>, mut len:u16, ip_header: &IP) {
         if let Some(udp_header) = m.pull(size_of::<UDP> as u32) {
             let udp_header = unsafe{ &mut *(udp_header as *mut UDP) };
             // TODO: validate UDP checksum
@@ -359,7 +361,7 @@ impl UDP {
 impl TCP {
     // sends the TCP packet
     // try to implement TCP myself
-    pub fn send(mut m:MBuf, dip:u32, sport:u16, dport:u16) {
+    pub fn send(mut m:Box<MBuf>, dip:u32, sport:u16, dport:u16) {
         // put the TCP header
         let tcp_header = unsafe{ &mut *(m.push(size_of::<TCP>() as u32) as *mut TCP) };
         tcp_header.tcp_sport = TCP::htons(sport);
