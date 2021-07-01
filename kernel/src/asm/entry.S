@@ -9,7 +9,8 @@ _entry:
 	# set up a stack for Rust.
     # stack0 is declared below,
     # with a 16KB stack per CPU.
-    # sp = stack0 + (hartid * 4096)
+    # sp = stack0 + (hartid * 16*1024)
+    # PS: 16KB stack for few stack bump
     la sp, stack0
     li a0, 1024*16
 	csrr a1, mhartid

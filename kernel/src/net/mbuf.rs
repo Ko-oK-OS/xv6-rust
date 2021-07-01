@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use core::ptr::drop_in_place;
 use core::ops::Deref;
+use core::ptr::copy_nonoverlapping;
 
 pub const MBUF_SIZE:usize = 2048;
 pub const MBUF_DEFAULT_HEADROOM:u32 = 128;
@@ -34,6 +35,15 @@ impl MBuf {
         self.len -= len;
         self.head = (self.head as usize + len as usize) as *mut u8;
         Some(tmp)
+    }
+
+    pub fn copy(src: Box<Self>, dst: &mut Box<Self>) {
+        unsafe {
+            copy_nonoverlapping(src.buf.as_ptr(), dst.buf.as_mut_ptr(), 1);
+            dst.next = src.next.clone();
+            dst.len = src.len.clone();
+            dst.head = src.head.clone();
+        }
     }
 
     // Prepends data to the beginning of the buffer and returns a pointer to it. 

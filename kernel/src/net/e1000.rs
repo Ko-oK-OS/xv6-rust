@@ -187,7 +187,7 @@ pub fn e1000_init() {
     
 }
 
-pub unsafe fn e1000_transmit(m: MBuf) {
+pub unsafe fn e1000_transmit(m: Box<MBuf>) {
     // the mbuf contains an ethernet frame; programe it into
     // the TX descriptor ring so that the e1000 sends it. Stash
     // a pointer so that it can be freed after sending. 
@@ -220,8 +220,10 @@ pub unsafe fn e1000_recv() {
             let mut mbuf = MBuf::new();
             // copy data from receive_mbuf to new allocated mbuf. 
             // ptr::copy_nonoverlapping(&mut mbuf as *mut MBuf, &mut recv_guard[index] as *mut MBuf, 1);
+            MBuf::copy(recv_guard[index].clone(), &mut mbuf);
+
             // deliver message buffer to Eth Protocol. 
-            // Eth::receive(mbuf);
+            Eth::receive(mbuf);
         }
     }
     // realise receive mbuf
