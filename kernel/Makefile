@@ -4,7 +4,7 @@ KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 CPUS		:= 3
 
-FS_IMG		:= ../mkfs/fs.img
+FS_IMG		:= ../fs.img
 KERNEL_ASM	:= kernel.S
 
 OBJDUMP     := rust-objdump --arch-name=riscv64
