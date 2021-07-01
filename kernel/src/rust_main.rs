@@ -28,6 +28,12 @@ pub unsafe extern "C" fn rust_main() -> !{
         console::uart_init(); //  uart init
         println!("{}",LOGO); 
         println!("xv6-rust kernel is booting!");
+        // extern "C" {
+        //     fn sbss();
+        //     fn bss();
+        // }
+        // println!("sbss addr: 0x{:x}", sbss as usize);
+        // println!("bss addr: 0x{:x}", bss as usize);
         KERNEL_HEAP.kinit(); // physical page allocator
         kvm_init(); // create kernel page table
         kvm_init_hart(); // turn on paging

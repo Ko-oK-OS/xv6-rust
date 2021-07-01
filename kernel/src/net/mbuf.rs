@@ -20,8 +20,8 @@ unsafe impl Sync for MBuf{}
 
 impl MBuf {
 
-    pub fn new() -> Self {
-        *MBuf::allocate(0).expect("Fail to allocate message buffer")
+    pub fn new() -> Box<Self> {
+        MBuf::allocate(0).expect("Fail to allocate message buffer")
     }
 
     // Strips data from start of the buffer and returns a pointer to it. 

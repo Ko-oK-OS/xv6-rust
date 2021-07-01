@@ -23,7 +23,10 @@ pub struct BigPage {
 impl RawPage {
     pub unsafe fn new_zeroed() -> usize {
         let boxed_page = Box::<Self>::new_zeroed().assume_init();
-        Box::into_raw(boxed_page) as usize
+        let ptr = Box::into_raw(boxed_page) as usize;
+        println!("RawPage addr: 0x{:x}", ptr);
+        ptr
+        // Box::into_raw(boxed_page) as usize
     }
 }
 

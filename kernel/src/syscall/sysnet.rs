@@ -13,7 +13,7 @@ struct UdpSocket {
     raddr: u32, // the remote IPv4 address
     lport: u16, // the local UDP port number,
     rport: u16, // the remote UDP port number,
-    rxq: MBuf, // a queue of packets waiting to be received
+    rxq: Box<MBuf>, // a queue of packets waiting to be received
 }
 
 impl UdpSocket {

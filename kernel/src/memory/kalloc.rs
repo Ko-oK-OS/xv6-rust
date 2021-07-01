@@ -23,7 +23,9 @@ pub struct KernelHeap(Spinlock<BuddySystem>);
 
 unsafe impl GlobalAlloc for KernelHeap {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.0.acquire().alloc(layout)
+        let ptr = self.0.acquire().alloc(layout);
+        // println!("alloc addr: 0x{:x}", ptr as usize);
+        ptr
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

@@ -20,6 +20,7 @@ SECTIONS
   .rodata :
   {
     *(.rodata .rodata.*)
+    *(.srodata .srodata.*)
   }
 
   . = ALIGN(0x1000);
@@ -30,10 +31,29 @@ SECTIONS
    */
   .data : {
     *(.data .data.*)
+    *(.sdata .sdata.*)
   }
+
+  . = ALIGN(0x1000);
+
   .bss : {
-    *(.bss .bss.*)
+    sbss = .;
     *(.sbss* .sbss.*)
+    bss = .;
+     *(.bss .bss.*)
   }
+
+  /* .bss :
+    {
+      sbss = .;
+      *(.sbss .sbss.*)
+      *(.dynsbss)
+      *(.bss .bss.*)
+      *(.dynbss)
+      ebss = .;
+      . = ALIGN(4K);
+    } */
+
+
   PROVIDE(end = .);
 }

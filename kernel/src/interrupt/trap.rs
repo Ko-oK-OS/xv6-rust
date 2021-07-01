@@ -161,6 +161,12 @@ pub unsafe fn kerneltrap(
     let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
+    let stval = stval::read();
+
+    println!("sepc: 0x{:x}", sepc);
+    println!("sstatus: 0x{:x}", sstatus);
+    println!("scause: 0x{:x}", scause);
+    println!("stval: 0x{:x}", stval);
     // let stval = stval::read();
 
     // if !sstatus::is_from_supervisor() {
