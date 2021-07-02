@@ -265,12 +265,12 @@ impl BufCtrl {
     }
 }
 
-struct BufInner {
+pub struct BufInner {
     // valid is guarded by
     // the bcache spinlock and the relevant buf sleeplock
     // holding either of which can get access to them
-    valid: AtomicBool,
-    data: SleepLock<BufData>,
+    pub(crate) valid: AtomicBool,
+    pub(crate) data: SleepLock<BufData>,
 }
 
 impl BufInner {

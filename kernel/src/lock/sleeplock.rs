@@ -6,6 +6,7 @@ use core::cell::{Cell, UnsafeCell};
 use core::hint::spin_loop;
 
 use crate::process::{push_off, pop_off};
+use crate::process::PROC_MANAGER;
 
 pub struct SleepChannel(u8);
 
@@ -61,11 +62,13 @@ impl<T: ?Sized> SleepLock<T> {
     }
 
     fn wakeup(&self) {
-        // TODO
+        unsafe{ 
+            PROC_MANAGER.wakeup(self.locked.as_ptr() as usize);
+        }
     }
 
     /// Always test holding might not be efficient
-    fn holding(&self) -> bool {
+    pub fn holding(&self) -> bool {
         self.lock.load(Ordering::Relaxed)
     }
 

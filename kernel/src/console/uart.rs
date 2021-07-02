@@ -45,6 +45,12 @@ const LCR_BAUD_LATCH: usize = 1 << 7; // special mode to set baud rate
 const LSR_RX_READY: usize = 1 << 0; // input is waiting to be read from RHR
 const LSR_TX_IDLE: usize = 1 << 5; // THR can accept another character to send
 
+const CTRL_P: u8 = b'P' - b'@';
+const CTRL_U: u8 = b'U' - b'@';
+const CTRL_H: u8 = b'H' - b'@';
+const CTRL_D: u8 = b'D' - b'@';
+
+
 
 // pub fn uartinit() {
 //     // disable interrupts.

@@ -12,6 +12,8 @@ mod inode;
 mod dinode;
 mod devices;
 mod file_table;
+mod ramdisk;
+mod stat;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
@@ -23,7 +25,7 @@ pub use dinode::Dinode;
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 
 use log::Log;
-use bio::BufData;
+use bio::{ BufData, BufInner };
 use devices::DEVICES;
 
 // pub trait File: Send + Sync {
