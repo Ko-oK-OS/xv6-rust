@@ -9,15 +9,19 @@ mod file;
 mod pipe;
 mod stdio;
 mod inode;
+mod dinode;
 mod devices;
 mod file_table;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
 pub use log::LOG;
-pub use file::VFS;
+pub use file::VFile;
+pub use file_table::FILE_TABLE;
+pub use inode::Inode;
+pub use dinode::Dinode;
+pub use superblock::{ SUPER_BLOCK, SuperBlock };
 
-use superblock::SUPER_BLOCK;
 use log::Log;
 use bio::BufData;
 use devices::DEVICES;

@@ -1,19 +1,42 @@
+use core::cell::UnsafeCell;
 use crate::lock::spinlock::Spinlock;
 use crate::define::fs::NFILE;
-use super::VFS;
+use super::VFile;
 
 use array_macro::array;
 
-static mut FILE_TABLE:FileTable = FileTable::new();
+pub static mut FILE_TABLE:FileTable = FileTable::new();
 
 pub struct FileTable {
-    table: Spinlock<[VFS;NFILE]>
+    pub(crate) lock: Spinlock<()>,
+    pub(crate) table: UnsafeCell<[VFile;NFILE]>
 }
 
 impl FileTable {
     const fn new() -> Self {
         Self{
-            table: Spinlock::new(array![_ => VFS::init();NFILE], "filetable")
+            lock: Spinlock::new((), "filetable"),
+            table: UnsafeCell::new(array![_ => VFile::init();NFILE])
         }
+    }
+
+    pub fn get_table(&self) -> &mut [VFile;NFILE]{
+        unsafe{
+            self.table.get().as_mut().unwrap()
+        }
+    }
+
+    /// Allocate a file structure
+    pub fn allocate(&self) -> Option<&mut VFile> {
+        let guard = self.lock.acquire();
+        for f in self.get_table().iter_mut() {
+            if f.file_ref == 0 {
+                f.file_ref = 1;
+                drop(guard);
+                return Some(f)
+            }
+        }
+        drop(guard);
+        None
     }
 }

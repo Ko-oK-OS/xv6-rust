@@ -2,6 +2,7 @@ use crate::memory::{
     PageTable, VirtualAddress, Addr
 };
 use crate::define::memlayout::PGSIZE;
+use crate::fs::Inode;
 
 const ELF_MAGIC: usize = 0x464C457F; // elf magic number
 
@@ -47,6 +48,7 @@ pub struct ProgHeader {
 fn load_seg(
     mut page_table: PageTable, 
     va:usize, 
+    ip: &mut Inode,
     offset:usize, 
     size: usize
 ) -> Result<(), &'static str> {

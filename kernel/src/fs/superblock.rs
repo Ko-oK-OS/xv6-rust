@@ -71,6 +71,18 @@ impl SuperBlock {
         sb.size
     }
 
+    /// The inodestart of blocks
+    pub fn inodestart(&self) -> u32 {
+        let sb = self.read();
+        sb.inodestart
+    }
+
+    /// bmapstart
+    pub fn bmapstart(&self) -> u32 {
+        let sb = self.read();
+        sb.bmapstart
+    }
+
     
 }
 

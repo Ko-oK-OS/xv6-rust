@@ -1,5 +1,5 @@
 #![no_std]
 
-pub fn main() -> ! {
-
+pub fn main() {
+    
 }

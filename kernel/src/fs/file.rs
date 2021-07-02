@@ -1,10 +1,10 @@
 use crate::define::param::NDEV;
 use crate::lock::spinlock::Spinlock;
 use crate::lock::sleeplock::SleepLock;
-// use super::File;
 use super::pipe::Pipe;
 use super::inode::Inode;
 use super::devices::DEVICES;
+use super::FILE_TABLE;
 
 
 pub enum FileType {
@@ -15,21 +15,21 @@ pub enum FileType {
     Socket,
 }
 
-/// Virtual File System, which can abstract struct to dispatch 
+/// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file. 
-pub struct VFS {
-    file_type: FileType,
-    file_ref: usize,
-    readable: bool,
-    writeable: bool,
-    pipe: Option<*mut Pipe>,
-    inode: Option<SleepLock<Inode>>,
-    off: usize,
-    major: u16
+pub struct VFile {
+    pub(crate) file_type: FileType,
+    pub(crate) file_ref: usize,
+    pub(crate) readable: bool,
+    pub(crate) writeable: bool,
+    pub(crate) pipe: Option<*mut Pipe>,
+    pub(crate) inode: Option<SleepLock<Inode>>,
+    pub(crate) off: usize,
+    pub(crate) major: u16
 }
 
-impl VFS {
-    pub const fn init() -> VFS {
+impl VFile {
+    pub const fn init() -> Self {
         Self{
             file_type: FileType::None,
             file_ref: 0,
@@ -110,6 +110,31 @@ impl VFS {
 
     fn writeable(&self) -> bool {
         self.writeable
+    }
+
+    /// Increment ref count for file f
+    pub fn dup(&mut self){
+        let guard = unsafe{ FILE_TABLE.lock.acquire() };
+        if self.file_ref < 1 {
+            panic!("vfile dup: no used file.")
+        }
+        self.file_ref += 1;
+        drop(guard);
+    }
+
+    /// Close file f(Decrement ref count, close when reaches 0.)
+    pub fn close(&mut self) {
+        let guard = unsafe{ FILE_TABLE.lock.acquire() };
+        if self.file_ref < 1 {
+            panic!("vfs close: no used file.")
+        }
+        self.file_ref -= 1;
+        if self.file_ref > 0 {
+            drop(guard);
+            return 
+        }
+
+        // TODO: pipe, inode
     }
 }
 
