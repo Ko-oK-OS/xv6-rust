@@ -25,7 +25,7 @@ pub use dinode::Dinode;
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 
 use log::Log;
-use bio::{ BufData, BufInner };
+use bio::BufData;
 use devices::DEVICES;
 
 // pub trait File: Send + Sync {

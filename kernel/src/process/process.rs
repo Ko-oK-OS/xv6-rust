@@ -1,5 +1,7 @@
 use core::ptr::*;
 use core::cell::UnsafeCell;
+use alloc::vec::Vec;
+
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     kalloc::*,
@@ -9,6 +11,8 @@ use crate::memory::{
 };
 use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use super::*;
+use crate::fs::{ VFile, Inode };
+
 
 use alloc::boxed::Box;
 
@@ -73,7 +77,9 @@ pub struct ProcExtern {
     // proc_tree_lock must be held when using this:
     pub parent: Option<NonNull<Process>>,
     
-    // TODO: Open files and Current directory
+    pub ofile: Option<Vec<VFile>>,
+    pub cwd: Option<Box<Inode>>
+
 }
 
 impl ProcExtern {
@@ -86,6 +92,8 @@ impl ProcExtern {
             context: Context::new(),
             name: "process",
             parent: None,
+            ofile: None,
+            cwd: None
         }
     }
 

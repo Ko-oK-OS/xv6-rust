@@ -265,7 +265,7 @@ impl BufCtrl {
     }
 }
 
-pub struct BufInner {
+struct BufInner {
     // valid is guarded by
     // the bcache spinlock and the relevant buf sleeplock
     // holding either of which can get access to them
