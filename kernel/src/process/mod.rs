@@ -1,9 +1,11 @@
 use core::ptr::{ copy_nonoverlapping, NonNull };
 use core::mem::size_of;
+use alloc::sync::Arc;
 
 use crate::fs;
 use crate::define::fs::ROOTDEV;
 use crate::interrupt::trap::usertrap_ret;
+
 
 mod process;
 pub mod cpu;
@@ -67,7 +69,11 @@ pub unsafe fn fork() -> isize {
         tf.a0 = 0;
 
         // increment reference counts on open file descriptions
-        // TODO: file system
+        for f in extern_data.ofile.iter_mut() {
+            f.borrow_mut().dup();
+            let other_f = f.clone();
+            other_extern_data.ofile.push(other_f);
+        }
 
         other_extern_data.set_name(extern_data.name);
 

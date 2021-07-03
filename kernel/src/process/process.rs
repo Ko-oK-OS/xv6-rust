@@ -1,6 +1,8 @@
 use core::ptr::*;
-use core::cell::UnsafeCell;
+use core::cell::{ UnsafeCell, RefCell };
 use alloc::vec::Vec;
+use alloc::vec;
+use alloc::sync::Arc;
 
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
@@ -77,7 +79,7 @@ pub struct ProcExtern {
     // proc_tree_lock must be held when using this:
     pub parent: Option<NonNull<Process>>,
     
-    pub ofile: Option<Vec<VFile>>,
+    pub ofile: Vec<Arc<RefCell<VFile>>>,
     pub cwd: Option<Box<Inode>>
 
 }
@@ -92,7 +94,7 @@ impl ProcExtern {
             context: Context::new(),
             name: "process",
             parent: None,
-            ofile: None,
+            ofile: vec![],
             cwd: None
         }
     }
@@ -206,9 +208,9 @@ impl Process{
 
 
 
-    // free a proc structure and the data hanging from it,
-    // including user pages.
-    // p.acquire() must be held.
+    /// free a proc structure and the data hanging from it,
+    /// including user pages.
+    /// p.acquire() must be held.
 
     pub fn freeproc(&mut self) {
         let mut extern_data = self.extern_data.get_mut();
@@ -240,8 +242,8 @@ impl Process{
     }
 
     
-    // Grow or shrink user memory by n bytes. 
-    // Return true on success, false on failure. 
+    /// Grow or shrink user memory by n bytes. 
+    /// Return true on success, false on failure. 
     pub fn growproc(&mut self, n: isize) -> Result<(), &'static str> {
         let mut extern_data = self.extern_data.get_mut();
         let mut size = extern_data.size; 
@@ -267,8 +269,8 @@ impl Process{
     }
 
 
-    // Give up the CPU for one scheduling round.
-    // yield is a keyword in rust
+    /// Give up the CPU for one scheduling round.
+    /// yield is a keyword in rust
     pub fn yielding(&mut self) {
         let mut guard = self.data.acquire();
         let ctx = self.extern_data.get_mut().get_context_mut();
@@ -284,8 +286,8 @@ impl Process{
         drop(guard)
     }
 
-    // Atomically release lock and sleep on chan
-    // Reacquires lock when awakened.
+    /// Atomically release lock and sleep on chan
+    /// Reacquires lock when awakened.
     pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<T>) {
         // Must acquire p->lock in order to 
         // change p->state and then call sched.

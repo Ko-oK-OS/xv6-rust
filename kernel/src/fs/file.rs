@@ -6,7 +6,11 @@ use super::inode::Inode;
 use super::devices::DEVICES;
 use super::FILE_TABLE;
 
+use alloc::sync::Arc;
+use core::ops::{ Deref, DerefMut };
 
+
+#[derive(Clone, Copy)]
 pub enum FileType {
     None,
     Pipe,
@@ -16,7 +20,7 @@ pub enum FileType {
 }
 
 /// Virtual File, which can abstract struct to dispatch 
-/// syscall to specific file. 
+/// syscall to specific file.
 pub struct VFile {
     pub(crate) file_type: FileType,
     pub(crate) file_ref: usize,
@@ -29,7 +33,7 @@ pub struct VFile {
 }
 
 impl VFile {
-    pub const fn init() -> Self {
+    pub(crate) const fn init() -> Self {
         Self{
             file_type: FileType::None,
             file_ref: 0,
@@ -42,7 +46,7 @@ impl VFile {
         }
     }
 
-    fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
+    pub fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
         let r;
         if !self.readable() {
             return Err("vfs: file not be read.")
@@ -72,7 +76,7 @@ impl VFile {
         }
     }
 
-    fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
+    pub fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
         let mut r = 0;
         let mut ret = 0; 
         if !self.writeable() {
@@ -137,4 +141,6 @@ impl VFile {
         // TODO: pipe, inode
     }
 }
+
+
 

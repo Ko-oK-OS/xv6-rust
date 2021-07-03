@@ -2,6 +2,7 @@ use crate::define::fs::NDIRECT;
 
 /// In-memory copy of an inode
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Inode {
     dev: usize, // device id
     inum: usize, // Inode number

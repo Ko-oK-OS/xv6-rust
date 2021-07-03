@@ -101,12 +101,12 @@ impl ProcManager{
     }
 
 
-    // Look in the process table for an UNUSED proc.
-    // If found, initialize state required to run in the kernel,
-    // and return p.acquire() held.
-    // If there are a free procs, or a memory allocation fails, return 0. 
+    /// Look in the process table for an UNUSED proc.
+    /// If found, initialize state required to run in the kernel,
+    /// and return p.acquire() held.
+    /// If there are a free procs, or a memory allocation fails, return 0. 
 
-    // TODO: possible error occurs here.
+    /// WARNING: possible error occurs here.
     pub fn alloc_proc(&mut self) -> Option<&mut Process> {
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
@@ -141,8 +141,8 @@ impl ProcManager{
     }
 
 
-    // Wake up all processes sleeping on chan.
-    // Must be called without any p->lock.
+    /// Wake up all processes sleeping on chan.
+    /// Must be called without any p->lock.
     pub fn wakeup(&self, channel: usize) {
         for p in self.proc.iter() {
             let mut guard = p.data.acquire();
