@@ -1,18 +1,20 @@
 use core::ptr::{ copy_nonoverlapping, NonNull };
 use core::mem::size_of;
 use alloc::sync::Arc;
+use alloc::vec;
 
 use crate::fs;
 use crate::define::fs::ROOTDEV;
 use crate::interrupt::trap::usertrap_ret;
+use crate::fs::LOG;
 
 
-mod process;
 pub mod cpu;
 mod context;
 mod trapframe;
 mod scheduler;
 mod elf;
+mod process;
 pub use context::*;
 pub use trapframe::*;
 pub use cpu::*;
@@ -93,6 +95,52 @@ pub unsafe fn fork() -> isize {
     }
 
     -1
+}
+
+
+/// Exit the current process. Does not return. 
+/// An exited process remains in the zombie state
+/// until its parent calls wait()
+pub unsafe fn exit(status: i32) {
+    let my_proc = CPU_MANAGER.myproc().unwrap();
+
+    // TODO: initproc
+
+    // Get extern data in current process. 
+    let extern_data = my_proc.extern_data.get_mut();
+
+    // Close all open files
+    for f in extern_data.ofile.iter_mut() {
+        f.borrow_mut().close();
+    }
+    extern_data.ofile = vec![];
+
+    LOG.begin_op();
+    extern_data.cwd.as_ref().unwrap().put();
+    LOG.end_op();
+    extern_data.cwd = None;
+
+    let wait_guard = WAIT_LOCK.acquire();
+    // TODO: Give any children to init
+    
+    // Parent might be sleeping in wait(). 
+    PROC_MANAGER.wakeup(extern_data.parent.unwrap().as_ptr() as usize);
+
+    let mut guard = my_proc.data.acquire();
+
+    guard.set_state(Procstate::ZOMBIE);
+    guard.xstate = status as usize;
+    
+    drop(guard);
+
+    drop(wait_guard);
+
+    // Jump into scheduler, never to return. 
+    scheduler();
+    panic!("zombine exit");
+
+
+
 }
 
 /// A fork child's very first scheduling by scheduler()
