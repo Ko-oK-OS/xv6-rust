@@ -29,7 +29,7 @@ pub struct VFile {
     pub(crate) pipe: Option<*mut Pipe>,
     pub(crate) inode: Option<SleepLock<Inode>>,
     pub(crate) off: usize,
-    pub(crate) major: u16
+    pub(crate) major: i16
 }
 
 impl VFile {
@@ -49,7 +49,7 @@ impl VFile {
     pub fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
         let r;
         if !self.readable() {
-            return Err("vfs: file not be read.")
+            panic!("File can't be read!")
         }
 
         match self.file_type {
@@ -67,11 +67,11 @@ impl VFile {
             },
 
             FileType::Inode => {
-                Err("No implement")
+                panic!("No implement.")
             },
 
             _ => {
-                return Err("vfs: fail to read")
+                panic!("Invalid file!")
             },
         }
     }
@@ -80,7 +80,7 @@ impl VFile {
         let mut r = 0;
         let mut ret = 0; 
         if !self.writeable() {
-            return Err("vfs: file not be written")
+            panic!("file can't be written")
         }
 
         match self.file_type {
@@ -97,11 +97,11 @@ impl VFile {
             },
 
             FileType::Inode => {
-                return Err("No implemente")
+                panic!("No implement.")
             },
 
             _ => {
-                return Err("Invaild File")
+                panic!("Invalid file type!")
             }
         }
 

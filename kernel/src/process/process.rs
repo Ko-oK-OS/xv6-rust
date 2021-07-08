@@ -204,7 +204,11 @@ impl Process{
         self as *mut Process as usize
     }
 
-
+    /// Create a user page table for a given process,
+    /// with no user memory, but with trampoline pages. 
+    pub fn proc_pagetable(proc: &Process) {
+        
+    }
 
 
 

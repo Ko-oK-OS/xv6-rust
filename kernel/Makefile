@@ -57,12 +57,15 @@ qemu: build
 	$(QEMU) $(QEMUOPTS)
 
 qemu-gdb:
-	cargo build
-	echo "*** Now run 'gdb' in another window." 1>&2
+	@cargo build
+	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
 # 一键运行
 run: build qemu
+
+test: build
+	@cargo test
 
 
 debug: build

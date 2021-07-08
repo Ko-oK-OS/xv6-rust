@@ -3,6 +3,11 @@ use crate::memory::{
 };
 use crate::define::memlayout::PGSIZE;
 use crate::fs::Inode;
+use crate::fs::LOG;
+
+use core::mem::size_of;
+
+use super::CPU_MANAGER;
 
 const ELF_MAGIC: usize = 0x464C457F; // elf magic number
 
@@ -81,4 +86,51 @@ fn load_seg(
     }
 
     Ok(())
+}
+
+
+pub fn exec(path: &str, args: &[*const u8]) -> Result<usize, &'static str> {
+    let elf: ElfHeader = ElfHeader {
+        magic: 0, // must equal ELF_MAGIC,
+        elf: [0; 12],
+        f_type: 0,
+        machine: 0,
+        version: 0,
+        entry: 0,
+        phoff: 0,
+        shoff: 0,
+        flags: 0,
+        ehsize: 0,
+        phentsize: 0,
+        phnum: 0,
+        shentsize: 0,
+        shnum: 0,
+        shstrndx: 0  
+    };
+    LOG.begin_op();
+    match Inode::namei(path) {
+        None => {
+            LOG.end_op();
+            Err("exec")
+        }
+
+        Some(ip) => {
+            ip.lock();
+           
+            // Check ELF header
+            if !ip.read(
+                0, 
+                &elf as *const ElfHeader as usize, 
+                0, 
+                size_of::<ElfHeader>()
+            ).is_err() {
+                if elf.magic == ELF_MAGIC {
+                    let my_proc = CPU_MANAGER.myproc().unwrap();
+                    if my_proc.proc_pagetable()
+                }
+            }
+            
+            Ok(0)
+        }
+    }
 }

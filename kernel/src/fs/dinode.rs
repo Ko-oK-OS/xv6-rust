@@ -4,9 +4,9 @@ use crate::define::fs::{ NDIRECT, DIRSIZ };
 #[repr(C)]
 pub struct Dinode {
     file_type: u16, // File type
-    major: u16, // Major device number (T_REVICE only)
-    minor: u16, // Minor device number (T_DEVICE only)
-    nlink: u16, // Number of links to inode in file system
+    major: i16, // Major device number (T_REVICE only)
+    minor: i16, // Minor device number (T_DEVICE only)
+    nlink: i16, // Number of links to inode in file system
     size: usize, // Size of file (bytes)
     addrs: [usize;NDIRECT+1] // Data block addresses
 }

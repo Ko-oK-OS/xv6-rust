@@ -1,4 +1,6 @@
 use crate::define::fs::NDIRECT;
+use alloc::boxed::Box;
+use alloc::string::String;
 
 /// In-memory copy of an inode
 #[repr(C)]
@@ -105,8 +107,9 @@ impl Inode {
         user_dst: usize, 
         dst: usize, 
         off: u32, 
-        buf: &mut[u8]) {
-
+        len: usize
+    ) -> Result<usize, &'static str>{
+        Ok(0)
     }
 
     /// Write data to inode. 
@@ -124,6 +127,23 @@ impl Inode {
         buf: &[u8]
     ) {
 
+    }
+
+    /// Look up and return the inode for a path name.
+    /// If parent != 0, return the inode for the parent and copy the final
+    /// path element into name, which must have room for DIRSIZ bytes.
+    /// Must be called inside a transaction since it calls iput().
+    pub(crate) fn namex(path: &str, nameiparent: isize, name: String) -> Option<Box<Self>> {
+        None
+    }
+
+    pub fn namei(path: &str) -> Option<Box<Self>> {
+        let name:String = String::new();
+        Self::namex(path, 0, name)
+    }
+
+    pub fn nameiparent(path: &str, name: &str) -> Option<Box<Self>> {
+        Self::namex(path, 1, String::from(name))
     }
 
 

@@ -6,7 +6,7 @@ pub struct Stdout ();
 impl Stdin {
     fn readable(&self) -> bool { true }
     fn writeable(&self) -> bool { false }
-    fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
+    fn read(&self, _addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
         Err("No implement")
     }
 
@@ -21,7 +21,8 @@ impl Stdout {
     fn read(&self, _addr: usize, _buf: &mut [u8]) -> Result<usize, &'static str> {
         panic!("Stdout cannot be read.")
     }
-    fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
-        Err("No implement")
+    fn write(&self, _addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
+       println!("{}", core::str::from_utf8(buf).unwrap());
+       Ok(buf.len())
     }
 }

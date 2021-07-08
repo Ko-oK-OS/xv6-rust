@@ -216,16 +216,15 @@ impl PageTable{
     }
 
 
-    // Create an empty user page table.
-    // return None if out of memory
+    /// Create an empty user page table.
+    /// return None if out of memory
     pub unsafe fn uvmcreate() -> Box<PageTable>{
         Box::new_zeroed().assume_init()
     }
 
-    // Load the user initcode into address 0 of pagetable
-    // for the very first process
-    // sz must be less than a page
-
+    /// Load the user initcode into address 0 of pagetable
+    /// for the very first process
+    /// sz must be less than a page
     pub unsafe fn uvminit(&mut self, src: &[u8], size:usize){
         if size >= PGSIZE{
             panic!("inituvm: more than a page");
@@ -245,8 +244,8 @@ impl PageTable{
     }
 
 
-    // Allocate PTEs and physical memory to grow process from oldsz to
-    // newsz, which need not be page aligned.  Returns new size or 0 on error.
+    /// Allocate PTEs and physical memory to grow process from oldsz to
+    /// newsz, which need not be page aligned.  Returns new size or 0 on error.
     pub unsafe fn uvmalloc(
         &mut self, 
         mut old_size:usize, 
@@ -283,8 +282,8 @@ impl PageTable{
         Some(new_size)
     }
 
-    // Free user memory pages,
-    // then free page-table pages
+    /// Free user memory pages,
+    /// then free page-table pages
     pub fn uvmfree(&mut self, size: usize) {
         if size > 0 {
             let mut pa = PhysicalAddress::new(size);
@@ -300,11 +299,10 @@ impl PageTable{
     }
 
 
-    // Deallocate user pages to bring the process size from oldsz to
-    // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-    // need to be less than oldsz.  oldsz can be larger than the actual
-    // process size.  Returns the new process size.
-
+    /// Deallocate user pages to bring the process size from oldsz to
+    /// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
+    /// need to be less than oldsz.  oldsz can be larger than the actual
+    /// process size.  Returns the new process size.
     pub fn uvmdealloc(
         &mut self, 
         old_size:usize, 
@@ -328,10 +326,15 @@ impl PageTable{
     }
 
 
-    // Remove npages of mappings starting from va. va must be
-    // page-aligned. The mappings must exist.
-    // Optionally free the physical memory.
-    pub fn uvmunmap(&mut self, va:VirtualAddress, npages:usize, do_free:usize){
+    /// Remove npages of mappings starting from va. va must be
+    /// page-aligned. The mappings must exist.
+    /// Optionally free the physical memory.
+    pub fn uvmunmap(
+        &mut self, 
+        va:VirtualAddress, 
+        npages:usize, 
+        do_free:usize
+    ){
         if !va.is_page_aligned(){
             panic!("uvmunmap: not aligned");
         }
@@ -369,13 +372,12 @@ impl PageTable{
     }
 
 
-    // Given a parent process's page table, copy
-    // its memory into a child's page table.
-    // Copies both the page table and the
-    // physical memory.
-    // returns 0 on success, -1 on failure.
-    // frees any allocated pages on failure.
-
+    /// Given a parent process's page table, copy
+    /// its memory into a child's page table.
+    /// Copies both the page table and the
+    /// physical memory.
+    /// returns 0 on success, -1 on failure.
+    /// frees any allocated pages on failure.
     pub unsafe fn uvmcopy(
         &mut self, 
         new: &mut Self, 
@@ -422,9 +424,8 @@ impl PageTable{
         Ok(())
     }
 
-    // mark a PTE invalid for user access.
-    // used by exec for the user stack guard page.
-
+    /// mark a PTE invalid for user access.
+    /// used by exec for the user stack guard page.
     pub fn uvmclear(&mut self, va: VirtualAddress) {
         if let Some(pte) = self.walk(va, 0) {
             pte.rm_user_bit();
@@ -433,10 +434,9 @@ impl PageTable{
         }
     }
 
-    // Copy from kernel to user.
-    // Copy len bytes from src to virtual address dstva in a given page table.
-    // Return true on success, false on error.
-
+    /// Copy from kernel to user.
+    /// Copy len bytes from src to virtual address dstva in a given page table.
+    /// Return true on success, false on error.
     pub fn copy_out(
         &mut self, 
         mut dst_va: VirtualAddress, 
@@ -474,9 +474,9 @@ impl PageTable{
     }
 
 
-    // Copy from user to kernel.
-    // Copy len bytes to dst from virtual address srcva in a given page table.
-    // Return 0 on success, -1 on error.
+    /// Copy from user to kernel.
+    /// Copy len bytes to dst from virtual address srcva in a given page table.
+    /// Return 0 on success, -1 on error.
     
     pub fn copy_in(
         &mut self, 

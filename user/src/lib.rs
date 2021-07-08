@@ -16,6 +16,10 @@ pub const O_TRUNC: u32 = 0x400;
 
 pub const CONSOLE: usize = 1;
 
+pub const STDIN: usize = 0;
+pub const STDOUT: usize = 1;
+pub const STDERR: usize = 2;
+
 pub fn fork() -> isize {
     sys_fork()
 }
