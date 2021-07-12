@@ -99,6 +99,10 @@ impl ProcExtern {
         }
     }
 
+    pub fn get_trapframe(&self) -> *mut Trapframe {
+        self.trapframe
+    }
+
     pub fn set_name(&mut self, name:&'static str) {
         self.name = name;
     }
@@ -206,8 +210,46 @@ impl Process{
 
     /// Create a user page table for a given process,
     /// with no user memory, but with trampoline pages. 
-    pub fn proc_pagetable(proc: &Process) {
-        
+    pub fn proc_pagetable(&self) -> Option<Box<PageTable>> {
+        // An empty page table
+        let mut page_table = unsafe{ PageTable::uvmcreate() };
+         
+        // map the trampoline code(for system call return)
+        // at the highest user virtual address. 
+        // only the supervisor uses it, on the way
+        // to/from user space, so not PTE_U. 
+        unsafe{
+            let flag = page_table.mappages(
+            VirtualAddress::new(TRAMPOLINE), 
+            PhysicalAddress::new(trampoline as usize),
+             PGSIZE, 
+             PteFlags::R | PteFlags::X
+            );
+            if !flag {
+                page_table.uvmfree(0);
+                return None
+            }
+
+            // map the trapframe just below TRAMPOLINE, for trampoline.S 
+            let flag = page_table.mappages(
+                VirtualAddress::new(TRAPFRAME), 
+                PhysicalAddress::new((&*self.extern_data.get()).get_trapframe() as usize), 
+                PGSIZE, 
+                PteFlags::R | PteFlags::W
+            );
+            if !flag {
+                page_table.uvmunmap(
+                    VirtualAddress::new(TRAPFRAME), 
+                    1, 
+                    0
+                );
+                page_table.uvmfree(0);
+                return None
+            }
+        }
+
+
+        Some(page_table)
     }
 
 

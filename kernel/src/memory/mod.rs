@@ -54,7 +54,8 @@ pub fn either_copy_in(
         
         if user_usr != 0 {
             let extern_data = &mut *(my_proc.extern_data.get());
-            extern_data.pagetable.unwrap().copy_in(dst, kern_src, len)
+            let page_table = extern_data.pagetable.as_mut().unwrap();
+            page_table.copy_in(dst, kern_src, len)
         } else {
             mem_copy(dst as usize, kern_src, len);
             Ok(())

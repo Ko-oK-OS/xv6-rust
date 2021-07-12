@@ -129,6 +129,12 @@ impl Inode {
 
     }
 
+    /// Common idiom: unlock, then put. 
+    pub fn unlock_put(&self) {
+        self.unlock();
+        self.put();
+    }
+
     /// Look up and return the inode for a path name.
     /// If parent != 0, return the inode for the parent and copy the final
     /// path element into name, which must have room for DIRSIZ bytes.

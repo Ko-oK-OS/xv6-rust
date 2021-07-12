@@ -52,6 +52,7 @@ mod syscall;
 mod fs;
 mod driver;
 mod net;
+mod misc;
 
 
 
