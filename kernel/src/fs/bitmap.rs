@@ -13,7 +13,7 @@ pub fn bzero(dev: u32, bno: u32) {
     let buf = BCACHE.bread(dev, bno);
     unsafe{ (&mut *buf.raw_data_mut()).zero() };
     LOG.write(buf);
-    BCACHE.brelse(buf.get_index());
+    drop(buf);
 }
 
 /// Free a block in the disk by setting the relevant bit in bitmap to 0.
@@ -49,12 +49,12 @@ pub fn balloc(dev: u32) -> u32 {
             if buf_val == 0 { // Is block free?
                 unsafe{ ptr::write(buf_ptr, m) };
                 LOG.write(buf);
-                BCACHE.brelse(buf.get_index());
+                drop(buf);
                 bzero(dev, b + bi);
                 return b + bi
             }
         }
-        BCACHE.brelse(buf.get_index());
+        drop(buf);
         b += BPB;
     }
     panic!("balloc: out of the block ranges.")

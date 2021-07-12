@@ -22,7 +22,7 @@ pub use bio::BCACHE;
 pub use log::LOG;
 pub use file::VFile;
 pub use file_table::FILE_TABLE;
-pub use inode::Inode;
+pub use inode::{ Inode, InodeData };
 pub use dinode::DiskInode;
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 

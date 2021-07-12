@@ -4,7 +4,6 @@ use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
 use crate::memory::either_copy_out;
 use crate::misc::{ min, mem_set };
-use crate::define::fs::iblock;
 
 use alloc::boxed::Box;
 use alloc::string::String;
@@ -89,6 +88,50 @@ impl InodeCache {
             drop(guard);
         }
     }
+
+    /// Lookup the inode in the inode cache. 
+    /// If found, return an handle. 
+    /// If not found, alloc an in-memory location in the cache, 
+    /// but not fetch it from the disk yet. 
+    fn get(&self, dev: u32, inum: u32) -> Inode {
+        let mut guard = self.meta.acquire();
+
+        // lookup in the cache 
+        let mut empty_i: Option<usize> = None;
+        for i in 0..NINODE {
+            if guard[i].inum == inum && guard[i].refs > 0 && guard[i].dev ==dev {
+                guard[i].refs += 1;
+                return Inode {
+                    dev,
+                    blockno: guard[i].blockno,
+                    inum,
+                    index: i,
+                }
+            }
+            if empty_i.is_none() && guard[i].refs == 0 {
+                empty_i = Some(i);
+            }
+        }
+
+        // not found 
+        let empty_i = match empty_i {
+            Some(i) => i,
+            None => panic!("inode: not enough"),
+        };
+        guard[empty_i].dev = dev;
+        let blockno = unsafe{ SUPER_BLOCK.locate_inode(inum) };
+        guard[empty_i].blockno = blockno;
+        guard[empty_i].inum = inum;
+        guard[empty_i].refs = 1;
+
+        Inode {
+            dev,
+            blockno,
+            inum,
+            index: empty_i
+        }
+
+    }
 }
 
 struct InodeMeta {
@@ -165,6 +208,49 @@ impl InodeData {
         unsafe{ write(dinode, self.dinode) };
         LOG.write(buf);
     }
+
+    /// Read data from inode. 
+    /// Caller must hold ip sleeplock. 
+    /// If is_user is true, then dst is a user virtual address;
+    /// otherwise, dst is a kernel address. 
+    pub fn read(
+        &self, 
+        inode: &Inode, 
+        is_user: bool, 
+        mut dst: usize, 
+        mut off: u32, 
+        mut n: u32
+    ) -> Option<usize> {
+        let mut m = 0;
+        if off > self.dinode.size {
+            return None
+        }
+
+        if off + n > self.dinode.size {
+            n = self.dinode.size - off;
+        }
+        let mut tot:usize;
+
+        while tot < n as usize {
+            let bm_blockno = unsafe{ SUPER_BLOCK.bitmap_blockno(off / BSIZE as u32) };
+            let buf = BCACHE.bread(inode.dev, bm_blockno);
+            m = min(inode.dev, BSIZE as u32 - off % BSIZE as u32);
+            if either_copy_out(
+                is_user, 
+                dst, 
+                unsafe{ (buf.raw_data() as *mut u8).offset((off % BSIZE as u32) as isize) },
+                m as usize
+            ).is_err() {
+                drop(buf);
+                return None
+            }
+            drop(buf);
+            tot += m as usize;
+            off += m;
+            dst += m as usize;
+        }
+        Some(tot)
+    }
 }
 
 /// Inode handed out by inode cache. 
@@ -219,189 +305,3 @@ impl Drop for Inode {
 fn locate_inode_offset(inum: u32) -> usize {
     inum as usize % IPB
 }
-
-// #[repr(C)]
-// #[derive(Clone, Copy)]
-// pub struct Inode {
-//     dev: u32, // device id
-//     inum: u32, // Inode number
-//     file_ref: i32, // Reference count
-//     vaild: i32, // inode has been read from disk
-
-//     file_type: i16, // copy of disk inode
-//     major: i16,
-//     minor: i16,
-//     nlink: i16,
-//     size: usize,
-//     addrs: [usize;NDIRECT+1]
-// }
-
-// impl Inode {
-//     /// Allocate an inode on device dev. 
-//     /// Mark it as allocated by giving it type type. 
-//     /// Returns an unlocked but allocated and referenced inode. 
-//     pub(crate) fn alloc(dev: u32, file_type: i16) -> Option<&'static mut Inode> {
-//         let sb_inodes = unsafe{ SUPER_BLOCK.inodestart() };
-//         let mut bp: Buf;
-//         let mut dip: &mut DiskInode;
-//         for inum in 1..sb_inodes {
-//             bp = BCACHE.bread(dev, iblock(inum, SUPER_BLOCK));
-//             dip = unsafe{ &mut *(bp.raw_data_mut() as *mut DiskInode) };
-//             if dip.get_type() == 0 {
-//                 // a free inode 
-//                 mem_set(
-//                     dip as *const _ as *mut u8, 
-//                     0, 
-//                     size_of::<DiskInode>()
-//                 );
-//                 dip.set_type(file_type);
-//                 LOG.write(bp);
-//                 BCACHE.brelse(bp.get_index());
-//                 return Inode::get(dev, inum)
-//             }
-//             BCACHE.brelse(bp.get_index());
-//         }
-//         panic!("inode alloc: no inodes");
-//     }
-
-
-//     /// Copy a modified in-memory inode to disk
-//     /// Must be called after every change to an ip->xxx field
-//     /// that lives on disk. 
-//     /// Caller must hold ip->lock
-//     pub(crate) fn update(&self) {
-
-//     }
-
-//     /// Find the inode with number inum on device dev
-//     /// and return th in-memory copy. Does not lock
-//     /// the inode and does not read it from disk. 
-//     pub(crate) fn get(dev: u32, inum: u32) -> Option<&'static mut Inode> {
-//         None
-//     }
-
-
-//     /// Increment reference count for ip. 
-//     /// Returns ip to enable ip = idup(ip1) idinum
-//     pub(crate) fn dup(&mut self) {
-
-//     } 
-
-//     /// Lock the given inode. 
-//     /// Reads the inode from disk if necessary. 
-//     pub(crate) fn lock(&self) {
-//         if self.file_ref < 1 {
-//             panic!("inode lock: inode references should be more than 1.");
-//         }
-
-        
-//     }
-
-//     /// Unlock the given inode. 
-//     pub(crate) fn unlock(&self) {
-
-//     }
-
-//     /// Drop a reference to an im-memory inode. 
-//     /// If that was the last reference, the inode table entry can
-//     /// be recycled. 
-//     /// If that was the last reference and the inode has no links
-//     /// to it, free the inode (and its content) on disk. 
-//     /// All calls to put() must be inside a transaction in
-//     /// case it has to free the inode. 
-//     pub(crate) fn put(&self) {
-
-//     }
-
-//     /// Inode content
-//     /// 
-//     /// The content (data) associated with each inode is stored
-//     /// in blocks on the disk. The first NDIRECT block numbers
-//     /// are listed in ip->address. The next NINDIRECT blocks are
-//     /// listed in block ip.addr[NDIRECT]. 
-//     /// 
-//     /// Return the disk block address of the nth block in inode ip. 
-//     /// If there is no such block, bmap allocates one. 
-//     pub(crate) fn bmap(&self, bn: usize) -> u32 {
-//         panic!("inode map: out of range.")
-//     }
-
-//     /// Truncate inode (discard contents)
-//     /// Caller must hold ip.lock 
-//     pub(crate) fn trunc(&mut self) {
-
-//     }
-
-//     /// Copy stat information from inode. 
-//     /// Caller must hold ip->lock. 
-//     pub(crate) fn stat(&mut self, st: &super::stat::Stat) {
-
-//     }
-
-
-//     /// Read data from inode.
-//     /// Caller must hold ip->lock.
-//     /// If user_dst==1, then dst is a user virtual address;
-//     /// otherwise, dst is a kernel address.
-//     pub(crate) fn read(
-//         &self, 
-//         user_dst: usize, 
-//         mut dst: usize, 
-//         off: u32, 
-//         mut len: usize
-//     ) -> Result<usize, &'static str>{
-//         let mut tot = 0;
-//         let mut m = 0;
-//         let mut off = off as usize;
-//         let mut bp: Buf;
-//         if off > self.size || off + len < off {
-//             return Err("inode read: off should be more than size and less than off + len")
-//         }
-//         if off + len > self.size {
-//             len = self.size - off;
-//         }
-
-//         for _ in 0..len/m {
-//             bp = BCACHE.bread(self.dev, self.bmap(off / BSIZE));
-//             m = min(len - tot, BSIZE - off%BSIZE);
-//             if either_copy_out(
-//                 user_dst, dst, 
-//                 (bp.raw_data() as usize + (off % BSIZE)) as *mut u8, 
-//                 m
-//             ).is_err() {
-//                 BCACHE.brelse(bp.get_index());
-//                 return Err("Fail to copy out")
-//             }
-//             BCACHE.brelse(bp.get_index());
-//             tot += m;
-//             off += m;
-//             dst += m;
-//         }
-
-//         Ok(tot)
-//     }
-
-//     /// Write data to inode. 
-//     /// Caller must hold ip->lock. 
-//     /// If user_dst == 1, then src is a user virtual address;
-//     /// otherwise, src is a kernel address. 
-//     /// Returns the number of bytes successfully written. 
-//     /// If the return value is less than the requested n, 
-//     /// there was an error of some kind.
-//     pub(crate) fn write(
-//         &mut self,
-//         user_dst: usize,
-//         dst: usize,
-//         off: u32,
-//         buf: &[u8]
-//     ) {
-
-//     }
-
-//     /// Common idiom: unlock, then put. 
-//     pub fn unlock_put(&self) {
-//         self.unlock();
-//         self.put();
-//     }
-
-// }

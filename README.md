@@ -83,7 +83,7 @@ And then you can debug this programe step by step.
 - Virtual Memory and Management   
     - [x] Virtulal Memory Map
     - [x] Kernel Allocator(Buddy System Allocator)  
-    - [ ] Load ELF Files From Memory
+    - [x] Load ELF Files From Memory
 - Traps,Interrupts, and drivers
     - [x] Kernel Trap
     - [x] Users Trap
@@ -102,7 +102,10 @@ And then you can debug this programe step by step.
 - File System
     - [x] Block Driver
     - [x] Log System
-    - [x] Super Block
+    - [x] SuperBlock
+    - [x] File
+    - [x] Inode Layer
+    - [x] Bitmap
 - NetWork
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers

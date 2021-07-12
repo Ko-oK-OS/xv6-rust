@@ -20,17 +20,17 @@ pub const ROOTDEV: u32 = 1;  // device number of file system root disk
 pub const FSSIZE: usize = 1000;  // size of file system in blocks
 
 pub const NDIRECT: usize = 12;
-pub const NINDIRECT: usize =  BSIZE/8;
+pub const NINDIRECT: usize =  BSIZE / 8;
 pub const MAXFILE: usize = NDIRECT + NINDIRECT;
 
 /// Directory is a file containing a sequence of dirent structures
 pub const DIRSIZ: usize = 14;
 
 /// Inodes per block. 
-pub const IPB:usize = BSIZE/size_of::<DiskInode>();
+pub const IPB: usize = BSIZE / size_of::<DiskInode>();
 
 /// Bitmap bits per block
-pub const BPB:u32 = (BSIZE*8) as u32;
+pub const BPB: u32 = (BSIZE*8) as u32;
 
 /// Block containing inode i 
 // #[inline]

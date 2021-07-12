@@ -57,14 +57,14 @@ pub fn either_copy_in(
 /// depending on usr_dst. 
 /// Returns 0 on success, -1 on error. 
 pub fn either_copy_out(
-    user_dst: usize,
+    user_dst: bool,
     dst: usize,
     src: *const u8,
     len: usize
 ) -> Result<(), &'static str> {
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
-        if user_dst != 0 {
+        if !user_dst {
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
             page_table

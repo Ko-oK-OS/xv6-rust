@@ -118,10 +118,6 @@ pub struct Buf<'a> {
 }
 
 impl<'a> Buf<'a> {
-    pub fn get_index(&self) -> usize {
-        self.index
-    }
-
     pub fn read_blockno(&self) -> u32 {
         self.blockno
     }
