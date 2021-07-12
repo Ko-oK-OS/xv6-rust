@@ -2,13 +2,16 @@ pub mod kalloc;
 pub mod mapping;
 pub mod address;
 
-use core::ptr::{read, write};
+
+
+use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 
 pub use kalloc::*;
 pub use mapping::*;
 pub use address::*;
 
 use crate::{define::memlayout::PGSIZE, process::{ CPU_MANAGER }};
+use crate::misc::mem_copy;
 
 use alloc::boxed::Box;
 
@@ -28,31 +31,23 @@ impl RawPage {
         let ptr = Box::into_raw(boxed_page) as usize;
         println!("RawPage addr: 0x{:x}", ptr);
         ptr
-        // Box::into_raw(boxed_page) as usize
     }
 }
 
-/// memory copy, copy memory into other memory. 
-pub(crate) unsafe fn mem_copy(dst: usize, src: usize, len: usize) {
-    for i in 0..len {
-        let val = read((src + i) as *const u8);
-        write((dst + i) as *mut u8, val);
-    }
-}
 
 /// Copy from either a user address, or kernel address,
 /// depending on usr_dst. 
 /// Returns Result<(), &'static str>
 pub fn either_copy_in(
     dst: *mut u8, 
-    user_usr: usize, 
+    user_src: usize, 
     kern_src: usize, 
     len: usize
 ) -> Result<(), &'static str>{
     unsafe {
         let my_proc =  CPU_MANAGER.myproc().unwrap();
         
-        if user_usr != 0 {
+        if user_src != 0 {
             let extern_data = &mut *(my_proc.extern_data.get());
             let page_table = extern_data.pagetable.as_mut().unwrap();
             page_table.copy_in(dst, kern_src, len)
@@ -61,4 +56,31 @@ pub fn either_copy_in(
             Ok(())
         }
     }
+}
+
+/// Copy to either a user address, or kernel address,
+/// depending on usr_dst. 
+/// Returns 0 on success, -1 on error. 
+pub fn either_copy_out(
+    user_dst: usize,
+    dst: usize,
+    src: *const u8,
+    len: usize
+) -> Result<(), &'static str> {
+    unsafe{
+        let p = CPU_MANAGER.myproc().unwrap();
+        if user_dst != 0 {
+            let extern_data = p.extern_data.get_mut();
+            let page_table = extern_data.pagetable.as_mut().unwrap();
+            page_table
+                .copy_out(
+                    VirtualAddress::new(dst), 
+                    &mut *slice_from_raw_parts_mut(src as *mut u8, len)
+                )
+        } else {
+            mem_copy(dst, src as usize, len);
+            Ok(())
+        }
+    }
+
 }

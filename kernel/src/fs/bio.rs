@@ -101,7 +101,7 @@ impl Bcache {
     }
 
     /// Move an unlocked buf to the head of the most-recently-used list.
-    fn brelse(&self, index: usize) {
+    pub fn brelse(&self, index: usize) {
         self.ctrl.acquire().move_if_no_ref(index);
     }
 }
@@ -118,6 +118,10 @@ pub struct Buf<'a> {
 }
 
 impl<'a> Buf<'a> {
+    pub fn get_index(&self) -> usize {
+        self.index
+    }
+
     pub fn read_blockno(&self) -> u32 {
         self.blockno
     }

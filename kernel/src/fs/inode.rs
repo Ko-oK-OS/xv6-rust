@@ -1,20 +1,27 @@
 use crate::define::fs::NDIRECT;
+use crate::define::fs::BSIZE;
+use crate::memory::either_copy_out;
+use crate::misc::min;
+
 use alloc::boxed::Box;
 use alloc::string::String;
+
+use super::Buf;
+use super::BCACHE;
 
 /// In-memory copy of an inode
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Inode {
-    dev: usize, // device id
-    inum: usize, // Inode number
-    file_ref: usize, // Reference count
-    vaild: usize, // inode has been read from disk
+    dev: u32, // device id
+    inum: u32, // Inode number
+    file_ref: i32, // Reference count
+    vaild: i32, // inode has been read from disk
 
-    file_type: u16, // copy of disk inode
-    major: u16,
-    minor: u16,
-    nlink: u16,
+    file_type: i16, // copy of disk inode
+    major: i16,
+    minor: i16,
+    nlink: i16,
     size: usize,
     addrs: [usize;NDIRECT+1]
 }
@@ -81,7 +88,7 @@ impl Inode {
     /// 
     /// Return the disk block address of the nth block in inode ip. 
     /// If there is no such block, bmap allocates one. 
-    pub(crate) fn map(&mut self, bn: usize) -> usize {
+    pub(crate) fn bmap(&self, bn: usize) -> u32 {
         panic!("inode map: out of range.")
     }
 
@@ -105,11 +112,39 @@ impl Inode {
     pub(crate) fn read(
         &self, 
         user_dst: usize, 
-        dst: usize, 
+        mut dst: usize, 
         off: u32, 
-        len: usize
+        mut len: usize
     ) -> Result<usize, &'static str>{
-        Ok(0)
+        let mut tot = 0;
+        let mut m = 0;
+        let mut off = off as usize;
+        let mut bp: Buf;
+        if off > self.size || off + len < off {
+            return Err("inode read: off should be more than size and less than off + len")
+        }
+        if off + len > self.size {
+            len = self.size - off;
+        }
+
+        for _ in 0..len/m {
+            bp = BCACHE.bread(self.dev, self.bmap(off / BSIZE));
+            m = min(len - tot, BSIZE - off%BSIZE);
+            if either_copy_out(
+                user_dst, dst, 
+                (bp.raw_data() as usize + (off % BSIZE)) as *mut u8, 
+                m
+            ).is_err() {
+                BCACHE.brelse(bp.get_index());
+                return Err("Fail to copy out")
+            }
+            BCACHE.brelse(bp.get_index());
+            tot += m;
+            off += m;
+            dst += m;
+        }
+
+        Ok(tot)
     }
 
     /// Write data to inode. 
