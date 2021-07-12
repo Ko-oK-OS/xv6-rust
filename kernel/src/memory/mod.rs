@@ -20,11 +20,6 @@ pub struct RawPage{
     data: [u8; PGSIZE]
 }
 
-#[repr(C, align(65536))]
-pub struct BigPage {
-    data: [u8; PGSIZE*16]
-}
-
 impl RawPage {
     pub unsafe fn new_zeroed() -> usize {
         let boxed_page = Box::<Self>::new_zeroed().assume_init();

@@ -14,6 +14,8 @@ mod devices;
 mod file_table;
 mod ramdisk;
 mod stat;
+mod dir;
+mod bitmap;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
@@ -21,7 +23,7 @@ pub use log::LOG;
 pub use file::VFile;
 pub use file_table::FILE_TABLE;
 pub use inode::Inode;
-pub use dinode::Dinode;
+pub use dinode::DiskInode;
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 
 use log::Log;

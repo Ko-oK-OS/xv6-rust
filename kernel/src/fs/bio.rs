@@ -291,8 +291,14 @@ impl BufInner {
 #[repr(C, align(8))]
 pub struct BufData([u8; BSIZE]);
 
-impl  BufData {
+impl BufData {
     const fn new() -> Self {
         Self([0; BSIZE])
+    }
+
+    pub fn zero(&mut self) {
+        for i in 0..BSIZE {
+            self.0[i] = 0;
+        }
     }
 }

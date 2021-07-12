@@ -1,4 +1,5 @@
 #![no_std]
+
 #![feature(llvm_asm)]
 #![feature(const_fn)]
 #![feature(global_asm)]
@@ -15,7 +16,6 @@
 #![feature(fn_traits)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(const_mut_refs)]
-#![feature(const_in_array_repeat_expressions)]
 
 
 

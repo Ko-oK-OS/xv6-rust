@@ -4,8 +4,8 @@ use core::ptr;
 use core::mem::{self, MaybeUninit};
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::define::fs::FSMAGIC;
-use super::{BCACHE, BufData};
+use crate::define::fs::{ FSMAGIC, IPB, BPB };
+use super::{ BCACHE, BufData };
 
 pub static mut SUPER_BLOCK: SuperBlock = SuperBlock::uninit();
 
@@ -81,6 +81,26 @@ impl SuperBlock {
     pub fn bmapstart(&self) -> u32 {
         let sb = self.read();
         sb.bmapstart
+    }
+
+    /// Given an inode number. 
+    /// Return the blockno of the block this inode resides. 
+    /// Panic if the queryed inode out of range. 
+    pub fn locate_inode(&self, inum: u32) -> u32 {
+        let sb = self.read();
+        if inum >= sb.ninodes {
+            panic!("query inum {} larger than maximum inode nums {}", inum, sb.ninodes);
+        }
+
+        let blockno = (inum / (IPB as u32)) + sb.inodestart;
+        blockno
+    }
+
+    /// Given a block number in the disk. 
+    /// Returns the relevant block number of the (controlling) bitmap block. 
+    pub fn bitmap_blockno(&self, blockno: u32) -> u32 {
+        let sb = self.read();
+        (blockno / BPB as u32) + sb.bmapstart
     }
 
     

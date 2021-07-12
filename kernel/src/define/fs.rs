@@ -1,5 +1,5 @@
 use core::mem::size_of;
-use crate::fs::Dinode;
+use crate::fs::DiskInode;
 use crate::fs::SuperBlock;
 
 /// magic number indentifying this specific file system
@@ -27,22 +27,22 @@ pub const MAXFILE: usize = NDIRECT + NINDIRECT;
 pub const DIRSIZ: usize = 14;
 
 /// Inodes per block. 
-pub const IPB:usize = BSIZE/size_of::<Dinode>();
+pub const IPB:usize = BSIZE/size_of::<DiskInode>();
 
 /// Bitmap bits per block
-pub const BPB:usize = BSIZE*8;
+pub const BPB:u32 = (BSIZE*8) as u32;
 
 /// Block containing inode i 
-#[inline]
-pub fn iblock(i: usize, sb: SuperBlock) -> usize {
-    i/IPB + sb.inodestart() as usize
-}
+// #[inline]
+// pub fn iblock(i: u32, sb: SuperBlock) -> u32 {
+//     i/(IPB as u32) + sb.inodestart() as u32
+// }
 
 /// Block of free map containing bit for block b
-#[inline]
-pub fn bblock(b:usize, sb:SuperBlock) -> usize {
-    b/BPB + sb.bmapstart() as usize 
-}
+// #[inline]
+// pub fn bblock(b:usize, sb:SuperBlock) -> u32 {
+//     b/BPB + sb.bmapstart() as usize 
+// }
 
 #[inline]
 pub fn major(dev: usize) -> usize {

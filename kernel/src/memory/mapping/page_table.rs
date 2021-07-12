@@ -6,8 +6,6 @@ use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
-    // kalloc:: {kalloc, kfree}, 
-    // container::boxed::Box,
     kalloc::KERNEL_HEAP,
     RawPage
 };
