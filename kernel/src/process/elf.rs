@@ -66,9 +66,9 @@ pub struct ProgHeader {
 #[allow(unused_assignments)]
 fn load_seg(
     mut page_table: Box<PageTable>, 
-    va:usize, 
-    ip: &Box<Inode>,
-    offset:usize, 
+    va: usize, 
+    ip: Box<Inode>,
+    offset: usize, 
     size: usize
 ) -> Result<(), &'static str> {
     let mut va = VirtualAddress::new(va);
@@ -78,7 +78,8 @@ fn load_seg(
 
     let mut i:usize = 0;
     while i < size {
-        match page_table.walkaddr(va) {
+        match page_table
+                .walkaddr(va) {
             Some(pa) => {
                 let n:usize;
                 if size - i < PGSIZE {
@@ -87,7 +88,14 @@ fn load_seg(
                     n = PGSIZE;
                 }
 
-                // TODO: readi()
+                if ip.read(
+                    0, 
+                    pa.as_usize(), 
+                    (offset + i) as u32, 
+                    n
+                ).is_err() {
+                    return Err("load_seg: Fail to read inode")
+                }
             },
 
             None => {
@@ -196,7 +204,7 @@ pub unsafe fn exec(
                 if load_seg(
                     page_table.clone(), 
                     ph.vaddr, 
-                    &ip, 
+                    ip.clone(), 
                     ph.off, 
                     ph.file_size
                 ).is_err() {
