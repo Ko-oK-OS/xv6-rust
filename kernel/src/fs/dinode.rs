@@ -11,6 +11,7 @@ pub enum InodeType {
 
 /// On-disk inode structure
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct DiskInode {
     pub itype: InodeType, // File type
     pub major: i16, // Major device number (T_REVICE only)

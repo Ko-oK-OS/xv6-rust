@@ -3,10 +3,9 @@ use core::mem::size_of;
 use alloc::sync::Arc;
 use alloc::vec;
 
-use crate::fs;
 use crate::define::fs::ROOTDEV;
 use crate::interrupt::trap::usertrap_ret;
-use crate::fs::LOG;
+use crate::fs::{ LOG, ICACHE, init };
 
 
 pub mod cpu;
@@ -116,7 +115,9 @@ pub unsafe fn exit(status: i32) {
     extern_data.ofile = vec![];
 
     LOG.begin_op();
-    extern_data.cwd.as_ref().unwrap().put();
+    // extern_data.cwd.as_ref().unwrap().put();
+    // ICACHE.put(extern_data.cwd.as_ref());
+    drop(extern_data.cwd.as_mut());
     LOG.end_op();
     extern_data.cwd = None;
 
@@ -156,7 +157,7 @@ unsafe fn fork_ret() -> ! {
     if FIRST {
         // File system initialization
         FIRST = false;
-        fs::init(ROOTDEV);
+        init(ROOTDEV);
     }
 
     usertrap_ret();

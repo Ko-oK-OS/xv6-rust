@@ -219,8 +219,8 @@ impl InodeData {
     /// Return the disk block address of the nth block in inode. 
     /// If there is no such block, bmap allocates one. 
     pub fn bmap(&mut self, offset_bn: u32) -> Result<u32, &'static str> {
-        let mut addr: u32 = 0;
-        let mut offset_bn = offset_bn as usize;
+        let mut addr;
+        let offset_bn = offset_bn as usize;
         if offset_bn < NDIRECT {
             if self.dinode.addrs[offset_bn] == 0 {
                 addr = balloc(self.dev);
@@ -249,7 +249,7 @@ impl InodeData {
                 }
                 LOG.write(buf);
             }
-            drop(buf);
+            // drop(buf);
             return Ok(addr)
         }
         panic!("inode bmap: out of range.");
@@ -260,7 +260,7 @@ impl InodeData {
     /// If is_user is true, then dst is a user virtual address;
     /// otherwise, dst is a kernel address. 
     pub fn read(
-        &self, 
+        &mut self, 
         is_user: bool, 
         mut dst: usize, 
         offset: u32, 
@@ -274,7 +274,7 @@ impl InodeData {
 
         let mut total: usize = 0;
         let mut offset = offset as usize;
-        let mut count = count as usize;
+        let count = count as usize;
         let block_basic = offset / BSIZE;
         let block_offset = offset % BSIZE;
         while total < count as usize {
@@ -308,9 +308,9 @@ impl InodeData {
     /// If the return value is less than the requestes n, 
     /// there was an error of some kind. 
     pub fn write(
-        &self, 
+        &mut self, 
         is_user: bool, 
-        src: usize, 
+        mut src: usize, 
         offset: u32, 
         count: u32
     ) -> Result<(), &'static str> {
@@ -320,14 +320,14 @@ impl InodeData {
         }
 
         let mut offset = offset as usize;
-        let mut count = count as usize;
+        let count = count as usize;
         let mut total = 0;
         let block_basic = offset / BSIZE;
         let block_offset = offset % BSIZE;
         while total < count {
             let surplus_len = count - total;
             let block_no = self.bmap(block_basic as u32)?;
-            let buf = BCACHE.bread(self.dev, block_no);
+            let mut buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, block_offset % BSIZE);
             if either_copy_in(
                 unsafe{ (buf.raw_data_mut() as *mut u8).offset((offset % BSIZE) as isize ) }, 
@@ -343,7 +343,7 @@ impl InodeData {
             total += write_len;
 
             LOG.write(buf);
-            drop(buf);
+            // drop(buf);
         }
 
         if self.dinode.size < offset as u32 {

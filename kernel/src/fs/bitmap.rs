@@ -10,10 +10,10 @@ use core::ptr;
 
 /// Zero a block. 
 pub fn bzero(dev: u32, bno: u32) {
-    let buf = BCACHE.bread(dev, bno);
+    let mut buf = BCACHE.bread(dev, bno);
     unsafe{ (&mut *buf.raw_data_mut()).zero() };
     LOG.write(buf);
-    drop(buf);
+    // drop(buf);
 }
 
 /// Free a block in the disk by setting the relevant bit in bitmap to 0.
@@ -39,7 +39,7 @@ pub fn balloc(dev: u32) -> u32 {
     let sb_size = unsafe{ SUPER_BLOCK.size() };
     while b < sb_size {
         let bm_blockno = unsafe{ SUPER_BLOCK.bitmap_blockno(b) };
-        let buf = BCACHE.bread(dev, bm_blockno);
+        let mut buf = BCACHE.bread(dev, bm_blockno);
         let mut bi = 0;
         while bi < BPB && b + bi < sb_size {
             bi += 1;
@@ -49,7 +49,7 @@ pub fn balloc(dev: u32) -> u32 {
             if buf_val == 0 { // Is block free?
                 unsafe{ ptr::write(buf_ptr, m) };
                 LOG.write(buf);
-                drop(buf);
+                // drop(buf);
                 bzero(dev, b + bi);
                 return b + bi
             }

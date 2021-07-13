@@ -510,7 +510,7 @@ impl PageTable{
         &mut self, 
         dst: *mut u8,
         src: usize,
-        max: usize
+        mut max: usize
     ) -> Result<(),&'static str> {
         let mut va = VirtualAddress::new(src as usize);
         va.pg_round_down();
@@ -527,7 +527,7 @@ impl PageTable{
                             return Err("copy_in_str: string end.")
                         }
                         let dst_ptr = dst.offset(i as isize);
-                        write(dst, src_val);
+                        write(dst_ptr, src_val);
                     }
                 }
                 return Ok(())
@@ -541,7 +541,7 @@ impl PageTable{
                         return Err("copy_in_str: string end.")
                     }
                     let dst_ptr = dst.offset(i as isize);
-                    write(dst, src_val);
+                    write(dst_ptr, src_val);
                 }
             }
             max -= count;
