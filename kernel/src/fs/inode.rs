@@ -2,7 +2,7 @@ use crate::define::fs::{ NDIRECT, BSIZE, NINODE, IPB, NINDIRECT, MAXFILE };
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
-use crate::memory::either_copy_out;
+use crate::memory::{either_copy_in, either_copy_out};
 use crate::misc::{ min, mem_set };
 
 use alloc::boxed::Box;
@@ -218,19 +218,21 @@ impl InodeData {
     /// 
     /// Return the disk block address of the nth block in inode. 
     /// If there is no such block, bmap allocates one. 
-    pub fn bmap(&mut self, blockno: u32) -> Result<u32, &'static str> {
+    pub fn bmap(&mut self, offset_bn: u32) -> Result<u32, &'static str> {
         let mut addr: u32 = 0;
-        let mut blockno = blockno as usize;
-        if blockno < NDIRECT {
-            if self.dinode.addrs[blockno] == 0 {
+        let mut offset_bn = offset_bn as usize;
+        if offset_bn < NDIRECT {
+            if self.dinode.addrs[offset_bn] == 0 {
                 addr = balloc(self.dev);
-                self.dinode.addrs[blockno] = addr;
+                self.dinode.addrs[offset_bn] = addr;
                 return Ok(addr)
+            } else {
+                return Ok(self.dinode.addrs[offset_bn])
             }
         }
-        blockno -= NDIRECT;
-        if blockno < NINDIRECT {
+        if offset_bn < NINDIRECT + NDIRECT {
             // Load indirect block, allocating if necessary. 
+            let count = offset_bn - NDIRECT;
             if self.dinode.addrs[NDIRECT] == 0 {
                 addr = balloc(self.dev);
                 self.dinode.addrs[NDIRECT] = addr;
@@ -239,11 +241,11 @@ impl InodeData {
             }
             let buf = BCACHE.bread(self.dev, addr);
             let buf_data = buf.raw_data() as *mut u32;
-            addr = unsafe{ read(buf_data.offset(blockno as isize)) };
+            addr = unsafe{ read(buf_data.offset(count as isize)) };
             if addr == 0 {
                 unsafe{
                     addr = balloc(self.dev);
-                    write(buf_data.offset(blockno as isize), addr);
+                    write(buf_data.offset(count as isize), addr);
                 }
                 LOG.write(buf);
             }
@@ -270,28 +272,29 @@ impl InodeData {
             return Err("inode read: end is more than diskinode's size.")
         }
 
-        let mut total: usize;
+        let mut total: usize = 0;
         let mut offset = offset as usize;
         let mut count = count as usize;
-        let mut m = 0;
-
+        let block_basic = offset / BSIZE;
+        let block_offset = offset % BSIZE;
         while total < count as usize {
-            let bm_blockno = unsafe{ SUPER_BLOCK.bitmap_blockno((offset / BSIZE) as u32) };
-            let buf = BCACHE.bread(self.dev, bm_blockno);
-            m = min(self.dev, (BSIZE  - offset % BSIZE) as u32);
+            let surplus_len = count - total;
+            let block_no = self.bmap(block_basic as u32)?;
+            let buf = BCACHE.bread(self.dev, block_no);
+            let write_len = min(surplus_len, BSIZE - block_offset);
             if either_copy_out(
                 is_user, 
                 dst, 
                 unsafe{ (buf.raw_data() as *mut u8).offset((offset % BSIZE) as isize) },
-                m as usize
+                write_len as usize
             ).is_err() {
                 drop(buf);
                 return Err("inode read: Fail to either copy out.")
             }
             drop(buf);
-            total += m as usize;
-            offset += m as usize;
-            dst += m as usize;
+            total += write_len as usize;
+            offset += write_len as usize;
+            dst += write_len as usize;
         }
         Ok(())
     }
@@ -318,8 +321,36 @@ impl InodeData {
 
         let mut offset = offset as usize;
         let mut count = count as usize;
-        panic!("Err");
+        let mut total = 0;
+        let block_basic = offset / BSIZE;
+        let block_offset = offset % BSIZE;
+        while total < count {
+            let surplus_len = count - total;
+            let block_no = self.bmap(block_basic as u32)?;
+            let buf = BCACHE.bread(self.dev, block_no);
+            let write_len = min(surplus_len, block_offset % BSIZE);
+            if either_copy_in(
+                unsafe{ (buf.raw_data_mut() as *mut u8).offset((offset % BSIZE) as isize ) }, 
+                is_user, 
+                src, 
+                write_len
+            ).is_err() {
+                drop(buf);
+                return Err("inode write: Fail to either copy in")
+            }
+            offset += write_len;
+            src += write_len;
+            total += write_len;
 
+            LOG.write(buf);
+            drop(buf);
+        }
+
+        if self.dinode.size < offset as u32 {
+            self.dinode.size = offset as u32;
+        }
+
+        Ok(())
     }
 }
 
