@@ -5,10 +5,10 @@ use crate::lock::spinlock::{SpinlockGuard, Spinlock};
 use core::ptr::NonNull;
 use super::*;
 pub struct CPU{
-    pub process:Option<NonNull<Process>>, // The process running on this cpu, or null.
-    pub context:Context, // swtch() here to enter scheduler().
-    pub noff:usize, // Depth of push_off() nesting.
-    pub intena:usize // Were interrupts enabled before push_off()?
+    pub process: Option<NonNull<Process>>, // The process running on this cpu, or null.
+    pub context: Context, // swtch() here to enter scheduler().
+    pub noff: usize, // Depth of push_off() nesting.
+    pub intena: usize // Were interrupts enabled before push_off()?
 }
 
 pub struct CPUManager{
@@ -58,6 +58,44 @@ impl CPUManager{
             }
         }
     }
+    
+    /// Per-CPU process scheduler.
+    /// Each CPU calls scheduler() after setting itself up.
+    /// Scheduler never returns.  It loops, doing:
+    ///  - choose a process to run.
+    ///  - swtch to start running that process.
+    ///  - eventually that process transfers control
+    ///    via swtch back to the scheduler.
+
+    pub unsafe fn scheduler(&mut self){
+        // println!("Enter scheduler.");
+        extern "C" {
+            fn swtch(old: *mut Context, new: *mut Context);
+        }
+
+        let c = self.mycpu();
+        loop{
+            // Avoid deadlock by ensuring that devices can interrupt.
+            sstatus::intr_on();
+            match PROC_MANAGER.seek_runnable() {
+                Some(p) => {
+                    // println!("Seek Runnable");
+                    c.set_proc(NonNull::new(p as *mut Process));
+                    let mut guard = p.data.acquire();
+                    guard.state = Procstate::RUNNING;
+                    swtch(
+                        c.get_context_mut(),
+                        &mut p.extern_data.get_mut().context as *mut Context
+                    );
+
+                    c.set_proc(None);
+                    drop(guard);
+                }
+
+                None => {}
+            }
+        }
+    }
 }
 
 impl CPU{
@@ -70,10 +108,6 @@ impl CPU{
         }
     }
 
-    // pub fn get_proc(&self) -> &Process {
-    //     self.process.unwrap().as_ref()
-    // }
-
     pub fn set_proc(&mut self, proc:Option<NonNull<Process>>){
         self.process = proc;
     }
@@ -83,13 +117,13 @@ impl CPU{
     }
 
 
-    // Switch to scheduler.  Must hold only p->lock
-    // and have changed proc->state. Saves and restores
-    // intena because intena is a property of this
-    // kernel thread, not this CPU. It should
-    // be proc->intena and proc->noff, but that would
-    // break in the few places where a lock is held but
-    // there's no process.
+    /// Switch to scheduler.  Must hold only p->lock
+    /// and have changed proc->state. Saves and restores
+    /// intena because intena is a property of this
+    /// kernel thread, not this CPU. It should
+    /// be proc->intena and proc->noff, but that would
+    /// break in the few places where a lock is held but
+    /// there's no process.
 
     pub unsafe fn sched<'a>
     (
@@ -143,7 +177,6 @@ pub fn push_off(){
     if my_cpu.noff == 0 {
         my_cpu.intena = old_enable as usize;
     }
-
 
     my_cpu.noff += 1;
 }

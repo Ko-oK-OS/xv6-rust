@@ -7,7 +7,7 @@ use super::devices::DEVICES;
 use super::FILE_TABLE;
 
 use alloc::sync::Arc;
-use core::ops::{ Deref, DerefMut };
+use core::{ops::{ Deref, DerefMut }, ptr::NonNull};
 
 
 #[derive(Clone, Copy)]
@@ -22,21 +22,21 @@ pub enum FileType {
 /// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file.
 pub struct VFile {
-    pub(crate) file_type: FileType,
-    pub(crate) file_ref: usize,
+    pub(crate) ftype: FileType,
+    pub(crate) refs: usize,
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
-    pub(crate) pipe: Option<*mut Pipe>,
-    pub(crate) inode: Option<SleepLock<Inode>>,
-    pub(crate) off: usize,
+    pub(crate) pipe: Option<NonNull<Pipe>>,
+    pub(crate) inode: Option<NonNull<Inode>>,
+    pub(crate) off: u32,
     pub(crate) major: i16
 }
 
 impl VFile {
     pub(crate) const fn init() -> Self {
         Self{
-            file_type: FileType::None,
-            file_ref: 0,
+            ftype: FileType::None,
+            refs: 0,
             readable: false,
             writeable: false,
             pipe: None,
@@ -46,15 +46,19 @@ impl VFile {
         }
     }
 
-    pub fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
+    pub fn read(
+        &self, 
+        addr: usize, 
+        len: usize
+    ) -> Result<usize, &'static str> {
         let r;
         if !self.readable() {
             panic!("File can't be read!")
         }
 
-        match self.file_type {
+        match self.ftype {
             FileType::Pipe => {
-                r = unsafe{ (&*(self.pipe.unwrap())).read(addr, buf).unwrap() };
+                r = unsafe{ (self.pipe.unwrap().as_ref()).read(addr, len).unwrap() };
                 return Ok(r)
             },
 
@@ -62,7 +66,7 @@ impl VFile {
                 if self.major < 0 || self.major as usize >= NDEV || unsafe{ DEVICES[self.major as usize].read.is_none() } {
                     return Err("vfs: fail to read device")
                 }
-                r = unsafe{ DEVICES[self.major as usize].read.unwrap().call((1, addr, buf))} as usize;
+                r = unsafe{ DEVICES[self.major as usize].read.unwrap().call((1, addr, len))} as usize;
                 return Ok(r)
             },
 
@@ -76,16 +80,16 @@ impl VFile {
         }
     }
 
-    pub fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
+    pub fn write(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
         let mut r = 0;
         let mut ret = 0; 
         if !self.writeable() {
             panic!("file can't be written")
         }
 
-        match self.file_type {
+        match self.ftype {
             FileType::Pipe => {
-                r = unsafe{ (&*(self.pipe.unwrap())).write(addr, buf).unwrap() };
+                r = unsafe{ (self.pipe.unwrap().as_ref()).write(addr, len).unwrap() };
             },
 
             FileType::Device => {
@@ -93,7 +97,7 @@ impl VFile {
                     return Err("vfs: fail to write")
                 }
 
-                ret = unsafe{ DEVICES[self.major as usize].write.unwrap().call((1, addr, buf)) as usize };
+                ret = unsafe{ DEVICES[self.major as usize].write.unwrap().call((1, addr, len)) as usize };
             },
 
             FileType::Inode => {
@@ -119,21 +123,21 @@ impl VFile {
     /// Increment ref count for file f
     pub fn dup(&mut self){
         let guard = unsafe{ FILE_TABLE.lock.acquire() };
-        if self.file_ref < 1 {
+        if self.refs < 1 {
             panic!("vfile dup: no used file.")
         }
-        self.file_ref += 1;
+        self.refs += 1;
         drop(guard);
     }
 
     /// Close file f(Decrement ref count, close when reaches 0.)
     pub fn close(&mut self) {
         let guard = unsafe{ FILE_TABLE.lock.acquire() };
-        if self.file_ref < 1 {
+        if self.refs < 1 {
             panic!("vfs close: no used file.")
         }
-        self.file_ref -= 1;
-        if self.file_ref > 0 {
+        self.refs -= 1;
+        if self.refs > 0 {
             drop(guard);
             return 
         }

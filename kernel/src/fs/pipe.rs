@@ -4,11 +4,11 @@ pub struct Pipe {
 }
 
 impl Pipe {
-    pub fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str> {
+    pub fn read(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
         Err("No implement")
     }
 
-    pub fn write(&self, addr: usize, buf: &[u8]) -> Result<usize, &'static str> {
+    pub fn write(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
         Err("No implement")
     }
 

@@ -1,7 +1,7 @@
 use crate::define::param::NDEV;
 
-type ReadFn = fn(usize, usize, &mut [u8]) -> usize;
-type WriteFn = fn(usize, usize, &[u8]) -> usize;
+type ReadFn = fn(usize, usize, usize) -> usize;
+type WriteFn = fn(usize, usize, usize) -> usize;
 
 /// map major device number to device functions.
 #[derive(Clone, Copy)]

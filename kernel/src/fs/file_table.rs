@@ -30,8 +30,8 @@ impl FileTable {
     pub fn allocate(&self) -> Option<&mut VFile> {
         let guard = self.lock.acquire();
         for f in self.get_table().iter_mut() {
-            if f.file_ref == 0 {
-                f.file_ref = 1;
+            if f.refs == 0 {
+                f.refs = 1;
                 drop(guard);
                 return Some(f)
             }

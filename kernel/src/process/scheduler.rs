@@ -186,29 +186,28 @@ impl ProcManager{
 //    via swtch back to the scheduler.
 
 pub unsafe fn scheduler(){
+    // println!("Enter scheduler.");
     extern "C" {
         fn swtch(old: *mut Context, new: *mut Context);
     }
 
     let c = CPU_MANAGER.mycpu();
-    c.set_proc(None);
-
     loop{
         // Avoid deadlock by ensuring that devices can interrupt.
         intr_on();
-
         match PROC_MANAGER.seek_runnable() {
             Some(p) => {
+                // println!("Seek Runnable");
                 c.set_proc(NonNull::new(p as *mut Process));
                 let mut guard = p.data.acquire();
                 guard.state = Procstate::RUNNING;
-
-                swtch(c.get_context_mut(),
-                    &mut p.extern_data.get_mut().context as *mut Context);
+                swtch(
+                    c.get_context_mut(),
+                    &mut p.extern_data.get_mut().context as *mut Context
+                );
 
                 c.set_proc(None);
                 drop(guard);
-
             }
 
             None => {}

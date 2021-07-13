@@ -100,12 +100,16 @@ And then you can debug this programe step by step.
     - [x] Muti-Core Support
     - [ ] Syscall
 - File System
-    - [x] Block Driver
-    - [x] Log System
-    - [x] SuperBlock
-    - [x] File
+    - [x] Buffer Layer
+    - [x] Log Layer
+    - [x] SuperBlock Layer
     - [x] Inode Layer
-    - [x] Bitmap
+    - [x] Bitmap Layer
+    - [ ] File Descriptor Layer
+    - [ ] Pipe 
+    - [ ] RamDisk
+    - [ ] Mkfs
+    - [ ] Syscall
 - NetWork
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers

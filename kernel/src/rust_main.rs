@@ -23,8 +23,8 @@ use core::sync::atomic::{ AtomicBool, Ordering };
 
 static STARTED:AtomicBool = AtomicBool::new(false);
 #[no_mangle]
-pub unsafe extern "C" fn rust_main() -> !{
-    if cpu::cpuid() == 0{
+pub unsafe extern "C" fn rust_main() {
+    if cpu::cpuid() == 0 {
         console::uart_init(); //  uart init
         println!("{}",LOGO); 
         println!("xv6-rust kernel is booting!");
@@ -42,21 +42,19 @@ pub unsafe extern "C" fn rust_main() -> !{
         PROC_MANAGER.user_init(); // first user process
 
 
-        panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // sstatus::intr_on();
         // STARTED.store(true, Ordering::SeqCst);
         // loop{};
-    }else{
+    } else {
         while !STARTED.load(Ordering::SeqCst){}
         println!("hart {} starting\n", cpu::cpuid());
         kvm_init_hart(); // turn on paging
         trap_init_hart();   // install kernel trap vector
         plic_init_hart();   // ask PLIC for device interrupts
-        panic!("end of rust main, cpu id is {}", cpu::cpuid());
+        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // loop{}
     }
-
-    #[cfg(feature = "unit_test")]
-    scheduler();
+    CPU_MANAGER.scheduler();
     
 }

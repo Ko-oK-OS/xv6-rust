@@ -137,7 +137,7 @@ pub unsafe fn exit(status: i32) {
     drop(wait_guard);
 
     // Jump into scheduler, never to return. 
-    scheduler();
+    CPU_MANAGER.scheduler();
     panic!("zombine exit");
 
 
