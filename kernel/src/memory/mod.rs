@@ -35,19 +35,23 @@ impl RawPage {
 /// Returns Result<(), &'static str>
 pub fn either_copy_in(
     dst: *mut u8, 
-    user_src: usize, 
-    kern_src: usize, 
+    is_user: bool, 
+    src: usize, 
     len: usize
 ) -> Result<(), &'static str>{
     unsafe {
         let my_proc =  CPU_MANAGER.myproc().unwrap();
         
-        if user_src != 0 {
+        if !is_user {
             let extern_data = &mut *(my_proc.extern_data.get());
             let page_table = extern_data.pagetable.as_mut().unwrap();
-            page_table.copy_in(dst, kern_src, len)
+            page_table.copy_in(
+                dst,
+                src,
+                len
+            )
         } else {
-            mem_copy(dst as usize, kern_src, len);
+            mem_copy(dst as usize, src, len);
             Ok(())
         }
     }
@@ -57,20 +61,21 @@ pub fn either_copy_in(
 /// depending on usr_dst. 
 /// Returns 0 on success, -1 on error. 
 pub fn either_copy_out(
-    user_dst: bool,
+    is_user: bool,
     dst: usize,
     src: *const u8,
     len: usize
 ) -> Result<(), &'static str> {
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
-        if !user_dst {
+        if !is_user {
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
             page_table
                 .copy_out(
-                    VirtualAddress::new(dst), 
-                    &mut *slice_from_raw_parts_mut(src as *mut u8, len)
+                    dst,
+                    src,
+                    len
                 )
         } else {
             mem_copy(dst, src as usize, len);

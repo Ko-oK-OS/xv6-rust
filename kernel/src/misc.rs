@@ -25,10 +25,12 @@ pub fn str_len(str: *const u8) -> usize {
 }
 
 /// memory copy, copy memory into other memory. 
-pub unsafe fn mem_copy(dst: usize, src: usize, len: usize) {
-    for i in 0..len {
-        let val = read((src + i) as *const u8);
-        write((dst + i) as *mut u8, val);
+pub fn mem_copy(dst: usize, src: usize, len: usize) {
+    unsafe{
+        for i in 0..len {
+            let val = read((src + i) as *const u8);
+            write((dst + i) as *mut u8, val);
+        }
     }
 }
 

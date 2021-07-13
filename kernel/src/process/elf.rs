@@ -92,12 +92,11 @@ fn load_seg(
                 }
 
                 if inode_data.read(
-                    inode, 
                     false, 
                     pa.as_usize(), 
                     (offset + i) as u32, 
                     n as u32
-                ).is_none() {
+                ).is_err() {
                     return Err("load_seg: Fail to read inode")
                 }
             },

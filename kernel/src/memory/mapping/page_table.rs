@@ -1,7 +1,9 @@
-use core::{alloc::GlobalAlloc, ops::Add, ptr::{write, read, write_bytes, copy_nonoverlapping}};
+use core::ptr::{write, read, write_bytes, copy_nonoverlapping};
 use core::ptr::drop_in_place;
 use core::ptr::copy;
-use crate::{interrupt::trap::kerneltrap, println, register::{sfence_vma, satp}};
+
+use crate::interrupt::trap::kerneltrap;
+use crate::register::{ sfence_vma, satp };
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
@@ -9,6 +11,7 @@ use crate::memory::{
     kalloc::KERNEL_HEAP,
     RawPage
 };
+use crate::misc::mem_copy;
 
 
 use alloc::boxed::Box;
@@ -434,94 +437,121 @@ impl PageTable{
 
     /// Copy from kernel to user.
     /// Copy len bytes from src to virtual address dstva in a given page table.
-    /// Return true on success, false on error.
+    /// Return Result<(), Err>. 
     pub fn copy_out(
         &mut self, 
-        mut dst_va: VirtualAddress, 
-        src: &mut [u8] 
+        mut dst: usize, 
+        mut src: *const u8,
+        mut len: usize 
     ) -> Result<(), &'static str> {
-        let total_len = src.len();
-        let mut len = src.len();
-        while len > 0 {
-            // iterate through the raw content page by page
-            let mut va = dst_va.clone();
-            // page align by dst_va;
-            va.pg_round_down();
-            // get pa by va;
-            let pa = self.walkaddr(va).expect("Invalid physical address from virtual address");
+        let mut va = VirtualAddress::new(dst);
+        va.pg_round_down();
 
-            let mut n = PGSIZE - (dst_va.as_usize() - va.as_usize());
-
-            if n > len {
-                n = len;
+        loop {
+            let pa = self.walkaddr(va).unwrap();
+            let count = PGSIZE - (dst - va.as_usize());
+            if len < count {
+                mem_copy(
+                    pa.as_usize() + (dst - va.as_usize()), 
+                    src as usize, 
+                    len
+                );
+                return Ok(())
             }
-
-            let write_addr: *mut u8 = (pa.as_usize() + (dst_va.as_usize() - va.as_usize())) as *mut u8;
-            unsafe {
-                let x = total_len - len;
-                let src_addr = (&mut src[x]) as *mut u8;
-                copy(src_addr, write_addr, n);
-            }
-
-            len -= n;
+            len -= count;
+            src = unsafe{ src.offset(count as isize) };
             va.add_page();
-            dst_va = va;
         }
-
-        Ok(())
-    }
+    }   
 
 
     /// Copy from user to kernel.
     /// Copy len bytes to dst from virtual address srcva in a given page table.
-    /// Return 0 on success, -1 on error.
+    /// Return Result<(), Err>
     
     pub fn copy_in(
         &mut self, 
         mut dst: *mut u8, 
-        src_va: usize, 
+        src: usize, 
         mut len: usize
     ) -> Result<(), &'static str> {
-        let mut va = VirtualAddress::new(src_va);
-        let mut src_va = VirtualAddress::new(src_va);
+        let mut va = VirtualAddress::new(src);
+        va.pg_round_down();
+        loop {
+            // Get physical address by virtual address
+            let pa = self.walkaddr(va).unwrap();
+            // Get copy bytes of current page.
+            let count = PGSIZE - (src - va.as_usize());
+            if len < count {
+                mem_copy(
+                    dst as usize, 
+                    pa.as_usize() + ( src - va.as_usize() ), 
+                    len
+                );
+                return Ok(())
+            }
+            mem_copy(
+                dst as usize,
+                pa.as_usize() + ( src - va.as_usize() ),
+                count
+            );
 
-        while len > 0 {
-            va.pg_round_down();
-            let pa = PageTable::walkaddr(self, va).unwrap();
-                if pa.as_usize() == 0 {
-                    return Err("copy_in(): fail to transfer pa from va.")
-                }
-                let mut n = PGSIZE - (src_va.as_usize() -va.as_usize());
+            len -= count;
+            dst = unsafe{ dst.offset(count as isize) };
+            va.add_page();
+        }
+    }
 
-                if n > len {
-                    n = len;
-                }
-
-                unsafe {
-                    // Write value from pagetable into dst
-                    for i in 0..n {
-                        let write_dst = (dst as usize + i) as *mut u8;
-                        let write_src = (pa.as_usize() + (src_va.as_usize() - va.as_usize())) as *const u8 ;
-                        let write_value = core::ptr::read(write_src);
-                        core::ptr::write(write_dst, write_value);
+    /// Copy a null-trrminated string from user to kernel. 
+    /// Copy bytes to dst from virtual address src in a given table. 
+    /// until a '\0', or max. 
+    /// Return Result. 
+    pub fn copy_in_str(
+        &mut self, 
+        dst: *mut u8,
+        src: usize,
+        max: usize
+    ) -> Result<(),&'static str> {
+        let mut va = VirtualAddress::new(src as usize);
+        va.pg_round_down();
+        loop {
+            let pa = self.walkaddr(va).unwrap();
+            let count = PGSIZE - (src - va.as_usize());
+            let s = (pa.as_usize() + (src - va.as_usize())) as *const u8;
+            if max < count {
+                for i in 0..max {
+                    unsafe{
+                        let src_ptr = s.offset(i as isize);
+                        let src_val = read(src_ptr); 
+                        if src_val == 0 {
+                            return Err("copy_in_str: string end.")
+                        }
+                        let dst_ptr = dst.offset(i as isize);
+                        write(dst, src_val);
                     }
                 }
+                return Ok(())
+            }
 
-                len -= n;
-                
-                dst = ((dst as usize) + n) as *mut u8;
-                
-
-                src_va = VirtualAddress::new(va.as_usize());
-                src_va.add_page();
+            for i in 0..count {
+                unsafe {
+                    let src_ptr = s.offset(i as isize);
+                    let src_val = read(src_ptr); 
+                    if src_val == 0 {
+                        return Err("copy_in_str: string end.")
+                    }
+                    let dst_ptr = dst.offset(i as isize);
+                    write(dst, src_val);
+                }
+            }
+            max -= count;
+            va.add_page();
         }
-        Ok(())
     }
 
 
-
-    // Free a process's page table, and free the
-    // physical memory it refers to.
+    /// Free a process's page table, and free the
+    /// physical memory it refers to.
     pub fn proc_freepagetable(&mut self, size: usize) {
         self.uvmunmap(
             VirtualAddress::new(TRAMPOLINE ), 

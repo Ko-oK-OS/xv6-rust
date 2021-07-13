@@ -1,4 +1,4 @@
-use crate::define::fs::{ NDIRECT, BSIZE, NINODE, IPB, NINDIRECT };
+use crate::define::fs::{ NDIRECT, BSIZE, NINODE, IPB, NINDIRECT, MAXFILE };
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
@@ -18,7 +18,7 @@ use super::DiskInode;
 use super::BCACHE;
 use super::SUPER_BLOCK;
 use super::dinode::InodeType;
-use super::bitmap::bfree;
+use super::bitmap::{balloc, bfree};
 
 pub static ICACHE: InodeCache = InodeCache::new();
 
@@ -159,6 +159,7 @@ impl InodeMeta {
 /// In-memory copy of an inode
 pub struct InodeData {
     valid: bool,
+    dev: u32,
     dinode: DiskInode
 }
 
@@ -166,6 +167,7 @@ impl InodeData {
     const fn new() -> Self {
         Self {
             valid: false,
+            dev: 0,
             dinode: DiskInode::new()
         }
     }
@@ -209,47 +211,115 @@ impl InodeData {
         LOG.write(buf);
     }
 
+    /// The content (data) associated with each inode is stored
+    /// in blocks on the disk. The first NDIRECT block numbers
+    /// are listed in self.dinode.addrs, The next NINDIRECT blocks are 
+    /// listed in block self.dinode.addrs[NDIRECT]. 
+    /// 
+    /// Return the disk block address of the nth block in inode. 
+    /// If there is no such block, bmap allocates one. 
+    pub fn bmap(&mut self, blockno: u32) -> Result<u32, &'static str> {
+        let mut addr: u32 = 0;
+        let mut blockno = blockno as usize;
+        if blockno < NDIRECT {
+            if self.dinode.addrs[blockno] == 0 {
+                addr = balloc(self.dev);
+                self.dinode.addrs[blockno] = addr;
+                return Ok(addr)
+            }
+        }
+        blockno -= NDIRECT;
+        if blockno < NINDIRECT {
+            // Load indirect block, allocating if necessary. 
+            if self.dinode.addrs[NDIRECT] == 0 {
+                addr = balloc(self.dev);
+                self.dinode.addrs[NDIRECT] = addr;
+            } else {
+                addr = self.dinode.addrs[NDIRECT]
+            }
+            let buf = BCACHE.bread(self.dev, addr);
+            let buf_data = buf.raw_data() as *mut u32;
+            addr = unsafe{ read(buf_data.offset(blockno as isize)) };
+            if addr == 0 {
+                unsafe{
+                    addr = balloc(self.dev);
+                    write(buf_data.offset(blockno as isize), addr);
+                }
+                LOG.write(buf);
+            }
+            drop(buf);
+            return Ok(addr)
+        }
+        panic!("inode bmap: out of range.");
+    }
+
     /// Read data from inode. 
-    /// Caller must hold ip sleeplock. 
+    /// Caller must hold inode's sleeplock. 
     /// If is_user is true, then dst is a user virtual address;
     /// otherwise, dst is a kernel address. 
     pub fn read(
         &self, 
-        inode: &Inode, 
         is_user: bool, 
         mut dst: usize, 
-        mut off: u32, 
-        mut n: u32
-    ) -> Option<usize> {
+        offset: u32, 
+        count: u32
+    ) -> Result<(), &'static str> { 
+        // Check the reading content is in range.
+        let end = offset.checked_add(count).ok_or("Fail to add count.")?;
+        if end > self.dinode.size {
+            return Err("inode read: end is more than diskinode's size.")
+        }
+
+        let mut total: usize;
+        let mut offset = offset as usize;
+        let mut count = count as usize;
         let mut m = 0;
-        if off > self.dinode.size {
-            return None
-        }
 
-        if off + n > self.dinode.size {
-            n = self.dinode.size - off;
-        }
-        let mut tot:usize;
-
-        while tot < n as usize {
-            let bm_blockno = unsafe{ SUPER_BLOCK.bitmap_blockno(off / BSIZE as u32) };
-            let buf = BCACHE.bread(inode.dev, bm_blockno);
-            m = min(inode.dev, BSIZE as u32 - off % BSIZE as u32);
+        while total < count as usize {
+            let bm_blockno = unsafe{ SUPER_BLOCK.bitmap_blockno((offset / BSIZE) as u32) };
+            let buf = BCACHE.bread(self.dev, bm_blockno);
+            m = min(self.dev, (BSIZE  - offset % BSIZE) as u32);
             if either_copy_out(
                 is_user, 
                 dst, 
-                unsafe{ (buf.raw_data() as *mut u8).offset((off % BSIZE as u32) as isize) },
+                unsafe{ (buf.raw_data() as *mut u8).offset((offset % BSIZE) as isize) },
                 m as usize
             ).is_err() {
                 drop(buf);
-                return None
+                return Err("inode read: Fail to either copy out.")
             }
             drop(buf);
-            tot += m as usize;
-            off += m;
+            total += m as usize;
+            offset += m as usize;
             dst += m as usize;
         }
-        Some(tot)
+        Ok(())
+    }
+
+
+    /// Write data to inode. 
+    /// Caller must hold inode's sleeplock. 
+    /// If is_user is true, then src is a user virtual address; 
+    /// otherwise, src is a kernel address. 
+    /// Returns the number of bytes successfully written. 
+    /// If the return value is less than the requestes n, 
+    /// there was an error of some kind. 
+    pub fn write(
+        &self, 
+        is_user: bool, 
+        src: usize, 
+        offset: u32, 
+        count: u32
+    ) -> Result<(), &'static str> {
+        let end = offset.checked_add(count).ok_or("Fail to add count.")?;
+        if end > self.dinode.size {
+            return Err("inode read: end is more than diskinode's size.")
+        }
+
+        let mut offset = offset as usize;
+        let mut count = count as usize;
+        panic!("Err");
+
     }
 }
 
