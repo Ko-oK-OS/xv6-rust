@@ -16,7 +16,7 @@ use array_macro::array;
 use super::Buf;
 use super::BCACHE;
 use super::SUPER_BLOCK;
-use fs_lib::inode::{ InodeType, DiskInode };
+use fs_lib::{ InodeType, DiskInode };
 use super::bitmap::{balloc, bfree};
 
 pub static ICACHE: InodeCache = InodeCache::new();

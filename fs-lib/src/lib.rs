@@ -1,7 +1,9 @@
 #![no_std]
 use core::mem::size_of;
 
-pub mod inode;
+mod inode;
+
+pub use inode::{ DiskInode, Dirent, InodeType };
 
 /// magic number indentifying this specific file system
 pub const FSMAGIC: u32 = 0x10203040;
@@ -23,6 +25,8 @@ pub const FSSIZE: usize = 1000;  // size of file system in blocks
 pub const NDIRECT: usize = 12;
 pub const NINDIRECT: usize =  BSIZE / 8;
 pub const MAXFILE: usize = NDIRECT + NINDIRECT;
+
+pub const NINODES: usize = 200;
 
 /// Directory is a file containing a sequence of dirent structures
 pub const DIRSIZ: usize = 14;
