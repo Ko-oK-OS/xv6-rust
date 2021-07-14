@@ -17,7 +17,7 @@ pub struct CPUManager{
 
 pub static mut CPU_MANAGER:CPUManager = CPUManager::new();
 
-pub unsafe fn cpuid() ->usize{
+pub unsafe fn cpuid() -> usize {
     let id = tp::read();
     id
 }
@@ -37,14 +37,16 @@ impl CPUManager{
     pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
         push_off();
         let c = CPU_MANAGER.mycpu();
-        if let Some(proc) = c.process{
-           let p = &mut *(proc.as_ptr());
-           pop_off();
-           return Some(p)
-        }
+        // if let Some(proc) = c.process {
+        //    let p = &mut *(proc.as_ptr());
+        //    pop_off();
+        //    return Some(p)
+        // }
+        // pop_off();
+        // None
+        let p = &mut *c.process.unwrap().as_ptr();
         pop_off();
-        None
-
+        Some(p)
     }
 
     pub fn yield_proc(&mut self) {
@@ -68,26 +70,35 @@ impl CPUManager{
     ///    via swtch back to the scheduler.
 
     pub unsafe fn scheduler(&mut self){
-        // println!("Enter scheduler.");
         extern "C" {
             fn swtch(old: *mut Context, new: *mut Context);
         }
 
         let c = self.mycpu();
-        loop{
+        println!("Get my cpu");
+        loop {
             // Avoid deadlock by ensuring that devices can interrupt.
             sstatus::intr_on();
             match PROC_MANAGER.seek_runnable() {
                 Some(p) => {
-                    // println!("Seek Runnable");
+                    println!("Seek runnable process.");
+                    // Switch to chosen process. It is the process's job
+                    // to release it's lock and then reacquire it 
+                    // before jumping back to us.
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
                     guard.state = Procstate::RUNNING;
+                    println!("Before switch");
                     swtch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
                     );
-
+                    println!("After switch");
+                    if c.get_context_mut().is_null() {
+                        panic!("context switch back with no process reference.");
+                    }
+                    // Process is done running for now. 
+                    // It should have changed it's process state before coming back. 
                     c.set_proc(None);
                     drop(guard);
                 }
@@ -163,9 +174,9 @@ impl CPU{
 
 }
 
-// push_off/pop_off are like intr_off()/intr_on() except that they are matched:
-// it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
-// are initially off, then push_off, pop_off leaves them off.
+/// push_off/pop_off are like intr_off()/intr_on() except that they are matched:
+/// it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
+/// are initially off, then push_off, pop_off leaves them off.
 
 pub fn push_off(){
     let old_enable;

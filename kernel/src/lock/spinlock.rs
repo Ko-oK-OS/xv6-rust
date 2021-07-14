@@ -33,7 +33,7 @@ impl<T> Spinlock<T>{
 
         push_off();
         if self.holding() {
-            panic!("acquire");
+            panic!("spinlock {} acquire", self.name);
         }
         
         while self.locked.swap(true, Ordering::Acquire){
@@ -50,12 +50,11 @@ impl<T> Spinlock<T>{
 
     pub fn release(&self) {
         if !self.holding() {
-            panic!("release");
+            panic!("spinlock {} release", self.name);
         }
         self.cpu_id.set(-1);
         fence(Ordering::SeqCst);
         self.locked.store(false, Ordering::Release);
-
         pop_off();
     }
 

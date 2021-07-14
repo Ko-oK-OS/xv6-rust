@@ -1,6 +1,4 @@
-[submodule "kernel/allocator"]
-	path = kernel/allocator
-	url = https://github.com/Ko-oK-OS/allocator.git
-[submodule "kernel/src/allocator"]
-	path = kernel/src/allocator
+
+[submodule "allocator"]
+	path = allocator
 	url = https://github.com/Ko-oK-OS/allocator.git

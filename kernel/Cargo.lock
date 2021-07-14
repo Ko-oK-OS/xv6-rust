@@ -3,7 +3,6 @@
 [[package]]
 name = "allocator"
 version = "0.1.0"
-source = "git+https://github.com/Ko-oK-OS/allocator.git?branch=main#460e17ebb6550175105459edd4ff4d0075c3cfa1"
 dependencies = [
  "bit_field",
 ]
@@ -33,6 +32,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
+name = "fs-lib"
+version = "0.1.0"
+
+[[package]]
 name = "kernel"
 version = "0.1.0"
 dependencies = [
@@ -41,6 +44,7 @@ dependencies = [
  "array-macro",
  "bit_field",
  "bitflags",
+ "fs-lib",
  "lazy_static",
  "spin",
 ]
