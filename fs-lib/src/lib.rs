@@ -2,8 +2,10 @@
 use core::mem::size_of;
 
 mod inode;
+mod superblock;
 
 pub use inode::{ DiskInode, Dirent, InodeType };
+pub use superblock:: { SuperBlock, RawSuperBlock };
 
 /// magic number indentifying this specific file system
 pub const FSMAGIC: u32 = 0x10203040;

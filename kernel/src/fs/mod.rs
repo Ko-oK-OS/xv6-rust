@@ -23,7 +23,7 @@ pub use log::LOG;
 pub use file::VFile;
 pub use file_table::FILE_TABLE;
 pub use inode::{ Inode, InodeData, ICACHE };
-pub use dinode::{ DiskInode, Dirent };
+pub use dinode::{ DiskInode, Dirent, InodeType };
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 
 use log::Log;

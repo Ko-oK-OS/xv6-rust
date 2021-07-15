@@ -1,4 +1,4 @@
-use fs_lib::{ NDIRECT, BSIZE, NINODE, IPB, NINDIRECT, MAXFILE };
+use crate::define::fs::{ NDIRECT, BSIZE, NINODE, IPB, NINDIRECT, MAXFILE };
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
@@ -16,7 +16,7 @@ use array_macro::array;
 use super::Buf;
 use super::BCACHE;
 use super::SUPER_BLOCK;
-use fs_lib::{ InodeType, DiskInode };
+use super::{ InodeType, DiskInode };
 use super::bitmap::{balloc, bfree};
 
 pub static ICACHE: InodeCache = InodeCache::new();

@@ -13,10 +13,10 @@ pub enum InodeType {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct DiskInode {
-    pub itype: InodeType, // File type
-    pub major: i16, // Major device number (T_REVICE only)
-    pub minor: i16, // Minor device number (T_DEVICE only)
-    pub nlink: i16, // Number of links to inode in file system
+    pub itype: u16, // File type
+    pub major: u16, // Major device number (T_REVICE only)
+    pub minor: u16, // Minor device number (T_DEVICE only)
+    pub nlink: u16, // Number of links to inode in file system
     pub size: u32, // Size of file (bytes)
     pub addrs: [u32; NDIRECT+1] // Data block addresses
 }
@@ -29,7 +29,7 @@ pub struct Dirent {
 impl DiskInode {
     pub const fn new() -> Self {
         Self {
-            itype: InodeType::Empty,
+            itype: 0,
             major: 0,
             minor: 0,
             nlink: 0,
