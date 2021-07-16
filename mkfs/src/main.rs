@@ -86,6 +86,7 @@ impl BlockDevice {
         unsafe {
             ptr::write(buf.as_mut_ptr() as *mut RawSuperBlock, *raw_sb);
         }
+        // println!("{:?}", &buf);
         self.write(1, &buf);
     }
 
@@ -93,8 +94,8 @@ impl BlockDevice {
     fn alloc_inode(&self, itype: u16) -> u32 {
         let inum: u32;
         unsafe {
-            FREE_INODE += 1;
             inum = FREE_INODE as u32;
+            FREE_INODE += 1;
         }
         let mut dinode = Box::new(DiskInode::new());
         let mut buf:Vec<u8> = vec![0;BSIZE];
@@ -137,37 +138,31 @@ impl BlockDevice {
     }    
     
     fn append_inode(&self, inum: u32) {
-    
+        let mut dinode:DiskInode = DiskInode::new();
+        let mut buf = vec![0;BSIZE]; 
+        self.read(inum, &mut buf);
+        unsafe{
+            ptr::write(&mut dinode as *mut DiskInode, *(buf.as_ptr() as *const DiskInode))
+        }
     }
 }
 
 
 /// Convert to intel byte order
 fn bytes_order_u16(x: u16) -> u16 {
-    let mut y: u16 = 0;
-    for i in 0..=1 {
-        unsafe {
-            let write_ptr = ((&mut y) as *mut _ as *mut u8).offset(i as isize);
-            let write_val:u8 = (x >> (8 * i)) as u8;
-            ptr::write(write_ptr, write_val);
-        } 
-    }
-    y
+   let mut y: [u8; 2];
+   y = x.to_be_bytes();
+   y.reverse();
+   ((y[0] as u16) << 8) | y[1] as u16
+   
 }
 
 fn bytes_order_u32(x: u32) -> u32 {
-    let mut y: u32 = 0;
-    for i in 0..=3 {
-        unsafe {
-            let write_ptr = ((&mut y) as *mut _ as *mut u8).offset(i as isize);
-            let write_val:u8 = (x >> (8 * i)) as u8;
-            ptr::write(write_ptr, write_val);
-        } 
-    }
-    y
+   let mut y: [u8; 4];
+   y = x.to_be_bytes();
+   y.reverse();
+  ((y[0] as u32) << 24) | ((y[1] as u32) << 16) | ((y[2] as u32) << 8) | y[3] as u32
 }
-
-
 
 
 pub fn main() {
@@ -213,6 +208,6 @@ pub fn main() {
 
     // Initialize root inode
     let root_inode = block_device.alloc_inode(1);
-    assert!(root_inode == ROOT_INUM);
+    assert!(root_inode == ROOT_INUM, "root inode number is {}", root_inode);
 
 }

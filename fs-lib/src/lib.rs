@@ -37,4 +37,4 @@ pub const DIRSIZ: usize = 14;
 pub const IPB: usize = BSIZE / size_of::<inode::DiskInode>();
 
 /// Bitmap bits per block
-pub const BPB: u32 = (BSIZE*8) as u32;
+pub const BPB: u32 = (BSIZE * 8) as u32;

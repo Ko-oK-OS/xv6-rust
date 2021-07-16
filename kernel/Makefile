@@ -23,9 +23,6 @@ QEMUOPTS 	+= -device e1000,netdev=net0,bus=pcie.0
 
 QEMUGDB 	:= -gdb tcp::26000
 
-
-
-
 .PHONY: doc kernel build clean qemu run test
 
 # 默认 build 为输出二进制文件
