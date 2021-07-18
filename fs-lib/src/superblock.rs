@@ -6,8 +6,8 @@ use super::{ IPB, BPB };
 /// In-memory copy of superblock
 #[derive(Debug)]
 pub struct SuperBlock {
-    data: MaybeUninit<RawSuperBlock>,
-    initialized: AtomicBool,
+    pub data: MaybeUninit<RawSuperBlock>,
+    pub initialized: AtomicBool,
 }
 
 unsafe impl Sync for SuperBlock {}
