@@ -108,7 +108,7 @@ And then you can debug this programe step by step.
     - [ ] File Descriptor Layer
     - [ ] Pipe 
     - [ ] RamDisk
-    - [ ] Mkfs
+    - [x] Mkfs
     - [ ] Syscall
 - NetWork
     - [x] PCI and E1000 Initialize

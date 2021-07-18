@@ -8,5 +8,5 @@ run: fs
 	make -C kernel run
 	make -C user run
 
-fs: fs.img
+fs:
 	make -C mkfs run

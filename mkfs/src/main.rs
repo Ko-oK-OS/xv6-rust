@@ -389,9 +389,9 @@ pub fn main() {
     block_device.write_inode(root_inode, &dinode);
 
     block_device.alloc(unsafe{ FREE_BLOCKS });
+    drop(block_device);
 
-
-    block_device.read_sb();
+    
 }
 
 #[test]
@@ -408,6 +408,5 @@ fn fs_test() {
         )
      );
 
-     let mut buf = vec![0;BSIZE];
      block_device.read_sb();
 }
