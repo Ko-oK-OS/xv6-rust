@@ -93,8 +93,15 @@ impl BlockDevice {
         unsafe {
             ptr::write(buf.as_mut_ptr() as *mut RawSuperBlock, *raw_sb);
         }
-        // println!("{:?}", &buf);
+        println!("{:?}", unsafe{ *(buf.as_ptr() as *const RawSuperBlock) });
         self.write(1, &buf);
+    }
+
+    /// read superblock from sector
+    fn read_sb(&self) {
+        let mut buf = vec![0;BSIZE];
+        self.read(1, &mut buf);
+        println!("{:?}", unsafe{ *(buf.as_ptr() as *const RawSuperBlock) });
     }
 
     /// Allocate inode and return inode number. 
@@ -105,16 +112,11 @@ impl BlockDevice {
             FREE_INODE += 1;
         }
         let mut dinode = Box::new(DiskInode::new());
-        let mut buf:Vec<u8> = vec![0;BSIZE];
         dinode.itype = bytes_order_u16(itype);
         dinode.nlink = bytes_order_u16(1);
         dinode.size = bytes_order_u32(0);
 
-        unsafe{
-            ptr::write(buf.as_mut_ptr() as *mut DiskInode, *dinode);
-        }
-
-        self.write(inum, &buf);
+        self.write_inode(inum, &dinode);
         inum
     }
 
@@ -283,6 +285,7 @@ pub fn main() {
     assert!(BSIZE % size_of::<DiskInode>() == 0);
     assert!(size_of::<DirEntry>() == 16);
     assert!(size_of::<DiskInode>() == 64);
+    assert!(size_of::<RawSuperBlock>() == 32);
 
 
     let block_device = BlockDevice(
@@ -307,6 +310,8 @@ pub fn main() {
     raw_sb.logstart = bytes_order_u32(2);
     raw_sb.inodestart = bytes_order_u32(2 + LOG_NUMBER as u32);
     raw_sb.bmapstart = bytes_order_u32((2 + LOG_NUMBER + INODE_BLOCK_NUMBER) as u32);
+
+    println!("{:?}", raw_sb);
     
     unsafe{ SUPER_BLOCK.initialized = AtomicBool::new(true) };
 
@@ -325,6 +330,7 @@ pub fn main() {
     // Initialize SuperBlock
     println!("initialize superblock.");
     block_device.write_sb(raw_sb);
+    block_device.read_sb();
 
     // Initialize root inode
     println!("initialize root inode");
@@ -383,4 +389,25 @@ pub fn main() {
     block_device.write_inode(root_inode, &dinode);
 
     block_device.alloc(unsafe{ FREE_BLOCKS });
+
+
+    block_device.read_sb();
+}
+
+#[test]
+fn fs_test() {
+    let block_device = BlockDevice(
+        Mutex::new(
+         OpenOptions::new()
+         .read(true)
+         .write(true)
+         .create(true)
+         .truncate(true)
+         .open(FS_IMG)
+         .expect("Fail to open fs.img."),
+        )
+     );
+
+     let mut buf = vec![0;BSIZE];
+     block_device.read_sb();
 }
