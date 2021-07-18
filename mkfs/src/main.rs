@@ -1,6 +1,6 @@
 extern crate fs_lib;
 
-use std::io::{ Read, Seek, SeekFrom, Write };
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::str::from_utf8;
 use std::sync::Mutex;
 use std::ptr;
@@ -10,13 +10,15 @@ use std::cmp::min;
 use std::sync::atomic::AtomicBool;
 
 use fs_lib::{BSIZE, FSMAGIC, FSSIZE, IPB, LOGSIZE, MAXFILE, NDIRECT, NINDIRECT, NINODES, RawSuperBlock};
-use fs_lib::{ DirEntry, DiskInode };
+use fs_lib::{ DirEntry, DiskInode, InodeType };
 use fs_lib::SuperBlock;
 
 // Disk Layout
 // [ boot block | sb block | log | inode blocks | free bit map | data blocks ]
 
+
 pub static FS_IMG: &'static str = "../fs.img";
+pub static USERPROG_DIR: &'static str = "../user/target/riscv64gc-unknown-none-elf/debug/";
 
 pub static mut SUPER_BLOCK: SuperBlock = SuperBlock::uninit();
 pub static mut FREE_INODE: usize = 1;
@@ -352,6 +354,33 @@ pub fn main() {
     println!("{}", from_utf8(&dir_entry.name).unwrap());
     let data = (&dir_entry) as *const DirEntry as *const u8;
     block_device.append_inode(root_inode, data, size_of::<DirEntry>());
-    
 
+    // Initialize use programe
+    let user_progs = File::open("userprog").unwrap();
+    let user_progs = BufReader::new(user_progs);
+    for prog_path in user_progs.lines() {
+        let short_str: &str = "null";
+        let inum = block_device.alloc_inode(InodeType::File as u16);
+        let mut dir_entry = DirEntry::new();
+        dir_entry.inum = inum as u16;
+        unsafe{
+            ptr::copy_nonoverlapping(short_str.as_bytes().as_ptr(), dir_entry.name.as_mut_ptr(), dot_dot.len());
+        }
+        let mut prog = File::open(prog_path.unwrap()).unwrap();
+        let mut buf = vec![0;BSIZE];
+        while prog.read(&mut buf).unwrap() > 0 {
+            block_device.append_inode(inum, buf.as_ptr(), BSIZE);
+        }
+        drop(prog);
+    }
+
+    // fix size of root inode dir
+    let mut dinode = DiskInode::new();
+    block_device.read_inode(root_inode, &mut dinode);
+    let offset = bytes_order_u32(dinode.size);
+    let offset = ((offset as usize / BSIZE) + 1) * BSIZE; 
+    dinode.size = bytes_order_u32(offset as u32);
+    block_device.write_inode(root_inode, &dinode);
+
+    block_device.alloc(unsafe{ FREE_BLOCKS });
 }
