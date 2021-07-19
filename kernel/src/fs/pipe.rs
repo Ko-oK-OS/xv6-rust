@@ -20,7 +20,7 @@ impl Pipe {
         false
     }
 
-    pub fn close(witable: bool) {
-        
+    pub fn close(&self, writeable: bool) {
+
     }
 }

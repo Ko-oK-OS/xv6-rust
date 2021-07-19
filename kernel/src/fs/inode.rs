@@ -16,6 +16,7 @@ use array_macro::array;
 use super::Buf;
 use super::BCACHE;
 use super::SUPER_BLOCK;
+use super::stat::Stat;
 use super::{ InodeType, DiskInode };
 use super::bitmap::{balloc, bfree};
 
@@ -159,6 +160,7 @@ impl InodeMeta {
 pub struct InodeData {
     valid: bool,
     dev: u32,
+    inum: u32,
     dinode: DiskInode
 }
 
@@ -167,8 +169,18 @@ impl InodeData {
         Self {
             valid: false,
             dev: 0,
+            inum: 0,
             dinode: DiskInode::new()
         }
+    }
+
+    /// Copy stat information from inode
+    pub fn stat(&self, stat: &mut Stat) {
+        stat.dev = self.dev;
+        stat.inum = self.inum;
+        stat.itype = self.dinode.itype;
+        stat.nlink = self.dinode.nlink;
+        stat.size = self.dinode.size as usize;
     }
 
     /// Discard the inode data/content. 

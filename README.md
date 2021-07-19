@@ -105,7 +105,7 @@ And then you can debug this programe step by step.
     - [x] SuperBlock Layer
     - [x] Inode Layer
     - [x] Bitmap Layer
-    - [ ] File Descriptor Layer
+    - [x] File Descriptor Layer
     - [ ] Pipe 
     - [ ] RamDisk
     - [x] Mkfs
