@@ -100,6 +100,7 @@ And then you can debug this programe step by step.
     - [x] Muti-Core Support
     - [ ] Syscall
 - File System
+    - [x] Mkfs
     - [x] Buffer Layer
     - [x] Log Layer
     - [x] SuperBlock Layer
@@ -108,7 +109,7 @@ And then you can debug this programe step by step.
     - [x] File Descriptor Layer
     - [ ] Pipe 
     - [ ] RamDisk
-    - [x] Mkfs
+    - [ ] File Path
     - [ ] Syscall
 - NetWork
     - [x] PCI and E1000 Initialize
