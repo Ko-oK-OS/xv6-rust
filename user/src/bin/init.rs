@@ -17,7 +17,6 @@ use user::{
 #[no_mangle]
 fn main() {
     let pid;
-    let wpid;
     if open("console", O_RDWR) < 0 {
         mknod("console", CONSOLE, 0);
         open("console", O_RDWR);
@@ -37,7 +36,17 @@ fn main() {
         }
 
         loop {
-
+            let mut temp:isize=0;
+            let wpid:isize=wait(&mut temp);
+            if wpid==pid {
+                break;
+            }else if wpid<0 {
+                //error
+                exit(1);
+            }else {
+                //do nothing
+            }
+            
         }
     }
 }
