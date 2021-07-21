@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use crate::define::memlayout::{
     PTE_V, PTE_R, PTE_W, PTE_X, PTE_U
 };
@@ -71,6 +73,12 @@ impl PageTableEntry{
     }
 
     #[inline]
+    fn is_leaf(&self) -> bool {
+        let flag_bits = self.0 & (PteFlags::R | PteFlags::W | PteFlags::X).bits();
+        !(flag_bits == 0)
+    }
+
+    #[inline]
     pub fn add_valid_bit(&self) -> Self {
         let pte = self.as_usize() | (PteFlags::V.bits());
         Self(pte)
@@ -119,6 +127,16 @@ impl PageTableEntry{
     #[inline]
     pub fn write(&mut self, addr: usize) {
         self.0 = addr
+    }
+
+    pub fn free(&mut self) {
+        if self.is_valid() {
+            if !self.is_leaf() {
+                drop(unsafe{ Box::from_raw(self.as_pagetable()) });
+            } else {
+                panic!("freeing a pte leaf")
+            }
+        }
     }
     
 }

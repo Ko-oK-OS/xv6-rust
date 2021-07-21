@@ -17,7 +17,7 @@ use crate::misc::mem_copy;
 use alloc::boxed::Box;
 use super::*;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone )]
 #[repr(C, align(4096))]
 pub struct PageTable{
     pub entries: [PageTableEntry; PGSIZE/8],
@@ -225,9 +225,9 @@ impl PageTable{
 
     /// Load the user initcode into address 0 of pagetable
     /// for the very first process
-    /// sz must be less than a page
-    pub unsafe fn uvminit(&mut self, src: &[u8], size:usize){
-        if size >= PGSIZE{
+    /// size must be less than a page
+    pub unsafe fn uvm_init(&mut self, src: &[u8]){
+        if src.len() >= PGSIZE{
             panic!("inituvm: more than a page");
         }
 
@@ -241,12 +241,12 @@ impl PageTable{
             PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
         );
 
-        copy_nonoverlapping(src.as_ptr(), mem, PGSIZE);
+        copy_nonoverlapping(src.as_ptr(), mem, src.len());
     }
 
 
     /// Allocate PTEs and physical memory to grow process from oldsz to
-    /// newsz, which need not be page aligned.  Returns new size or 0 on error.
+    /// new_size, which need not be page aligned.  Returns new size or 0 on error.
     pub unsafe fn uvmalloc(
         &mut self, 
         mut old_size:usize, 
@@ -257,27 +257,21 @@ impl PageTable{
         }
 
         old_size = page_round_up(old_size);
-        let mut a = old_size;
-        while a < new_size {
 
-            let mem = RawPage::new_zeroed() as *mut u8;
+        for cur_size in (old_size..new_size).step_by(PGSIZE) {
+            let memory = RawPage::new_zeroed();
+            write_bytes(memory as *mut u8, 0, PGSIZE);
 
-            write_bytes(mem, 0, PGSIZE);
-
-            if self.mappages(
-                VirtualAddress::new(a), 
-                PhysicalAddress::new(mem as usize), 
-                PGSIZE, 
-                PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
+            if !self.mappages(
+            VirtualAddress::new(cur_size), 
+            PhysicalAddress::new(memory), 
+            PGSIZE, 
+            PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
             ){
-                // drop RawPage , maybe UB?
-                // drop(*(mem as *mut RawPage));
-                drop_in_place(mem as *mut RawPage);
-                self.uvmdealloc(a, old_size);
+                drop_in_place(memory as *mut RawPage);
+                self.uvmdealloc(cur_size, old_size);
                 return None
             }
-
-            a += PGSIZE;
         }
 
         Some(new_size)
@@ -300,9 +294,9 @@ impl PageTable{
     }
 
 
-    /// Deallocate user pages to bring the process size from oldsz to
-    /// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-    /// need to be less than oldsz.  oldsz can be larger than the actual
+    /// Deallocate user pages to bring the process size from old_size to
+    /// new_size.  oldsz and newsz need not be page-aligned, nor does new_size
+    /// need to be less than old_size.  old_size can be larger than the actual
     /// process size.  Returns the new process size.
     pub fn uvmdealloc(
         &mut self, 
@@ -568,4 +562,10 @@ impl PageTable{
         self.uvmfree(size);
     }
 
+}
+
+impl Drop for PageTable {
+    fn drop(&mut self) {
+        self.entries.iter_mut().for_each(|pte| pte.free());
+    }
 }

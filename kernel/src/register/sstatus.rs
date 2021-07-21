@@ -38,13 +38,13 @@ pub unsafe fn intr_on(){
 // disable device interrupts
 #[inline]
 pub unsafe fn intr_off(){
-    write(read() & SSTATUS::SIE as usize);
+    write(read() & !(SSTATUS::SIE as usize));
 }
 
 
 // are device interrupts enabled?
 #[inline]
-pub unsafe fn intr_get() -> bool{
+pub unsafe fn intr_get() -> bool {
     let x = read();
     return (x & SSTATUS::SIE as usize) != 0;
 }

@@ -75,10 +75,12 @@ impl CPUManager{
         }
 
         let c = self.mycpu();
-        println!("Get my cpu");
+        // println!("Get my cpu");
         loop {
             // Avoid deadlock by ensuring that devices can interrupt.
+            println!("Before");
             sstatus::intr_on();
+            println!("After");
             match PROC_MANAGER.seek_runnable() {
                 Some(p) => {
                     println!("Seek runnable process.");

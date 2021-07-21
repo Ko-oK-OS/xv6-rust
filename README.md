@@ -107,13 +107,15 @@ And then you can debug this programe step by step.
     - [x] Inode Layer
     - [x] Bitmap Layer
     - [x] File Descriptor Layer
+    - [x] File Path
     - [ ] Pipe 
     - [ ] RamDisk
-    - [ ] File Path
     - [ ] Syscall
 - NetWork
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers
+    - [ ] NetCardS
+    - [ ] Syscall
 
 ## DOCS
 

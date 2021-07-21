@@ -79,9 +79,8 @@ impl ProcManager{
         // allocate one user page and copy init's instructions
         // and data into it.
         let extern_data = p.extern_data.get_mut();
-        extern_data.pagetable.as_mut().unwrap().uvminit(
+        extern_data.pagetable.as_mut().unwrap().uvm_init(
             &INITCODE,
-            size_of_val(&INITCODE)
         );
 
         extern_data.size = PGSIZE;

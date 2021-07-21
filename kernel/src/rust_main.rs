@@ -45,7 +45,7 @@ pub unsafe extern "C" fn rust_main() {
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // sstatus::intr_on();
         STARTED.store(true, Ordering::SeqCst);
-        loop{};
+        // loop{};
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         println!("hart {} starting\n", cpu::cpuid());
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn rust_main() {
         trap_init_hart();   // install kernel trap vector
         plic_init_hart();   // ask PLIC for device interrupts
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        loop{}
+        // loop{}
     }
     CPU_MANAGER.scheduler();
     
