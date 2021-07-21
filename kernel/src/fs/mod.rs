@@ -45,3 +45,15 @@ pub unsafe fn init(dev: u32) {
     log_ptr.as_mut().unwrap().init(dev);
     println!("file system: setup done");
 }
+
+#[cfg(test)]
+mod test {
+    use super::bio::Bcache;
+
+    pub fn read_disk() {
+        let block_cache = Bcache::new();
+        block_cache.init();
+        // read superblock
+        block_cache.bread(0, 0);
+    }
+}

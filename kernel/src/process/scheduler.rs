@@ -1,4 +1,5 @@
 use array_macro::array;
+use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
 use super::*;
