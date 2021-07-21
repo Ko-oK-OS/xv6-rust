@@ -57,25 +57,23 @@ impl PageTable{
     }
 
 
-    // Recursively free page-table pages.
-    // All leaf mappings must already have been removed.
-
-    pub fn freewalk(&mut self) {
+    /// Recursively free page-table pages.
+    /// All leaf mappings must already have been removed.
+    pub fn free(&mut self) {
         // there are 2^9 = 512 PTEs in a pagetable
-        for i in 0..512 {
+        for i in 0..self.entries.len() {
             let pte = self.entries[i];
-            if pte.is_valid() && (pte.is_read() || pte.is_write() || pte.is_execute()) {
+            if pte.is_valid() && !pte.is_leaf() {
                 // this PTE points to a lower-level page. 
                 unsafe {
-                    let child = &mut *(pte.as_pagetable());
-                    child.freewalk();
+                    let child_pgt = &mut *(pte.as_pagetable());
+                    child_pgt.free();
                 }
                 self.entries[i] = PageTableEntry::new(0);
             } else if pte.is_valid() {
-                panic!("freewalk(): leaf not be removed");
+                panic!("pagetable free(): leaf not be removed");
             }
         }
-
         drop(self);
     }
 
@@ -149,7 +147,7 @@ impl PageTable{
         va: VirtualAddress
     ) -> Option<PhysicalAddress> {
         let addr = va.as_usize();
-        if addr > MAXVA{
+        if addr > MAXVA {
             return None
         }
         match self.unmap(va){
@@ -170,11 +168,10 @@ impl PageTable{
     }
 
 
-    // Create PTEs for virtual addresses starting at va that refer to
-    // physical addresses starting at pa. va and size might not
-    // be page-aligned. Returns 0 on success, -1 if walk() couldn't
-    // allocate a needed page-table page.
-
+    /// Create PTEs for virtual addresses starting at va that refer to
+    /// physical addresses starting at pa. va and size might not
+    /// be page-aligned. Returns 0 on success, -1 if walk() couldn't
+    /// allocate a needed page-table page.
     pub unsafe fn map(
         &mut self, 
         mut va: VirtualAddress, 
@@ -209,11 +206,10 @@ impl PageTable{
         true
     }
 
-    // add a mapping to the kernel page table.
-    // only used when booting
-    // does not flush TLB or enable paging
-    
-    pub unsafe fn kvmmap(
+    /// add a mapping to the kernel page table.
+    /// only used when booting
+    /// does not flush TLB or enable paging   
+    pub unsafe fn kernel_map(
         &mut self, 
         va:VirtualAddress, 
         pa:PhysicalAddress, 
@@ -298,19 +294,19 @@ impl PageTable{
         if size > 0 {
             let mut pa = PhysicalAddress::new(size);
             pa.pg_round_up();
+            let ppn = pa.as_usize() / PGSIZE;
             self.uvm_unmap(
                 VirtualAddress::new(0),
-                 pa.as_usize(),
+                 ppn,
                 true
             );
         }
-
-        self.freewalk();
+        drop(self);
     }
 
 
     /// Deallocate user pages to bring the process size from old_size to
-    /// new_size.  oldsz and newsz need not be page-aligned, nor does new_size
+    /// new_size.  old_size and new_size need not be page-aligned, nor does new_size
     /// need to be less than old_size.  old_size can be larger than the actual
     /// process size.  Returns the new process size.
     pub fn uvm_dealloc(
@@ -322,11 +318,11 @@ impl PageTable{
             return old_size
         }
 
-        if page_round_up(new_size) < page_round_up(old_size){
-            let npages = (page_round_up(old_size) - page_round_up(new_size)) / PGSIZE;
+        if page_round_up(new_size) < page_round_up(old_size) {
+            let pages_num = (page_round_up(old_size) - page_round_up(new_size)) / PGSIZE;
             self.uvm_unmap(
                 VirtualAddress::new(page_round_up(new_size)), 
-                npages, 
+            pages_num, 
                 true
             );
         }
@@ -343,10 +339,10 @@ impl PageTable{
         &mut self, 
         mut va: VirtualAddress, 
         npages: usize, 
-        do_free: bool
+        free: bool
     ){
         if !va.is_page_aligned() {
-            panic!("uvmunmap: not aligned");
+            panic!("uvm_unmap: not aligned");
         }
         
         for _ in 0..npages {
@@ -358,7 +354,7 @@ impl PageTable{
                     if pte.as_flags() == PteFlags::V.bits() {
                         panic!("uvm_unmap: not a leaf");
                     }
-                    if do_free {
+                    if free {
                         let pa = pte.as_pagetable();
                         unsafe{ drop_in_place(pa) };
                     }
@@ -440,7 +436,7 @@ impl PageTable{
     /// Return Result<(), Err>. 
     pub fn copy_out(
         &mut self, 
-        mut dst: usize, 
+        dst: usize, 
         mut src: *const u8,
         mut len: usize 
     ) -> Result<(), &'static str> {
@@ -552,7 +548,7 @@ impl PageTable{
 
     /// Free a process's page table, and free the
     /// physical memory it refers to.
-    pub fn proc_freepagetable(&mut self, size: usize) {
+    pub fn proc_free_pagetable(&mut self, size: usize) {
         self.uvm_unmap(
             VirtualAddress::new(TRAMPOLINE ), 
             1, 
@@ -571,6 +567,8 @@ impl PageTable{
 }
 
 impl Drop for PageTable {
+    /// Recursively free non-first-level pagetables.
+    /// Physical memory should already be freed.
     fn drop(&mut self) {
         self.entries.iter_mut().for_each(|pte| pte.free());
     }

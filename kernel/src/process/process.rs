@@ -252,7 +252,7 @@ impl Process{
     /// including user pages.
     /// p.acquire() must be held.
 
-    pub fn freeproc(&mut self) {
+    pub fn free_proc(&mut self) {
         let mut extern_data = self.extern_data.get_mut();
         if !extern_data.trapframe.is_null() {
             // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
@@ -260,7 +260,7 @@ impl Process{
             extern_data.set_trapframe(0 as *mut Trapframe);
 
             if let Some(page_table) = extern_data.pagetable.as_mut() {
-                page_table.proc_freepagetable(extern_data.size);
+                page_table.proc_free_pagetable(extern_data.size);
             }
 
 

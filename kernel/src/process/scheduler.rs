@@ -10,28 +10,27 @@ use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
 use crate::memory::*;
 
-pub struct ProcManager{
+pub struct ProcManager {
     proc: [Process; NPROC],
-    init_proc: Process
+    init_proc: Process,
+    pid_lock: Spinlock<usize>,
+    /// helps ensure that wakeups of wait()ing
+    /// parents are not lost. helps obey the
+    /// memory model when using p->parent.
+    /// must be acquired before any p->lock.
+    pub wait_lock: Spinlock<()>,
 }
 
 pub static mut PROC_MANAGER:ProcManager = ProcManager::new();
 
-pub static PID_LOCK:Spinlock<()> = Spinlock::new((), "pid_lock");
-
-// helps ensure that wakeups of wait()ing
-// parents are not lost. helps obey the
-// memory model when using p->parent.
-// must be acquired before any p->lock.
-pub static WAIT_LOCK:Spinlock<()> = Spinlock::new((), "wait_lock");
-
-pub static mut NEXT_PID:usize = 0;
 
 impl ProcManager{
     pub const fn new() -> Self {
         Self{
             proc: array![_ => Process::new(); NPROC],
-            init_proc: Process::new()
+            init_proc: Process::new(),
+            pid_lock: Spinlock::new(0, "pid_lock"),
+            wait_lock: Spinlock::new((), "wait_lock"),
         }
     }
 
@@ -40,7 +39,14 @@ impl ProcManager{
         &mut self.proc
     }
 
-    
+    pub fn alloc_pid(&mut self) -> usize {
+        let mut guard = self.pid_lock.acquire();
+        let pid;       
+        *guard += 1;
+        pid = *guard;        
+        drop(guard);
+        pid
+    }
 
     // initialize the proc table at boot time.
     // Only used in boot.
@@ -53,15 +59,15 @@ impl ProcManager{
         println!("procinit done......");
     }
 
-    // Allocate a page for each process's kernel stack.
-    // Map it high in memory, followed by an invalid 
-    // group page
+    /// Allocate a page for each process's kernel stack.
+    /// Map it high in memory, followed by an invalid 
+    /// group page
     pub unsafe fn proc_mapstacks(&mut self) {
         for (pos, _) in self.proc.iter_mut().enumerate() {
             let pa = RawPage::new_zeroed() as *mut u8;
             let va = kstack(pos);
 
-            KERNEL_PAGETABLE.kvmmap(
+            KERNEL_PAGETABLE.kernel_map(
                 VirtualAddress::new(va),
                 PhysicalAddress::new(pa as usize),
                 PGSIZE,
@@ -71,7 +77,7 @@ impl ProcManager{
         }
     }
 
-    // Set up first user programe
+    /// Set up first user programe
     pub unsafe fn user_init(&mut self) {
         println!("first user process init......");
         let p = self.alloc_proc().expect("Fail to get unused process");
@@ -107,11 +113,12 @@ impl ProcManager{
 
     /// WARNING: possible error occurs here.
     pub fn alloc_proc(&mut self) -> Option<&mut Process> {
+        let alloc_pid = self.alloc_pid();
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             match guard.state {
                 Procstate::UNUSED => {
-                    guard.pid = alloc_pid();
+                    guard.pid = alloc_pid;
                     guard.set_state(Procstate::ALLOCATED);
 
                     let extern_data = p.extern_data.get_mut();
@@ -158,7 +165,7 @@ impl ProcManager{
                 Procstate::RUNNABLE => {
                     guard.state = Procstate::ALLOCATED;
                     drop(guard);
-                    unsafe{ println!("Process {} will run.", (&*p.extern_data.get()).name); }
+                    // unsafe{ println!("Process {} will run.", (&*p.extern_data.get()).name); }
                     return Some(p)
                 },
 
@@ -171,18 +178,6 @@ impl ProcManager{
     }
 }
 
-
-
-pub fn alloc_pid() -> usize {
-    let guard = PID_LOCK.acquire();
-    let pid;
-    unsafe {
-        pid = NEXT_PID;
-        NEXT_PID += 1;
-    }
-    drop(guard);
-    pid
-}
 
 
 #[inline]

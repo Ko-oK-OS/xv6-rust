@@ -37,13 +37,6 @@ impl CPUManager{
     pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
         push_off();
         let c = CPU_MANAGER.mycpu();
-        // if let Some(proc) = c.process {
-        //    let p = &mut *(proc.as_ptr());
-        //    pop_off();
-        //    return Some(p)
-        // }
-        // pop_off();
-        // None
         let p = &mut *c.process.unwrap().as_ptr();
         pop_off();
         Some(p)
@@ -80,7 +73,6 @@ impl CPUManager{
             // sstatus::intr_on();
             match PROC_MANAGER.seek_runnable() {
                 Some(p) => {
-                    println!("Seek runnable process.");
                     // Switch to chosen process. It is the process's job
                     // to release it's lock and then reacquire it 
                     // before jumping back to us.

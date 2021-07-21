@@ -6,7 +6,9 @@ use crate::define::memlayout::{
 use crate::memory::address::{ PhysicalAddress, Addr};
 use super::page_table::PageTable;
 
-#[derive(Debug, Copy, Clone)]
+use core::ptr::drop_in_place;
+
+#[derive(Debug, Clone, Copy)]
 pub struct PageTableEntry(pub usize);
 
 
@@ -73,7 +75,7 @@ impl PageTableEntry{
     }
 
     #[inline]
-    fn is_leaf(&self) -> bool {
+    pub fn is_leaf(&self) -> bool {
         let flag_bits = self.0 & (PteFlags::R | PteFlags::W | PteFlags::X).bits();
         !(flag_bits == 0)
     }
@@ -132,7 +134,7 @@ impl PageTableEntry{
     pub fn free(&mut self) {
         if self.is_valid() {
             if !self.is_leaf() {
-                drop(unsafe{ Box::from_raw(self.as_pagetable()) });
+                unsafe{ drop_in_place(self.as_pagetable()) };
             } else {
                 panic!("freeing a pte leaf")
             }
@@ -140,6 +142,12 @@ impl PageTableEntry{
     }
     
 }
+
+// impl Drop for PageTableEntry {
+//     fn drop(&mut self) {
+//         self.write_zero();
+//     }
+// }
 
 
 
