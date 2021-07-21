@@ -79,28 +79,47 @@ impl PageTable{
         drop(self);
     }
 
+    /// Return the address of the PTE in page table pagetable
+    /// that corresponds to virtual address va.  If alloc!=0,
+    /// create any required page-table pages.
+    ///
+    /// The risc-v Sv39 scheme has three levels of page-table
+    /// pages. A page-table page contains 512 64-bit PTEs.
+    /// A 64-bit virtual address is split into five fields:
+    ///   39..63 -- must be zero.
+    ///   30..38 -- 9 bits of level-2 index.
+    ///   21..29 -- 9 bits of level-1 index.
+    ///   12..20 -- 9 bits of level-0 index.
+    ///    0..11 -- 12 bits of byte offset within the page.
+    /// 
+    /// Look up a virtual address, return the physical address,
+    /// or 0 if not mapped.
+    /// Can only be used to look up user pages.
+    fn unmap(
+        &mut self,
+        va: VirtualAddress
+    ) -> Option<&mut PageTableEntry> {
+        if va.as_usize() > MAXVA {
+            return None
+        }
+        let mut page_table = self as *mut PageTable;
+        for level in (1..=2).rev() {
+            let pte = unsafe{ &mut (*page_table).entries[va.page_num(level)] };
+            if pte.is_valid() {
+                page_table = pte.as_pagetable();
     
+            }else{
+               return None
+            }            
+        }
+        let pte = unsafe{&mut (*page_table).entries[va.page_num(0)]};
+        Some(pte)
+    }
 
-    // Return the address of the PTE in page table pagetable
-    // that corresponds to virtual address va.  If alloc!=0,
-    // create any required page-table pages.
-    //
-    // The risc-v Sv39 scheme has three levels of page-table
-    // pages. A page-table page contains 512 64-bit PTEs.
-    // A 64-bit virtual address is split into five fields:
-    //   39..63 -- must be zero.
-    //   30..38 -- 9 bits of level-2 index.
-    //   21..29 -- 9 bits of level-1 index.
-    //   12..20 -- 9 bits of level-0 index.
-    //    0..11 -- 12 bits of byte offset within the page.
-
-
-    // find  the PTE for a virtual address
-     fn walk(
-         &mut self, 
-         va: VirtualAddress, 
-         alloc:i32
-        ) -> Option<&mut PageTableEntry> {
+    fn unmap_alloc(
+        &mut self,
+        va: VirtualAddress
+    ) -> Option<&mut PageTableEntry> {
         let mut pagetable = self as *mut PageTable;
         let real_addr:usize = va.as_usize();
         if real_addr > MAXVA {
@@ -111,11 +130,7 @@ impl PageTable{
             if pte.is_valid() {
                 pagetable = pte.as_pagetable();
     
-            }else{
-                if alloc == 0{
-                    return None
-                }
-
+            }else {
                 let zeroed_pgt: Box<PageTable> = unsafe{ 
                     Box::new_zeroed().assume_init()
                 };
@@ -126,10 +141,10 @@ impl PageTable{
         Some(unsafe{&mut (*pagetable).entries[va.page_num(0)]})
     }
 
-    // Look up a virtual address, return the physical address,
-    // or 0 if not mapped.
-    // Can only be used to look up user pages.
-    pub fn walkaddr(
+    /// Look up a virtual address, return the physical address,
+    /// or 0 if not mapped.
+    /// Can only be used to look up user pages.
+    pub fn unmap_pgt(
         &mut self, 
         va: VirtualAddress
     ) -> Option<PhysicalAddress> {
@@ -137,7 +152,7 @@ impl PageTable{
         if addr > MAXVA{
             return None
         }
-        match self.walk(va, 0){
+        match self.unmap(va){
             Some(pte) => {
                 if !pte.is_valid(){
                     return None
@@ -160,7 +175,7 @@ impl PageTable{
     // be page-aligned. Returns 0 on success, -1 if walk() couldn't
     // allocate a needed page-table page.
 
-    pub unsafe fn mappages(
+    pub unsafe fn map(
         &mut self, 
         mut va: VirtualAddress, 
         mut pa: PhysicalAddress, 
@@ -171,10 +186,10 @@ impl PageTable{
         va.pg_round_down();
         last.pg_round_up();
         while va != last{
-            match self.walk(va, 1){
+            match self.unmap_alloc(va){
                 Some(pte) => {
                 // TODO - is_valid?
-                if pte.is_valid(){
+                if pte.is_valid() {
                     println!(
                         "va: {:#x}, pa: {:#x}, pte: {:#x}",
                         va.as_usize(),
@@ -211,7 +226,7 @@ impl PageTable{
             pa.as_usize(),
             size
         );
-        if !self.mappages(va, pa, size, perm){
+        if !self.map(va, pa, size, perm){
             panic!("kvmmap");
         }
     }
@@ -234,7 +249,7 @@ impl PageTable{
         let mem = RawPage::new_zeroed() as *mut u8;
         write_bytes(mem, 0, PGSIZE);
 
-        self.mappages(
+        self.map(
             VirtualAddress::new(0), 
             PhysicalAddress::new(mem as usize), 
             PGSIZE, 
@@ -245,12 +260,12 @@ impl PageTable{
     }
 
 
-    /// Allocate PTEs and physical memory to grow process from oldsz to
+    /// Allocate PTEs and physical memory to grow process from old_size to
     /// new_size, which need not be page aligned.  Returns new size or 0 on error.
-    pub unsafe fn uvmalloc(
+    pub unsafe fn uvm_alloc(
         &mut self, 
-        mut old_size:usize, 
-        new_size:usize
+        mut old_size: usize, 
+        new_size: usize
     ) -> Option<usize> {
         if new_size < old_size {
             return Some(old_size)
@@ -262,14 +277,14 @@ impl PageTable{
             let memory = RawPage::new_zeroed();
             write_bytes(memory as *mut u8, 0, PGSIZE);
 
-            if !self.mappages(
-            VirtualAddress::new(cur_size), 
-            PhysicalAddress::new(memory), 
-            PGSIZE, 
-            PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
+            if !self.map(
+                VirtualAddress::new(cur_size), 
+                PhysicalAddress::new(memory), 
+                PGSIZE, 
+                PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U
             ){
                 drop_in_place(memory as *mut RawPage);
-                self.uvmdealloc(cur_size, old_size);
+                self.uvm_dealloc(cur_size, old_size);
                 return None
             }
         }
@@ -279,14 +294,14 @@ impl PageTable{
 
     /// Free user memory pages,
     /// then free page-table pages
-    pub fn uvmfree(&mut self, size: usize) {
+    pub fn uvm_free(&mut self, size: usize) {
         if size > 0 {
             let mut pa = PhysicalAddress::new(size);
             pa.pg_round_up();
-            self.uvmunmap(
+            self.uvm_unmap(
                 VirtualAddress::new(0),
                  pa.as_usize(),
-                1
+                true
             );
         }
 
@@ -298,7 +313,7 @@ impl PageTable{
     /// new_size.  oldsz and newsz need not be page-aligned, nor does new_size
     /// need to be less than old_size.  old_size can be larger than the actual
     /// process size.  Returns the new process size.
-    pub fn uvmdealloc(
+    pub fn uvm_dealloc(
         &mut self, 
         old_size:usize, 
         new_size:usize
@@ -309,10 +324,10 @@ impl PageTable{
 
         if page_round_up(new_size) < page_round_up(old_size){
             let npages = (page_round_up(old_size) - page_round_up(new_size)) / PGSIZE;
-            self.uvmunmap(
+            self.uvm_unmap(
                 VirtualAddress::new(page_round_up(new_size)), 
                 npages, 
-                1
+                true
             );
         }
 
@@ -324,46 +339,37 @@ impl PageTable{
     /// Remove npages of mappings starting from va. va must be
     /// page-aligned. The mappings must exist.
     /// Optionally free the physical memory.
-    pub fn uvmunmap(
+    pub fn uvm_unmap(
         &mut self, 
-        va:VirtualAddress, 
-        npages:usize, 
-        do_free:usize
+        mut va: VirtualAddress, 
+        npages: usize, 
+        do_free: bool
     ){
-        if !va.is_page_aligned(){
+        if !va.is_page_aligned() {
             panic!("uvmunmap: not aligned");
         }
-
-        let mut a = va.clone();
-
-        while a != va.add_addr(npages * PGSIZE){
-            match self.walk(va, 0){
+        
+        for _ in 0..npages {
+            match self.unmap(va) {
                 Some(pte) => {
-                    if pte.as_usize() & PteFlags::V.bits() == 0 {
-                        panic!("uvmunmap: not mapped")
+                    if pte.is_valid() {
+                        panic!("uvm_unmap: not mapped");
                     }
-
                     if pte.as_flags() == PteFlags::V.bits() {
-                        panic!("uvmunmap: not a leaf")
+                        panic!("uvm_unmap: not a leaf");
                     }
-
-                    if do_free != 0 {
-                        unsafe{
-                            let pa = (&(*pte.as_pagetable())).as_addr();
-                            drop_in_place(pa as *mut RawPage);
-                        }
+                    if do_free {
+                        let pa = pte.as_pagetable();
+                        unsafe{ drop_in_place(pa) };
                     }
+                },
 
-                    pte.write_zero();
+                None => {
+                    panic!("uvm_unmap");
                 }
-
-                None => panic!("uvmunmap(): walk")
             }
-
-            a.add_page()
+            va.add_page();
         }
-
-
     }
 
 
@@ -373,14 +379,14 @@ impl PageTable{
     /// physical memory.
     /// returns 0 on success, -1 on failure.
     /// frees any allocated pages on failure.
-    pub unsafe fn uvmcopy(
+    pub unsafe fn uvm_copy(
         &mut self, 
         new: &mut Self, 
         size: usize
     ) -> Result<(), &'static str> {
         let mut va = VirtualAddress::new(0);
         while va.as_usize() != size {
-            match self.walk(va, 0) {
+            match self.unmap(va) {
                 Some(pte) => {
                     if !pte.is_valid() {
                         panic!("uvmcopy(): page not present");
@@ -393,17 +399,17 @@ impl PageTable{
                     let new_page_table = &mut *(RawPage::new_zeroed() as *mut PageTable);
                     new_page_table.write(& *page_table);
 
-                    if !new.mappages(
+                    if !new.map(
                         va,
                         PhysicalAddress::new(new_page_table.as_addr()),
                         PGSIZE,
                         flags
                     ) {
                         drop(new_page_table);
-                        new.uvmunmap(
+                        new.uvm_unmap(
                             VirtualAddress::new(0), 
                             va.as_usize() / PGSIZE, 
-                            1
+                            true
                         );
                         return Err("uvmcopy(): fail.")
                     }
@@ -421,8 +427,8 @@ impl PageTable{
 
     /// mark a PTE invalid for user access.
     /// used by exec for the user stack guard page.
-    pub fn uvmclear(&mut self, va: VirtualAddress) {
-        if let Some(pte) = self.walk(va, 0) {
+    pub fn uvm_clear(&mut self, va: VirtualAddress) {
+        if let Some(pte) = self.unmap(va) {
             pte.rm_user_bit();
         }else {
             panic!("uvmclear(): Not found valid pte for virtualaddress");
@@ -442,7 +448,7 @@ impl PageTable{
         va.pg_round_down();
 
         loop {
-            let pa = self.walkaddr(va).unwrap();
+            let pa = self.unmap_pgt(va).unwrap();
             let count = PGSIZE - (dst - va.as_usize());
             if len < count {
                 mem_copy(
@@ -473,7 +479,7 @@ impl PageTable{
         va.pg_round_down();
         loop {
             // Get physical address by virtual address
-            let pa = self.walkaddr(va).unwrap();
+            let pa = self.unmap_pgt(va).unwrap();
             // Get copy bytes of current page.
             let count = PGSIZE - (src - va.as_usize());
             if len < count {
@@ -509,7 +515,7 @@ impl PageTable{
         let mut va = VirtualAddress::new(src as usize);
         va.pg_round_down();
         loop {
-            let pa = self.walkaddr(va).unwrap();
+            let pa = self.unmap_pgt(va).unwrap();
             let count = PGSIZE - (src - va.as_usize());
             let s = (pa.as_usize() + (src - va.as_usize())) as *const u8;
             if max < count {
@@ -547,19 +553,19 @@ impl PageTable{
     /// Free a process's page table, and free the
     /// physical memory it refers to.
     pub fn proc_freepagetable(&mut self, size: usize) {
-        self.uvmunmap(
+        self.uvm_unmap(
             VirtualAddress::new(TRAMPOLINE ), 
             1, 
-            0
+            true
         );
 
-        self.uvmunmap(
+        self.uvm_unmap(
             VirtualAddress::new(TRAPFRAME),
             1,
-            0
+            false
         );
 
-        self.uvmfree(size);
+        self.uvm_free(size);
     }
 
 }

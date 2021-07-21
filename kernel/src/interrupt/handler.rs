@@ -67,7 +67,7 @@ pub unsafe fn lazy_allocate(stval: usize) {
     write_bytes(mm, 0, PGSIZE);
     let pa = PhysicalAddress::new(mm as usize);
 
-    if !page_table.mappages(
+    if !page_table.map(
         va,
         pa,
         PGSIZE,

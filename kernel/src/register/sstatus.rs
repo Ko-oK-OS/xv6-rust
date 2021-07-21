@@ -31,7 +31,7 @@ pub unsafe fn is_from_user() -> bool {
 
 // enable device interrupts
 #[inline]
-pub unsafe fn intr_on(){
+pub unsafe fn intr_on() {
     write(read() | SSTATUS::SIE as usize);
 }
 

@@ -109,33 +109,32 @@ impl ProcManager{
     pub fn alloc_proc(&mut self) -> Option<&mut Process> {
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
-            if guard.state == Procstate::UNUSED {
-                guard.pid = alloc_pid();
-                guard.set_state(Procstate::USED);
+            match guard.state {
+                Procstate::UNUSED => {
+                    guard.pid = alloc_pid();
+                    guard.set_state(Procstate::ALLOCATED);
 
-                let extern_data = p.extern_data.get_mut();
-                // Allocate a trapframe page.
-                let ptr = unsafe{ RawPage::new_zeroed() as *mut u8 };
+                    let extern_data = p.extern_data.get_mut();
+                    // Allocate a trapframe page.
+                    let ptr = unsafe{ RawPage::new_zeroed() as *mut u8 };
 
-                extern_data.set_trapframe(ptr as *mut Trapframe);
+                    extern_data.set_trapframe(ptr as *mut Trapframe);
 
-                // An empty user page table
-                unsafe{
-                    extern_data.proc_pagetable();
+                    // An empty user page table
+                    unsafe{
+                        extern_data.proc_pagetable();
+                    }
+                    
+                    // Set up new context to start executing at forkret, 
+                    // which returns to user space. 
+                    extern_data.init_context();
+                    drop(guard);
+
+                    return Some(p)
                 }
-                
-                // Set up new context to start executing at forkret, 
-                // which returns to user space. 
-                extern_data.init_context();
-                drop(guard);
-
-                return Some(p);
-        
-            }else {
-                drop(guard);
+                _ => { return None }
             }
         }
-
         None
     }
 
@@ -174,7 +173,7 @@ impl ProcManager{
 
 
 
-pub fn alloc_pid() -> usize{
+pub fn alloc_pid() -> usize {
     let guard = PID_LOCK.acquire();
     let pid;
     unsafe {

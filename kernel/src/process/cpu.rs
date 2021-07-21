@@ -75,12 +75,9 @@ impl CPUManager{
         }
 
         let c = self.mycpu();
-        // println!("Get my cpu");
         loop {
             // Avoid deadlock by ensuring that devices can interrupt.
-            println!("Before");
-            sstatus::intr_on();
-            println!("After");
+            // sstatus::intr_on();
             match PROC_MANAGER.seek_runnable() {
                 Some(p) => {
                     println!("Seek runnable process.");
@@ -90,12 +87,10 @@ impl CPUManager{
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
                     guard.state = Procstate::RUNNING;
-                    println!("Before switch");
                     swtch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
                     );
-                    println!("After switch");
                     if c.get_context_mut().is_null() {
                         panic!("context switch back with no process reference.");
                     }
