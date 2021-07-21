@@ -123,7 +123,7 @@ impl VirtualAddress{
     }
 
 
-    pub fn page_num(&self, level:usize) -> usize{
+    pub fn page_num(&self, level: usize) -> usize{
         (self.0 >> (PGSHIFT + level * PGMASKLEN)) & PGMASK
     }
 

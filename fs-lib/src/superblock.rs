@@ -6,8 +6,8 @@ use super::{ IPB, BPB };
 /// In-memory copy of superblock
 #[derive(Debug)]
 pub struct SuperBlock {
-    data: MaybeUninit<RawSuperBlock>,
-    initialized: AtomicBool,
+    pub data: MaybeUninit<RawSuperBlock>,
+    pub initialized: AtomicBool,
 }
 
 unsafe impl Sync for SuperBlock {}
@@ -95,4 +95,19 @@ pub struct RawSuperBlock {
     pub logstart: u32,   // Block number of first log block
     pub inodestart: u32, // Block number of first inode block
     pub bmapstart: u32,  // Block number of first free map block
+}
+
+impl RawSuperBlock {
+    pub const fn uninit() -> Self {
+        Self {
+            magic: 0,
+            size: 0,
+            nblocks: 0,
+            ninodes: 0,
+            nlog: 0,
+            logstart: 0,
+            inodestart: 0,
+            bmapstart: 0
+        }
+    }
 }

@@ -19,4 +19,8 @@ impl Pipe {
     pub fn writeable(&self) -> bool {
         false
     }
+
+    pub fn close(&self, writeable: bool) {
+
+    }
 }

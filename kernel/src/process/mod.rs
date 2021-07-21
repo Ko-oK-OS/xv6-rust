@@ -21,19 +21,15 @@ pub use process::*;
 pub use scheduler::*;
 pub use elf::*;
 
-static INITCODE: [u8; 52] = [
-    0x17, 0x05, 0x00, 0x00, 0x13, 0x05, 0x45, 0x02,
-    0x97, 0x05, 0x00, 0x00, 0x93, 0x85, 0x35, 0x02,
-    0x93, 0x08, 0x70, 0x00, 0x73, 0x00, 0x00, 0x00,
-    0x93, 0x08, 0x20, 0x00, 0x73, 0x00, 0x00, 0x00,
-    0xef, 0xf0, 0x9f, 0xff, 0x2f, 0x69, 0x6e, 0x69,
-    0x74, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00
+static INITCODE: [u8; 51] = [
+    0x17, 0x05, 0x00, 0x00, 0x13, 0x05, 0x05, 0x02, 0x97, 0x05, 0x00, 0x00, 0x93, 0x85, 0x05, 0x02,
+    0x9d, 0x48, 0x73, 0x00, 0x00, 0x00, 0x89, 0x48, 0x73, 0x00, 0x00, 0x00, 0xef, 0xf0, 0xbf, 0xff,
+    0x2f, 0x69, 0x6e, 0x69, 0x74, 0x00, 0x00, 0x01, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
 ];
 
-// Create a new process, copying the parent.
-// Sets up child kernel stack to return as if from fork() system call.
-
+/// Create a new process, copying the parent.
+/// Sets up child kernel stack to return as if from fork() system call.
 pub unsafe fn fork() -> isize {
     let my_proc = CPU_MANAGER.myproc().expect("Fail to get my cpu");
 
@@ -45,7 +41,7 @@ pub unsafe fn fork() -> isize {
 
         // Copy user memory from parent to child
 
-        match extern_data.pagetable.as_mut().unwrap().uvmcopy(
+        match extern_data.pagetable.as_mut().unwrap().uvm_copy(
             other_extern_data.pagetable.as_mut().unwrap(),
             extern_data.size
         ) {
@@ -81,9 +77,9 @@ pub unsafe fn fork() -> isize {
         let pid = guard.pid as isize;
         drop(guard);
 
-        WAIT_LOCK.acquire();
+        let wait_guard = PROC_MANAGER.wait_lock.acquire();
         other_extern_data.parent = NonNull::new(my_proc as *mut Process);
-        WAIT_LOCK.release();
+        drop(wait_guard);
 
         let mut guard = other_proc.data.acquire();
         guard.set_state(Procstate::RUNNABLE);
@@ -121,7 +117,7 @@ pub unsafe fn exit(status: i32) {
     LOG.end_op();
     extern_data.cwd = None;
 
-    let wait_guard = WAIT_LOCK.acquire();
+    let wait_guard = PROC_MANAGER.wait_lock.acquire();
     // TODO: Give any children to init
     
     // Parent might be sleeping in wait(). 

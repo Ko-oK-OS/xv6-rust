@@ -1,10 +1,15 @@
-// Supervisor Status Register, sstatus
+/// Supervisor Status Register, sstatus
 pub enum SSTATUS {
-    SPP = 1 << 8,  // Previous mode, 1=Supervisor, 0=User
-    SPIE = 1 << 5, // Supervisor Previous Interrupt Enable
-    UPIE = 1 << 4, // User Previous Interrupt Enable
-    SIE = 1 << 1, // Supervisor Interrupt Enable
-    UIE = 1 << 0  // User Interrupt Enable
+    /// Previous mode, 1=Supervisor, 0=User
+    SPP = 1 << 8,
+    /// Supervisor Previous Interrupt Enable
+    SPIE = 1 << 5,
+    /// User Previous Interrupt Enable
+    UPIE = 1 << 4,
+    /// Supervisor Interrupt Enable
+    SIE = 1 << 1, 
+    /// User Interrupt Enable
+    UIE = 1 << 0
 }
 
 #[inline]
@@ -31,20 +36,20 @@ pub unsafe fn is_from_user() -> bool {
 
 // enable device interrupts
 #[inline]
-pub unsafe fn intr_on(){
+pub unsafe fn intr_on() {
     write(read() | SSTATUS::SIE as usize);
 }
 
 // disable device interrupts
 #[inline]
 pub unsafe fn intr_off(){
-    write(read() & SSTATUS::SIE as usize);
+    write(read() & !(SSTATUS::SIE as usize));
 }
 
 
 // are device interrupts enabled?
 #[inline]
-pub unsafe fn intr_get() -> bool{
+pub unsafe fn intr_get() -> bool {
     let x = read();
     return (x & SSTATUS::SIE as usize) != 0;
 }

@@ -29,8 +29,9 @@ impl FileTable {
     /// Allocate a file structure
     pub fn allocate(&self) -> Option<&mut VFile> {
         let guard = self.lock.acquire();
-        for f in self.get_table().iter_mut() {
+        for (index, f) in self.get_table().iter_mut().enumerate() {
             if f.refs == 0 {
+                f.index = index;
                 f.refs = 1;
                 drop(guard);
                 return Some(f)
@@ -39,4 +40,5 @@ impl FileTable {
         drop(guard);
         None
     }
+    
 }

@@ -14,16 +14,15 @@ mod devices;
 mod file_table;
 mod ramdisk;
 mod stat;
-mod dir;
 mod bitmap;
 
 pub use bio::Buf;
 pub use bio::BCACHE;
 pub use log::LOG;
-pub use file::VFile;
+pub use file::{ VFile, FileType };
 pub use file_table::FILE_TABLE;
 pub use inode::{ Inode, InodeData, ICACHE };
-pub use dinode::{ DiskInode, Dirent, InodeType };
+pub use dinode::{ DiskInode, DirEntry, InodeType };
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 
 use log::Log;
@@ -45,4 +44,16 @@ pub unsafe fn init(dev: u32) {
     let log_ptr = LOG.acquire().deref_mut() as *mut Log;
     log_ptr.as_mut().unwrap().init(dev);
     println!("file system: setup done");
+}
+
+#[cfg(test)]
+mod test {
+    use super::bio::Bcache;
+
+    pub fn read_disk() {
+        let block_cache = Bcache::new();
+        block_cache.init();
+        // read superblock
+        block_cache.bread(0, 0);
+    }
 }

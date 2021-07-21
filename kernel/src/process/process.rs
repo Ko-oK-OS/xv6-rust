@@ -80,7 +80,7 @@ pub struct ProcExtern {
     pub parent: Option<NonNull<Process>>,
     
     pub ofile: Vec<Arc<RefCell<VFile>>>,
-    pub cwd: Option<Box<Inode>>
+    pub cwd: Option<Inode>
 
 }
 
@@ -154,27 +154,23 @@ impl ProcExtern {
         // only the supervisor uses it, on the way
         // to/from user space, so not PTE_U. 
         // let page_table = &mut *page_table;
-        let is_ok = page_table.mappages(
+        if !page_table.map(
             VirtualAddress::new(TRAMPOLINE),
             PhysicalAddress::new(trampoline as usize),
             PGSIZE,
             PteFlags::R | PteFlags::X
-        );
-
-        if !is_ok {
-            page_table.uvmfree(0);
+        ) {
+            page_table.uvm_free(0);
         }
 
         // map the trapframe just below TRAMPOLINE, for trampoline.S 
-        let is_ok = page_table.mappages(
+        if !page_table.map(
             VirtualAddress::new(TRAPFRAME), 
             PhysicalAddress::new(self.trapframe as usize),
             PGSIZE,
             PteFlags::R | PteFlags::X
-        );
-
-        if !is_ok {
-            page_table.uvmfree(0);
+        ) {
+            page_table.uvm_free(0);
         }
 
         self.pagetable = Some(page_table);
@@ -219,31 +215,29 @@ impl Process{
         // only the supervisor uses it, on the way
         // to/from user space, so not PTE_U. 
         unsafe{
-            let flag = page_table.mappages(
+            if !page_table.map(
             VirtualAddress::new(TRAMPOLINE), 
             PhysicalAddress::new(trampoline as usize),
              PGSIZE, 
              PteFlags::R | PteFlags::X
-            );
-            if !flag {
-                page_table.uvmfree(0);
+            ) {
+                page_table.uvm_free(0);
                 return None
             }
 
             // map the trapframe just below TRAMPOLINE, for trampoline.S 
-            let flag = page_table.mappages(
+            if !page_table.map(
                 VirtualAddress::new(TRAPFRAME), 
                 PhysicalAddress::new((&*self.extern_data.get()).get_trapframe() as usize), 
                 PGSIZE, 
                 PteFlags::R | PteFlags::W
-            );
-            if !flag {
-                page_table.uvmunmap(
+            ) {
+                page_table.uvm_unmap(
                     VirtualAddress::new(TRAPFRAME), 
                     1, 
-                    0
+                    false
                 );
-                page_table.uvmfree(0);
+                page_table.uvm_free(0);
                 return None
             }
         }
@@ -258,7 +252,7 @@ impl Process{
     /// including user pages.
     /// p.acquire() must be held.
 
-    pub fn freeproc(&mut self) {
+    pub fn free_proc(&mut self) {
         let mut extern_data = self.extern_data.get_mut();
         if !extern_data.trapframe.is_null() {
             // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
@@ -266,7 +260,7 @@ impl Process{
             extern_data.set_trapframe(0 as *mut Trapframe);
 
             if let Some(page_table) = extern_data.pagetable.as_mut() {
-                page_table.proc_freepagetable(extern_data.size);
+                page_table.proc_free_pagetable(extern_data.size);
             }
 
 
@@ -290,12 +284,12 @@ impl Process{
     
     /// Grow or shrink user memory by n bytes. 
     /// Return true on success, false on failure. 
-    pub fn growproc(&mut self, n: isize) -> Result<(), &'static str> {
+    pub fn grow_proc(&mut self, n: isize) -> Result<(), &'static str> {
         let mut extern_data = self.extern_data.get_mut();
         let mut size = extern_data.size; 
         let page_table = extern_data.pagetable.as_mut().unwrap();
         if n > 0 {
-            match unsafe { page_table.uvmalloc(size, size + n as usize) } {
+            match unsafe { page_table.uvm_alloc(size, size + n as usize) } {
                 Some(new_size) => {
                     size = new_size;
                 },
@@ -306,7 +300,7 @@ impl Process{
             }
         }else if n < 0 {
             let new_size = (size as isize + n) as usize;
-            size = page_table.uvmdealloc(size, new_size);
+            size = page_table.uvm_dealloc(size, new_size);
         }
 
         extern_data.size = size;

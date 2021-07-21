@@ -13,11 +13,18 @@ pub const NBUF: usize = MAXOPBLOCKS * 3;
 /// size of log space in disk
 pub const LOGSIZE: usize = MAXOPBLOCKS * 3;
 
-pub const NOFILE: usize = 16;  // open files per process
-pub const NFILE: usize = 100;  // open files per system
-pub const NINODE: usize = 50;  // maximum number of active i-nodes
-pub const ROOTDEV: u32 = 1;  // device number of file system root disk
-pub const FSSIZE: usize = 1000;  // size of file system in blocks
+/// open files per process
+pub const NOFILE: usize = 16;
+/// open files per system
+pub const NFILE: usize = 100; 
+/// maximum number of active i-nodes
+pub const NINODE: usize = 50;  
+/// device number of file system root disk
+pub const ROOTDEV: u32 = 1;
+/// size of file system in blocks
+pub const FSSIZE: usize = 1000; 
+
+pub const ROOTINUM: u32 = 1;
 
 pub const NDIRECT: usize = 12;
 pub const NINDIRECT: usize =  BSIZE / 8;

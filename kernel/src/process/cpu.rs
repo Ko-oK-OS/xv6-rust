@@ -37,13 +37,6 @@ impl CPUManager{
     pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
         push_off();
         let c = CPU_MANAGER.mycpu();
-        // if let Some(proc) = c.process {
-        //    let p = &mut *(proc.as_ptr());
-        //    pop_off();
-        //    return Some(p)
-        // }
-        // pop_off();
-        // None
         let p = &mut *c.process.unwrap().as_ptr();
         pop_off();
         Some(p)
@@ -75,25 +68,21 @@ impl CPUManager{
         }
 
         let c = self.mycpu();
-        println!("Get my cpu");
         loop {
             // Avoid deadlock by ensuring that devices can interrupt.
-            sstatus::intr_on();
+            // sstatus::intr_on();
             match PROC_MANAGER.seek_runnable() {
                 Some(p) => {
-                    println!("Seek runnable process.");
                     // Switch to chosen process. It is the process's job
                     // to release it's lock and then reacquire it 
                     // before jumping back to us.
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
                     guard.state = Procstate::RUNNING;
-                    println!("Before switch");
                     swtch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
                     );
-                    println!("After switch");
                     if c.get_context_mut().is_null() {
                         panic!("context switch back with no process reference.");
                     }

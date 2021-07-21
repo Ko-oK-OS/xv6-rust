@@ -4,7 +4,7 @@ use core::mem::size_of;
 mod inode;
 mod superblock;
 
-pub use inode::{ DiskInode, Dirent, InodeType };
+pub use inode::{ DiskInode, DirEntry, InodeType };
 pub use superblock:: { SuperBlock, RawSuperBlock };
 
 /// magic number indentifying this specific file system

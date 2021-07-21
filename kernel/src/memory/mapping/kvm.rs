@@ -49,7 +49,7 @@ unsafe fn kvm_make() {
 
     // println!("virt test map......");
     // map VIRT_TEST for shutdown or reboot
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(VIRT_TEST),
         PhysicalAddress::new(VIRT_TEST),
         PGSIZE,
@@ -58,7 +58,7 @@ unsafe fn kvm_make() {
 
     println!("uart map......");
     // uart registers
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(UART0), 
         PhysicalAddress::new(UART0), 
         PGSIZE, 
@@ -67,7 +67,7 @@ unsafe fn kvm_make() {
 
     println!("virtio0 map......");
     // virtio mmio disk interface
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(VIRTIO0), 
         PhysicalAddress::new(VIRTIO0), 
         PGSIZE, 
@@ -76,7 +76,7 @@ unsafe fn kvm_make() {
 
     // PCI-E ECAM (configuration space), for pci.c
     println!("PCL_E ECAM map......");
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(ECAM),
         PhysicalAddress::new(ECAM),
         0x10000000,
@@ -85,7 +85,7 @@ unsafe fn kvm_make() {
 
     // pci.c maps the e1000's registers here.
     println!("e1000's registers map......");
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(E1000_REGS),
         PhysicalAddress::new(E1000_REGS),
         0x20000,
@@ -94,7 +94,7 @@ unsafe fn kvm_make() {
 
     println!("clint map......");
     // CLINT
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(CLINT.as_usize()),
         PhysicalAddress::new(CLINT.as_usize()),
         0x10000,
@@ -103,7 +103,7 @@ unsafe fn kvm_make() {
 
     println!("plic map......");
     // PLIC
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(PLIC.as_usize()), 
         PhysicalAddress::new(PLIC.as_usize()), 
         0x400000, 
@@ -112,7 +112,7 @@ unsafe fn kvm_make() {
 
     println!("text map......");
     // map kernel text exectuable and read-only
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(KERNBASE.as_usize()), 
         PhysicalAddress::new(KERNBASE.as_usize()), 
         etext as usize - Into::<usize>::into(KERNBASE), 
@@ -121,7 +121,7 @@ unsafe fn kvm_make() {
 
     println!("kernel data map......");
     // map kernel data and the physical RAM we'll make use of
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(etext as usize), 
         PhysicalAddress::new(etext as usize), 
         Into::<usize>::into(PHYSTOP) - etext as usize, 
@@ -131,7 +131,7 @@ unsafe fn kvm_make() {
     println!("trampoline map......");
     // map the trampoline for trap entry/exit
     // the highest virtual address in the kernel
-    KERNEL_PAGETABLE.kvmmap(
+    KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(TRAMPOLINE), 
         PhysicalAddress::new(trampoline as usize), 
         PGSIZE, 

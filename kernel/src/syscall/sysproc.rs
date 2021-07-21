@@ -27,7 +27,7 @@ pub fn sys_sbrk() -> usize {
 
     let my_proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
     let addr = my_proc.extern_data.get_mut().size;
-    match my_proc.growproc(size as isize) {
+    match my_proc.grow_proc(size as isize) {
         Ok(()) => {
             return addr
         }

@@ -21,9 +21,10 @@ pub struct DiskInode {
     pub addrs: [u32; NDIRECT+1] // Data block addresses
 }
 
-pub struct Dirent {
-    inum: u16,
-    name:[u8;DIRSIZ]
+#[repr(C)]
+pub struct DirEntry {
+    pub inum: u16,
+    pub name:[u8;DIRSIZ]
 }
 
 impl DiskInode {
@@ -35,6 +36,15 @@ impl DiskInode {
             nlink: 0,
             size: 0,
             addrs: [0; NDIRECT+1]
+        }
+    }
+}
+
+impl DirEntry {
+    pub const fn new() -> Self {
+        Self {
+            inum: 0,
+            name: [0;DIRSIZ]
         }
     }
 }
