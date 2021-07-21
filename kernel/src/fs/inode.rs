@@ -1,15 +1,16 @@
-use crate::define::fs::{ NDIRECT, BSIZE, NINODE, IPB, NINDIRECT, MAXFILE };
+use crate::define::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE, ROOTDEV, ROOTINUM};
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
 use crate::memory::{either_copy_in, either_copy_out};
 use crate::misc::{ min, mem_set };
+use crate::process::CPU_MANAGER;
 
 use alloc::boxed::Box;
 use alloc::string::String;
 
 use core::mem::size_of;
-use core::ptr::{ read, write };
+use core::ptr::{self, read, write};
 
 use array_macro::array;
 
@@ -17,7 +18,7 @@ use super::Buf;
 use super::BCACHE;
 use super::SUPER_BLOCK;
 use super::stat::Stat;
-use super::{ InodeType, DiskInode };
+use super::{ InodeType, DiskInode, DirEntry };
 use super::bitmap::{balloc, bfree};
 
 pub static ICACHE: InodeCache = InodeCache::new();
@@ -130,9 +131,107 @@ impl InodeCache {
             inum,
             index: empty_i
         }
+    }
 
+    /// Helper function for 'namei' and 'namei_parent'
+    fn namex(
+        &self, 
+        path: &[u8], 
+        name: &mut [u8;DIRSIZ], 
+        is_parent: bool
+    ) -> Option<Inode> {
+        let mut inode: Inode;
+        if path[0] == b'/' {
+            inode = self.get(ROOTDEV, ROOTINUM);
+        } else {
+            let p = unsafe { CPU_MANAGER.myproc().unwrap() };
+            inode = self.dup(p.extern_data.get_mut().cwd.as_ref().unwrap());
+        }
+        let mut cur: usize = 0;
+        loop {
+            cur = skip_path(path, cur, name);
+            if cur == 0 { break; }
+
+            let mut data_guard = inode.lock();
+            if data_guard.dinode.itype != InodeType::Directory {
+                drop(data_guard);
+                return None
+            }
+            if is_parent && path[cur] == 0 {
+                drop(data_guard);
+                return Some(inode)
+            }
+
+            match data_guard.dir_lookup(name) {
+                None => {
+                    drop(data_guard);
+                    return None
+                },
+                Some(last_inode) => {
+                    drop(data_guard);
+                    inode = last_inode;
+                }
+            }
+        }
+        if is_parent {
+            // only when querying root inode's parent 
+            println!("Kernel warning: namex querying root inode's parent");
+            None 
+        } else {
+            Some(inode)
+        }
+    }
+
+    /// namei interprets the path argument as an pathname to Unix file. 
+    /// It will return an [`inode`] if succeed, Err(()) if fail. 
+    /// It must be called inside a transaction(i.e.,'begin_op' and `end_op`) since it calls `put`.
+    /// Note: the path should end with 0u8, otherwise it might panic due to out-of-bound. 
+    pub fn namei(&self, path: &[u8]) -> Option<Inode> {
+        let mut name: [u8;DIRSIZ] = [0;DIRSIZ];
+        self.namex(path, &mut name, false)
+    }
+
+    /// Same behavior as `namei`, but return the parent of the inode, 
+    /// and copy the end path into name. 
+    pub fn namei_parent(&self, path: &[u8], name: &mut [u8;DIRSIZ]) -> Option<Inode> {
+        self.namex(path, name, true)
     }
 }
+
+/// Skip the path starting at cur by b'/'s. 
+/// It will copy the skipped content to name. 
+/// Return the current offset after skiping. 
+fn skip_path(path: &[u8], mut cur: usize, name: &mut [u8; DIRSIZ]) -> usize {
+    // skip preceding b'/'
+    while path[cur] == b'/' {
+        cur += 1;
+    }
+    if path[cur] == 0 {
+        return 0
+    }
+
+    let start = cur;
+    while path[cur] != b'/' && path[cur] != 0 {
+        cur += 1;
+    }
+
+    let mut count = cur - start; 
+    if count >= name.len() {
+        debug_assert!(false);
+        count = name.len() - 1;
+    }
+    unsafe{
+        ptr::copy(path.as_ptr().offset(start as isize), name.as_mut_ptr(), count);
+    }
+    name[count] = 0;
+
+    // skip succeeding b'/'
+    while path[cur] == b'/' {
+        cur += 1;
+    }
+    cur
+}
+
 
 struct InodeMeta {
     /// device number
@@ -362,6 +461,34 @@ impl InodeData {
         }
 
         Ok(())
+    }
+
+    /// Look for an inode entry in this directory according the name. 
+    /// Panics if this is not a directory. 
+    fn dir_lookup(&mut self, name: &[u8; DIRSIZ]) -> Option<Inode> {
+        debug_assert!(self.dev != 0);
+        if self.dinode.itype != InodeType::Directory {
+            panic!("inode type is not directory");
+        }
+
+        let de_size = size_of::<DirEntry>();
+        let mut dir_entry = DirEntry::new();
+        let dir_entry_ptr = &mut dir_entry as *mut _ as *mut u8;
+        for offset in (0..self.dinode.size).step_by(de_size) {
+            self.read(true, dir_entry_ptr as usize, offset, de_size as u32).expect("Cannot read entry in this dir");
+            if dir_entry.inum == 0 {
+                continue;
+            }
+            for i in 0..DIRSIZ {
+                if dir_entry.name[i] != name[i] {
+                    break;
+                }
+                if dir_entry.name[i] == 0 {
+                    return Some(ICACHE.get(self.dev, dir_entry.inum as u32))
+                }
+            }
+        }
+        None
     }
 }
 

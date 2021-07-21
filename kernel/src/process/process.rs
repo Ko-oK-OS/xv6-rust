@@ -80,7 +80,7 @@ pub struct ProcExtern {
     pub parent: Option<NonNull<Process>>,
     
     pub ofile: Vec<Arc<RefCell<VFile>>>,
-    pub cwd: Option<Box<Inode>>
+    pub cwd: Option<Inode>
 
 }
 

@@ -46,7 +46,7 @@ pub struct ElfHeader {
 }
 
 
-// Programe Section Header
+// Program Section Header
 #[repr(C)]
 pub struct ProgHeader {
     pub prog_type: u32,
