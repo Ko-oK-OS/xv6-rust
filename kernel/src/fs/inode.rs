@@ -114,6 +114,8 @@ impl InodeCache {
             if dinode.itype == InodeType::Empty {
                 dinode.itype = itype;
                 // Commit to change for dindoe
+                // Value move occurs here, block will write back when 
+                // log commit, so we don't have to drop block explicitly. 
                 LOG.write(block);
                 return Some(self.get(dev, inum))
             }
