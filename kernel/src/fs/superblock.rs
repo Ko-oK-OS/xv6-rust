@@ -83,6 +83,11 @@ impl SuperBlock {
         sb.bmapstart
     }
 
+    /// inode numbers
+    pub fn ninodes(&self) -> u32 {
+        self.read().ninodes
+    }
+
     /// Given an inode number. 
     /// Return the blockno of the block this inode resides. 
     /// Panic if the queryed inode out of range. 

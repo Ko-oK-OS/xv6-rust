@@ -29,6 +29,9 @@ use log::Log;
 use bio::BufData;
 use devices::DEVICES;
 
+use crate::define::fs::DIRSIZ;
+use crate::lock::sleeplock::SleepLockGuard;
+
 // pub trait File: Send + Sync {
 //     fn read(&self, addr: usize, buf: &mut [u8]) -> Result<usize, &'static str>;
 //     fn write(&self, addr: usize, buf: &[u8]) -> Result <usize, &'static str>;
@@ -44,6 +47,60 @@ pub unsafe fn init(dev: u32) {
     let log_ptr = LOG.acquire().deref_mut() as *mut Log;
     log_ptr.as_mut().unwrap().init(dev);
     println!("file system: setup done");
+}
+
+pub fn create(
+    path: &[u8],
+    itype: InodeType,
+    major: i16,
+    minor: i16
+) -> Result<Inode, &'static str> {
+    let mut name = [0;DIRSIZ];
+    let dirinode = ICACHE.namei_parent(path, &mut name).unwrap();
+    let mut dirinode_guard = dirinode.lock();
+    
+    match dirinode_guard.dir_lookup(&name) {
+        Some(inode) => {
+            drop(dirinode_guard);
+            let inode_guard = inode.lock();
+            match inode_guard.dinode.itype {
+                InodeType::Device | InodeType::File => {
+                    if itype == InodeType::File {
+                        drop(inode_guard);
+                        return Ok(inode)
+                    }
+                    return Err("create: unmatched type.");
+                },
+
+                _ => {
+                    return Err("create: unmatched type.")
+                }
+            }
+        },
+
+        None => {}
+    }
+    // Allocate a new inode to create file
+    let inode = ICACHE.alloc(dirinode.dev, itype).unwrap();
+    
+    let mut inode_guard = inode.lock();
+    // initialize new allocated inode
+    inode_guard.dinode.major = major;
+    inode_guard.dinode.minor = minor;
+    inode_guard.dinode.nlink = 1;
+    // Write back to disk
+    inode_guard.update(&inode);
+
+    // Directory, create .. 
+    if itype == InodeType::Directory {
+        // Create . and .. entries. 
+        inode_guard.dinode.nlink += 1;
+        inode_guard.update(&inode);
+        // No nlink++ for . to avoid recycle ref count. 
+        // TODO: dirlink
+    }
+    drop(inode_guard);
+    Ok(inode)
 }
 
 #[cfg(test)]

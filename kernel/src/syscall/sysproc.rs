@@ -23,7 +23,7 @@ pub fn sys_sbrk() -> usize {
     let mut size: usize = 0;
 
     // get syscall argument
-    argint(0, &mut size);
+    arg_int(0, &mut size);
 
     let my_proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
     let addr = my_proc.extern_data.get_mut().size;

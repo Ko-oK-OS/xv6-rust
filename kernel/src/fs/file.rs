@@ -25,6 +25,7 @@ pub enum FileType {
 
 /// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file.
+#[derive(Clone, Copy)]
 pub struct VFile {
     pub(crate) index: usize,
     pub(crate) ftype: FileType,
