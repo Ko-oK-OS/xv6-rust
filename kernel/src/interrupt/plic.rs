@@ -4,11 +4,7 @@ use core::convert::Into;
 use crate::define::memlayout;
 use crate::process::{cpu};
 
-
-//
 // the riscv Platform Level Interrupt Controller (PLIC).
-//
-
 
 pub unsafe fn plic_init(){
     println!("plic init......");
@@ -36,7 +32,7 @@ pub unsafe fn plic_init_hart(){
     
 }
 
-// ask the PLIC what interrupt we should serve.
+/// ask the PLIC what interrupt we should serve.
 pub unsafe fn plic_claim() -> usize{
     let id = cpu::cpuid();
     let plic_sclaim = memlayout::plic_sclaim(id);

@@ -49,9 +49,9 @@ pub fn fetch_str(addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), &'st
     };
 
     let extern_data = unsafe{ 
-        &*my_proc.extern_data.get()
+        &mut *my_proc.extern_data.get()
     };
-    let pgt = extern_data.pagetable.as_ref().unwrap();
+    let pgt = extern_data.pagetable.as_mut().unwrap();
     pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len)?;
     Ok(())
 

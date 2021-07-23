@@ -24,10 +24,11 @@ pub use file_table::FILE_TABLE;
 pub use inode::{ Inode, InodeData, ICACHE };
 pub use dinode::{ DiskInode, DirEntry, InodeType };
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
+pub use devices::DEVICE_LIST;
 
 use log::Log;
 use bio::BufData;
-use devices::DEVICES;
+
 
 use crate::define::fs::DIRSIZ;
 use crate::lock::sleeplock::SleepLockGuard;

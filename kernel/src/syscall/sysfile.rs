@@ -47,6 +47,7 @@ pub fn sys_open() -> Result<usize, &'static str> {
     match OpenMode::mode(open_mode) {
         OpenMode::CREATE => {
             let inode_guard: SleepLockGuard<InodeData>;
+            
         },
 
         _ => {

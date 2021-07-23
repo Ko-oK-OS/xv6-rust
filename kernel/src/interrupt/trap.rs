@@ -21,7 +21,6 @@ pub unsafe fn trap_init_hart() {
     extern "C" {
         fn kernelvec();
     }
-
     stvec::write(kernelvec as usize);
 }
 
@@ -35,7 +34,7 @@ pub unsafe fn usertrap() {
     let sepc = sepc::read();
     let scause = scause::read();
 
-    let which_dev = devintr();
+    let which_dev = device_intr();
     if !sstatus::is_from_user() {
         panic!("usertrap(): not from user mode");
     }
@@ -147,9 +146,6 @@ pub unsafe fn usertrap_ret() -> ! {
 
 }
 
-
-
-
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
 #[no_mangle]
@@ -157,7 +153,7 @@ pub unsafe fn kerneltrap(
    arg0: usize, arg1: usize, arg2: usize, _: usize,
    _: usize, _: usize, _: usize, which: usize
 ) {
-
+    println!("Enter kernel trap");
     let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
@@ -167,22 +163,17 @@ pub unsafe fn kerneltrap(
     println!("sstatus: 0x{:x}", sstatus);
     println!("scause: 0x{:x}", scause);
     println!("stval: 0x{:x}", stval);
-    // let stval = stval::read();
-
-    // if !sstatus::is_from_supervisor() {
-    //     panic!("kerneltrap: not from supervisor mode");
-    // }
 
     if sstatus::intr_get() {
         panic!("kerneltrap(): interrupts enabled");
     }
     
-    let which_dev = devintr();
+    let cause = device_intr();
 
-    match which_dev {
+    match cause {
         0 => {
             // modify sepc to countine running after restoring context
-            sepc += 2;
+            sepc += 4;
             
             let scause = Scause::new(scause);
             match scause.cause(){
@@ -200,24 +191,17 @@ pub unsafe fn kerneltrap(
 
                 _ => panic!("Unresolved Trap! scause:{:?}", scause.cause())
             }
-
         }
-
         1 => {
             panic!("Unsolved solution!");
-            
-
         }
-
         2 => {
             CPU_MANAGER.yield_proc();
         }
-
         _ => {
             unreachable!();
         }
     }
-
     // store context
     sepc::write(sepc);
     sstatus::write(sstatus);
@@ -234,12 +218,12 @@ pub unsafe fn clockintr(){
     drop(ticks);
 }
 
-// check if it's an external interrupt or software interrupt,
-// and handle it.
-// returns 2 if timer interrupt,
-// 1 if other device,
-// 0 if not recognized.
-unsafe fn devintr() -> usize {
+/// check if it's an external interrupt or software interrupt,
+/// and handle it.
+/// returns 2 if timer interrupt,
+/// 1 if other device,
+/// 0 if not recognized.
+unsafe fn device_intr() -> usize {
     let scause = scause::read();
     let scause = Scause::new(scause);
 
@@ -247,19 +231,17 @@ unsafe fn devintr() -> usize {
             Trap::Interrupt(Interrupt::SupervisorExternal) => {
                 println!("Supervisor Enternal Interrupt Occures!");
             // this is a supervisor external interrupt, via PLIC.
-
             // irq indicates which device interrupted.
             let irq = plic::plic_claim();
 
             if irq == UART0_IRQ as usize{
-                // TODO: uartintr
-                uart_intr();
                 println!("uart interrupt");
+                uart_intr();
 
             }else if irq == VIRTIO0_IRQ as usize{
                 // TODO: virtio_disk_intr
                 println!("virtio0 interrupt");
-            }else if irq != 0{
+            }else if irq != 0 {
                 println!("unexpected intrrupt, irq={}", irq);
             }
 
@@ -276,9 +258,7 @@ unsafe fn devintr() -> usize {
             // forwarded by timervec in kernelvec.S.
 
             if cpu::cpuid() == 0{
-                // TODO: clockintr
                 clockintr();
-                // println!("clockintr!");
             }
 
             // acknowledge the software interrupt by clearing

@@ -97,7 +97,7 @@ impl InodeCache {
         let ninodes = unsafe {
             SUPER_BLOCK.ninodes()
         };
-        for inum in 1..=ninodes {
+        for inum in 1 ..= ninodes {
             // get block id
             let block_id = unsafe {
                 SUPER_BLOCK.locate_inode(inum)
@@ -500,7 +500,8 @@ impl InodeData {
 
     /// Look for an inode entry in this directory according the name. 
     /// Panics if this is not a directory. 
-    pub fn dir_lookup(&mut self, name: &[u8; DIRSIZ]) -> Option<Inode> {
+    pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
+        assert!(name.len() == DIRSIZ);
         debug_assert!(self.dev != 0);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
@@ -524,6 +525,37 @@ impl InodeData {
             }
         }
         None
+    }
+
+    /// Write s new directory entry (name, inum) into the directory
+    pub fn dir_link(&mut self, name: &[u8], inum: u32) -> Result<(), &'static str>{
+        self.dir_lookup(name).ok_or("Fail to find inode")?;
+        let mut dir_entry = DirEntry::new();
+        // look for an empty dir_entry
+        let mut entry_offset = 0;
+        for offset in (0..self.dinode.size).step_by(size_of::<DirEntry>()) {
+            self.read(
+                false, 
+                (&mut dir_entry) as *mut DirEntry as usize, 
+                offset, 
+                size_of::<DirEntry>() as u32
+            )?;
+            if dir_entry.inum == 0 {
+                entry_offset = offset;
+                break;
+            }
+        }
+        unsafe {
+            ptr::copy(name.as_ptr(), dir_entry.name.as_mut_ptr(), name.len());
+        }
+        dir_entry.inum = inum as u16;
+        self.write(
+            false, 
+            (&dir_entry) as *const DirEntry as usize, 
+            entry_offset, 
+            size_of::<DirEntry>() as u32
+        )?;
+        Ok(())
     }
 }
 
