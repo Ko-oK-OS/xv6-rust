@@ -116,6 +116,10 @@ And then you can debug this programe step by step.
     - [x] Protocol Headers
     - [ ] NetCardS
     - [ ] Syscall
+- Device Driver
+    - [x] Virtio Disk
+    - [x] Uart/Console
+    - [x] PCI
 
 ## DOCS
 
