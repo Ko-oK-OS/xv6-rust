@@ -39,18 +39,6 @@ pub const IPB: usize = BSIZE / size_of::<DiskInode>();
 /// Bitmap bits per block
 pub const BPB: u32 = (BSIZE*8) as u32;
 
-/// Block containing inode i 
-// #[inline]
-// pub fn iblock(i: u32, sb: SuperBlock) -> u32 {
-//     i/(IPB as u32) + sb.inodestart() as u32
-// }
-
-/// Block of free map containing bit for block b
-// #[inline]
-// pub fn bblock(b:usize, sb:SuperBlock) -> u32 {
-//     b/BPB + sb.bmapstart() as usize 
-// }
-
 #[inline]
 pub fn major(dev: usize) -> usize {
     (dev >> 16) & 0xFFFF
@@ -64,6 +52,29 @@ pub fn minor(dev: usize) -> usize {
 #[inline]
 pub fn mkdev(m: usize, n: usize) -> usize {
     (m << 16) | n
+}
+
+#[repr(usize)]
+pub enum OpenMode {
+   RDONLY = 0x000,
+   WRONLY = 0x001,
+   RDWR = 0x002,
+   CREATE = 0x200,
+   TRUNC = 0x400,
+   INVALID
+}
+
+impl OpenMode {
+    pub fn mode(item: usize) -> Self {
+        match item {
+            0x000 => { Self::RDONLY },
+            0x001 => { Self::WRONLY },
+            0x002 => { Self::RDWR },
+            0x200 => { Self::CREATE },
+            0x400 => { Self::TRUNC },
+            _ => {Self::INVALID}
+        }
+    }
 }
 
 

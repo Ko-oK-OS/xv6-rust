@@ -90,6 +90,40 @@ impl InodeCache {
         }
     }
 
+    /// Allocate an inode on device dev. 
+    /// Mark it as allocated by giving it type type. 
+    /// Returns an unlocked but allocated and reference inode 
+    pub fn alloc(&self, dev: u32, itype: InodeType) -> Option<Inode> {
+        let ninodes = unsafe {
+            SUPER_BLOCK.ninodes()
+        };
+        for inum in 1 ..= ninodes {
+            // get block id
+            let block_id = unsafe {
+                SUPER_BLOCK.locate_inode(inum)
+            };
+            // read block into buffer by device and block_id
+            let block = BCACHE.bread(dev, block_id);
+        
+            // Get inode offset in the block
+            let offset = (inum as usize % IPB) as isize;
+            let mut dinode = unsafe {
+                &mut *(block.raw_data().offset(offset) as *mut DiskInode)
+            };
+            // Find a empty inode
+            if dinode.itype == InodeType::Empty {
+                dinode.itype = itype;
+                // Commit to change for dindoe
+                // Value move occurs here, block will write back when 
+                // log commit, so we don't have to drop block explicitly. 
+                LOG.write(block);
+                return Some(self.get(dev, inum))
+            }
+            drop(block);
+        }
+        None
+    }
+
     /// Lookup the inode in the inode cache. 
     /// If found, return an handle. 
     /// If not found, alloc an in-memory location in the cache, 
@@ -257,10 +291,10 @@ impl InodeMeta {
 
 /// In-memory copy of an inode
 pub struct InodeData {
-    valid: bool,
-    dev: u32,
-    inum: u32,
-    dinode: DiskInode
+    pub valid: bool,
+    pub dev: u32,
+    pub inum: u32,
+    pub dinode: DiskInode
 }
 
 impl InodeData {
@@ -273,6 +307,7 @@ impl InodeData {
         }
     }
 
+
     /// Copy stat information from inode
     pub fn stat(&self, stat: &mut Stat) {
         stat.dev = self.dev;
@@ -283,7 +318,7 @@ impl InodeData {
     }
 
     /// Discard the inode data/content. 
-    fn truncate(&mut self, inode: &Inode) {
+    pub fn truncate(&mut self, inode: &Inode) {
         // direct block
         for i in 0..NDIRECT {
             if self.dinode.addrs[i] > 0 {
@@ -313,7 +348,7 @@ impl InodeData {
 
     /// Update a modified in-memory inode to disk. 
     /// Typically called after changing the content of inode info. 
-    fn update(&mut self, inode: &Inode) {
+    pub fn update(&mut self, inode: &Inode) {
         let mut buf = BCACHE.bread(inode.dev, inode.blockno);
         let offset = locate_inode_offset(inode.inum) as isize;
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
@@ -465,7 +500,8 @@ impl InodeData {
 
     /// Look for an inode entry in this directory according the name. 
     /// Panics if this is not a directory. 
-    fn dir_lookup(&mut self, name: &[u8; DIRSIZ]) -> Option<Inode> {
+    pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
+        assert!(name.len() == DIRSIZ);
         debug_assert!(self.dev != 0);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
@@ -490,15 +526,46 @@ impl InodeData {
         }
         None
     }
+
+    /// Write s new directory entry (name, inum) into the directory
+    pub fn dir_link(&mut self, name: &[u8], inum: u32) -> Result<(), &'static str>{
+        self.dir_lookup(name).ok_or("Fail to find inode")?;
+        let mut dir_entry = DirEntry::new();
+        // look for an empty dir_entry
+        let mut entry_offset = 0;
+        for offset in (0..self.dinode.size).step_by(size_of::<DirEntry>()) {
+            self.read(
+                false, 
+                (&mut dir_entry) as *mut DirEntry as usize, 
+                offset, 
+                size_of::<DirEntry>() as u32
+            )?;
+            if dir_entry.inum == 0 {
+                entry_offset = offset;
+                break;
+            }
+        }
+        unsafe {
+            ptr::copy(name.as_ptr(), dir_entry.name.as_mut_ptr(), name.len());
+        }
+        dir_entry.inum = inum as u16;
+        self.write(
+            false, 
+            (&dir_entry) as *const DirEntry as usize, 
+            entry_offset, 
+            size_of::<DirEntry>() as u32
+        )?;
+        Ok(())
+    }
 }
 
 /// Inode handed out by inode cache. 
 /// It is actually a handle pointing to the cache. 
 pub struct Inode {
-    dev: u32,
-    blockno: u32,
-    inum: u32,
-    index: usize
+    pub dev: u32,
+    pub blockno: u32,
+    pub inum: u32,
+    pub index: usize
 }
 
 impl Clone for Inode {

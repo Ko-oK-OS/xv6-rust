@@ -18,7 +18,7 @@ extern "C" {
     fn trampoline();
 }
 
-// Initialize the one kernel_pagetable
+/// Initialize the one kernel_pagetable
 #[no_mangle]
 pub unsafe fn kvm_init(){
     // check if RawPage and PageTable have the same memory layout
@@ -33,8 +33,8 @@ pub unsafe fn kvm_init(){
    
 }
 
-// Switch h/w page table register to the kernel's page table,
-// and enable paging.
+/// Switch h/w page table register to the kernel's page table,
+/// and enable paging.
 pub unsafe fn kvm_init_hart(){
     println!("kvminithart......");
     satp::write(KERNEL_PAGETABLE.as_satp());
@@ -43,7 +43,7 @@ pub unsafe fn kvm_init_hart(){
 }
 
 
-// Make a direct-map page table for the kernel.
+/// Make a direct-map page table for the kernel.
 unsafe fn kvm_make() {
     println!("kvmmake start......");
 
@@ -75,22 +75,22 @@ unsafe fn kvm_make() {
     );
 
     // PCI-E ECAM (configuration space), for pci.c
-    println!("PCL_E ECAM map......");
-    KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(ECAM),
-        PhysicalAddress::new(ECAM),
-        0x10000000,
-        PteFlags::R | PteFlags::W
-    );
+    // println!("PCL-E ECAM map......");
+    // KERNEL_PAGETABLE.kernel_map(
+    //     VirtualAddress::new(ECAM),
+    //     PhysicalAddress::new(ECAM),
+    //     0x10000000,
+    //     PteFlags::R | PteFlags::W
+    // );
 
-    // pci.c maps the e1000's registers here.
-    println!("e1000's registers map......");
-    KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(E1000_REGS),
-        PhysicalAddress::new(E1000_REGS),
-        0x20000,
-        PteFlags::R | PteFlags::W
-    );
+    // pci maps the e1000's registers here.
+    // println!("e1000's registers map......");
+    // KERNEL_PAGETABLE.kernel_map(
+    //     VirtualAddress::new(E1000_REGS),
+    //     PhysicalAddress::new(E1000_REGS),
+    //     0x20000,
+    //     PteFlags::R | PteFlags::W
+    // );
 
     println!("clint map......");
     // CLINT

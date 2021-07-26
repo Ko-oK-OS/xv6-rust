@@ -34,7 +34,6 @@ impl ProcManager{
             wait_lock: Spinlock::new((), "wait_lock"),
         }
     }
-
     
     pub fn get_table_mut(&mut self) -> &mut [Process; NPROC] {
         &mut self.proc
@@ -49,15 +48,13 @@ impl ProcManager{
         pid
     }
 
-    // initialize the proc table at boot time.
-    // Only used in boot.
-    pub unsafe fn proc_init(&mut self){
-        println!("procinit......");
-        for (pos, p) in self.proc.iter_mut().enumerate() {
-            p.extern_data.get_mut().set_kstack(kstack(pos));
+    /// initialize the proc table at boot time.
+    /// Only used in boot.
+    pub unsafe fn init(&mut self){
+        println!("process init......");
+        for (pos, proc) in self.proc.iter_mut().enumerate() {
+            proc.init(kstack(pos));
         }
-
-        println!("procinit done......");
     }
 
     /// Allocate a page for each process's kernel stack.
@@ -159,6 +156,7 @@ impl ProcManager{
         }
     }
 
+    /// Find a runnable and set status to allocated
     pub fn seek_runnable(&mut self) -> Option<&mut Process> {
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
@@ -166,7 +164,6 @@ impl ProcManager{
                 Procstate::RUNNABLE => {
                     guard.state = Procstate::ALLOCATED;
                     drop(guard);
-                    // unsafe{ println!("Process {} will run.", (&*p.extern_data.get()).name); }
                     return Some(p)
                 },
 
@@ -177,6 +174,8 @@ impl ProcManager{
         }
         None
     }
+
+    
 }
 
 

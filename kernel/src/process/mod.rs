@@ -6,6 +6,7 @@ use alloc::vec;
 use crate::define::fs::ROOTDEV;
 use crate::interrupt::trap::usertrap_ret;
 use crate::fs::{ LOG, ICACHE, init };
+use crate::syscall::SysResult;
 
 
 pub mod cpu;
@@ -30,7 +31,7 @@ static INITCODE: [u8; 51] = [
 
 /// Create a new process, copying the parent.
 /// Sets up child kernel stack to return as if from fork() system call.
-pub unsafe fn fork() -> isize {
+pub unsafe fn fork() -> SysResult {
     let my_proc = CPU_MANAGER.myproc().expect("Fail to get my cpu");
 
     // ALLOCATE process
@@ -74,7 +75,7 @@ pub unsafe fn fork() -> isize {
 
         other_extern_data.set_name(extern_data.name);
 
-        let pid = guard.pid as isize;
+        let pid = guard.pid;
         drop(guard);
 
         let wait_guard = PROC_MANAGER.wait_lock.acquire();
@@ -85,11 +86,11 @@ pub unsafe fn fork() -> isize {
         guard.set_state(Procstate::RUNNABLE);
         drop(guard);
 
-        return pid
+        return Ok(pid)
 
     }
 
-    -1
+    Err(())
 }
 
 

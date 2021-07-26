@@ -31,7 +31,7 @@ impl RawPage {
 
 
 /// Copy from either a user address, or kernel address,
-/// depending on usr_dst. 
+/// depending on is_user. 
 /// Returns Result<(), &'static str>
 pub fn either_copy_in(
     dst: *mut u8, 

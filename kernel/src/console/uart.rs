@@ -2,31 +2,11 @@ use core::ptr;
 use core::convert::{ Into, TryInto };
 use core::fmt::{self, Write};
 
+use crate::process::PROC_MANAGER;
 use crate::{define::memlayout::UART0, println};
 use crate::lock::spinlock::*;
 
-// static mut UART_TX_LOCK: Spinlock<()> = Spinlock::new((), "uart_tx_lock");
-
-
-// macro_rules! Reg {
-//     ($reg: expr) => {
-//         Into::<usize>::into(UART0) + $reg
-//     };
-// }
-
-// macro_rules! ReadReg {
-//     ($reg: expr) => {
-//         unsafe { ptr::read_volatile(Reg!($reg) as *const u8) }
-//     };
-// }
-
-// macro_rules! WriteReg {
-//     ($reg: expr, $value: expr) => {
-//         unsafe {
-//             ptr::write_volatile(Reg!($reg) as *mut u8, $value);
-//         }
-//     };
-// }
+use super::console::console_intr;
 
 const RHR: usize = 0; // receive holding register (for input bytes)
 const THR: usize = 0; // transmit holding register (for output bytes)
@@ -45,80 +25,8 @@ const LCR_BAUD_LATCH: usize = 1 << 7; // special mode to set baud rate
 const LSR_RX_READY: usize = 1 << 0; // input is waiting to be read from RHR
 const LSR_TX_IDLE: usize = 1 << 5; // THR can accept another character to send
 
-const CTRL_P: u8 = b'P' - b'@';
-const CTRL_U: u8 = b'U' - b'@';
-const CTRL_H: u8 = b'H' - b'@';
-const CTRL_D: u8 = b'D' - b'@';
-
-
-
-// pub fn uartinit() {
-//     // disable interrupts.
-//     WriteReg!(IER, 0x00);
-
-//     // special mode to set baud rate.
-//     WriteReg!(LCR, 0x80);
-
-//     // LSB for baud rate of 38.4K.
-//     WriteReg!(0, 0x03);
-
-//     // MSB for baud rate of 38.4K.
-//     WriteReg!(1, 0x00);
-
-//     // leave set-baud mode,
-//     // and set word length to 8 bits, no parity.
-//     WriteReg!(LCR, 0x03);
-
-//     // reset and enable FIFOs.
-//     WriteReg!(FCR, 0x07);
-
-//     // enable receive interrupts.
-//     WriteReg!(IER, 0x01);
-// }
-
-// pub fn uartputc(c: u8) {
-//     let guard = unsafe{ UART_TX_LOCK.acquire() };
-//     while (ReadReg!(LSR) & (1 << 5)) == 0 {}
-//     WriteReg!(THR, c);
-//     drop(guard);
-// }
-
-// // read one input character from the UART.
-// // return -1 if none is waiting.
-// pub fn uartgetc() -> u8 {
-//     if ReadReg!(LSR) & 1 != 0 {
-//         ReadReg!(RHR)
-//     }else {
-//         1
-//     }
-// }
-
-// handle a uart interrupt, raised because input has
-// arrived, or the uart is ready for more output, or
-// both. called from trap.c.
-
-// pub fn uartintr() {
-//     // read and process incoming characters.
-//     loop {
-//         let c = uartgetc();
-//         match c {
-//             _ => {
-//                 break;
-//             }
-//         }
-//     }
-
-
-// }
-
 const UART_BUF_SIZE:usize = 32;
-pub static UART:Spinlock<Uart> = Spinlock::new(Uart::new(UART0), "uart");
-
-// write next to uart.buf[UART_WRITE % UART_BUF_SIZE]
-pub static mut UART_WRITE:usize = 0;
-
-// read next from uart.buf[UART_READ % UART_BUF_SIZE]
-pub static mut UART_READ:usize = 0;
+pub static UART: Spinlock<Uart> = Spinlock::new(Uart::new(UART0), "uart");
 
 
 
@@ -133,7 +41,11 @@ pub unsafe fn uart_init() {
 pub struct Uart {
     // UART MMIO base address
     addr: usize,
-    buf: [u8; UART_BUF_SIZE]
+    buf: [u8; UART_BUF_SIZE],
+    /// Write to next to buf[write_index % UART_BUF_SIZE]
+    write_index: usize,
+    /// Read next from buf[read_index % UART_BUF_SIZE]
+    read_index: usize
 }
 
 impl Uart {
@@ -141,11 +53,13 @@ impl Uart {
         Self{
             addr: addr,
             // output buffer 
-            buf: [0u8; UART_BUF_SIZE]
+            buf: [0u8; UART_BUF_SIZE],
+            write_index: 0,
+            read_index: 0
         }
     } 
 
-    // init uart device
+    /// init uart device
     pub fn init(&mut self) {
         let ptr = self.addr as *mut u8;
         unsafe {
@@ -212,15 +126,14 @@ impl Uart {
 
     }
 
-    // if the UART is idle, and a character is waiting
-    // in the transmit buffer, send it.
-    // caller must hold uart_tx_lock.
-    // called from both the top- and bottom-half.
+    /// If the UART is idle, and a character is waiting
+    /// in the transmit buffer, send it.
+    /// caller must hold lock.
+    /// called from both the top- and bottom-half.
     pub unsafe fn uart_start(&mut self) {
         loop {
-            if UART_READ == UART_WRITE  {
-                // transmit buffer is empty
-                return 
+            if self.read_index == self.write_index {
+                // transmit buffer is empty.
             }
 
             let ptr = self.addr as *mut u8;
@@ -233,17 +146,22 @@ impl Uart {
                 return 
             }
 
-            let c = self.buf[UART_READ % UART_BUF_SIZE];
-            UART_READ += 1;
-
-            // TODO: wakeup?
-
+            let c = self.buf[self.read_index % UART_BUF_SIZE];
+            self.read_index += 1;
+            
+            // Maybe UART::put() is waiting for space in the buffer. 
+            // PROC_MANAGER.wakeup(&self.read_index as *const usize as usize);
             ptr.add(0).write_volatile(c);
 
         }
     }
 
-    // Put a character into uart
+    /// Add a chacter to the output buffer and tell the
+    /// UART to start sending if it isn't already. 
+    /// blocks if the output buffer is full. 
+    /// because it may block, it can't be called from interrupts;
+    /// it's only suitable for use
+    /// by write()
     pub fn put(&mut self, c: u8) {
         let ptr = self.addr as *mut u8;
         loop {
@@ -258,7 +176,7 @@ impl Uart {
         }
     }
 
-    // get a chacter from uart
+    /// get a chacter from uart
     pub fn get(&mut self) -> Option<u8> {
         let ptr = self.addr as *mut u8;
         unsafe {
@@ -271,6 +189,8 @@ impl Uart {
             }
         }
     }
+
+
 }
 
 impl Write for Uart {
@@ -286,28 +206,40 @@ impl Write for Uart {
 }
 
 
-pub fn uart_intr() {
-    loop {
-        let mut uart = UART.acquire();
-        let c = uart.get().unwrap();
-        drop(uart);
-        match c {
-            // new line
-            10 => {
-                break;
-            }
-
-            _ => {
-                // println!("{}", c as char);
-                // TODO: consoleintr
-                // uart.put(c)
-            }
+impl Spinlock<Uart> {
+    /// Handle a uart interrupt, raised because input has
+    /// arrived, or the uart is ready for more output, or
+    /// both, called from trap.rs
+    pub fn intr(&self) {
+        loop {
+            // read and process incoming characters. 
+            let c = uart_get();
+            console_intr(c);
         }
     }
-
-    let mut uart = UART.acquire();
-    unsafe{
-        uart.uart_start();
-    }
-    drop(uart);
 }
+
+pub fn uart_get() -> u8 {
+    let c: u8;
+    let mut uart_guard = UART.acquire();
+    c = uart_guard.get().expect("Fail to get char");
+    drop(uart_guard);
+    c
+}
+
+pub fn uart_put(c: u8) {
+    let mut uart_guard = UART.acquire();
+
+    uart_guard.put(c);
+    drop(uart_guard);
+}
+
+
+// pub fn uart_intr() {
+//    loop {
+//        // read and process incoming characters. 
+//        let c = uart_get();
+//        console_intr(c);
+//    }
+// }
+

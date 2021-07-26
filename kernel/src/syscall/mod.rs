@@ -5,10 +5,13 @@ pub use sysproc::*;
 pub use sysnet::*;
 pub use sysfile::*;
 
+use crate::define::fs::NOFILE;
 use crate::{println, process::*};
 use crate::fs::VFile;
 
+use core::borrow::BorrowMut;
 use core::mem::size_of;
+use core::ops::IndexMut;
 
 type SyscallFn = fn() -> isize;
 
@@ -18,29 +21,51 @@ pub static SYSCALL:[SyscallFn; SYSCALL_NUM] = [
     sys_fork
 ];
 
+pub type SysResult = Result<usize, ()>;
 
-// Fetch the uint64 at addr from the current process.
-pub fn fetchaddr(addr: usize, arg: *mut u8, len: usize) -> Result<(), &'static str> {
+
+/// Fetch the uint64 at addr from the current process.
+pub fn fetch_addr(addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
     let my_proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
     let extern_data = my_proc.extern_data.get_mut(); 
 
     if addr > extern_data.size || addr + size_of::<usize>() > extern_data.size {
-        return Err("addr size is out of process!");
+        println!("addr size is out of process!");
+        return Err(());
     }
 
     let pg = extern_data.pagetable.as_mut().unwrap();
 
-    if pg.copy_in(arg, addr, len).is_err() {
-        return Err("Fail copy data from pagetable!")
+    if pg.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
+        println!("Fail copy data from pagetable!");
+        return Err(())
     }
     
     
     Ok(())
 }
 
+/// Fetch the null-terminated string at addr from the current process. 
+/// Returns lenght of string, not including null
+pub fn fetch_str(addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
+    let my_proc = unsafe {
+        CPU_MANAGER.myproc().unwrap()
+    };
 
-// Fetch the syscall arguments
-pub fn argraw(id: usize) -> Result<usize, &'static str> {
+    let extern_data = unsafe{ 
+        &mut *my_proc.extern_data.get()
+    };
+    let pgt = extern_data.pagetable.as_mut().unwrap();
+    if pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
+        println!("Fail to copy in str");
+        return Err(())
+    }
+    Ok(())
+
+}
+
+/// Fetch the syscall arguments
+pub fn arg_raw(id: usize) -> Result<usize, ()> {
     let tf = unsafe{
         &mut *CPU_MANAGER.myproc().unwrap().
         extern_data.get_mut().trapframe
@@ -65,14 +90,52 @@ pub fn argraw(id: usize) -> Result<usize, &'static str> {
     }
 }
 
-// Fetch the nth arguments in current syscall
-pub fn argint(id: usize, arg: &mut usize) -> Result<(), &'static str> {
+/// Fetch the nth arguments in current syscall
+pub fn arg_int(id: usize, arg: &mut usize) -> Result<(), ()> {
     // get arguments by call argraw
-    *arg = argraw(id).unwrap();
+    *arg = arg_raw(id)?;
     Ok(())
 }
 
-pub fn argfd(id: usize, pfd: &mut usize, pfs: &mut VFile) -> Result<(), &'static str> {
+/// Retrieve an argument as a pointer. 
+/// Doesn't check for legality, since
+/// copy_in / copy_out will do that. 
+pub fn arg_addr(id: usize, ptr: &mut usize) -> Result<(), ()> {
+    *ptr = arg_raw(id)?;
+    Ok(())
+}
+
+/// Fetch the nth word-size system call argument as a file descriptor
+/// and return both the descriptor and the corresponding struct file. 
+pub fn arg_fd(id: usize, fd: &mut usize, file: &mut VFile) -> Result<(), ()> {
+    // Get file descriptor
+    arg_int(id, fd)?;
+    // Check the fd is valid
+    let my_proc = unsafe {
+        CPU_MANAGER.myproc().unwrap()
+    };
+    let extern_data = unsafe{ &*my_proc.extern_data.get() };
+    let open_file = &extern_data.ofile;
+    if *fd >= NOFILE || *fd > open_file.len() {
+        println!("arg_fd: file decsriptor is invalid");
+        return Err(())
+    } else {
+        // Get file by file descriptor
+        *file = unsafe{ 
+            *open_file[*fd].as_ptr() 
+        };
+        Ok(())
+    }
+}
+
+
+/// Fetch the nth word-size system call argument as a null-terminated string. 
+/// Copies into buf, at most max. 
+/// Returns string length if OK (including null)
+pub fn arg_str(id: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
+    let mut addr = 0;
+    arg_addr(id, &mut addr)?;
+    fetch_str(addr, buf, max_len)?;
     Ok(())
 }
 

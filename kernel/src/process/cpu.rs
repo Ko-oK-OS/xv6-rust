@@ -1,10 +1,13 @@
 use array_macro::array;
+use crate::fs::VFile;
 use crate::register::{ tp, sstatus };
 use crate::define::param::NCPU;
 use crate::lock::spinlock::{SpinlockGuard, Spinlock};
+use core::cell::RefCell;
+use core::ops::IndexMut;
 use core::ptr::NonNull;
 use super::*;
-pub struct CPU{
+pub struct CPU {
     pub process: Option<NonNull<Process>>, // The process running on this cpu, or null.
     pub context: Context, // swtch() here to enter scheduler().
     pub noff: usize, // Depth of push_off() nesting.
@@ -96,6 +99,23 @@ impl CPUManager{
             }
         }
     }
+
+    pub fn alloc_fd(&mut self, file: &mut VFile) -> Result<usize, &'static str> {
+        let proc = unsafe{ self.myproc().ok_or("Fail to find current process")? };
+        proc.fd_alloc(file)
+    }
+
+    pub fn fd_close(&mut self, fd: usize) {
+        let proc = unsafe {
+            self.myproc().unwrap()
+        };
+        let extern_data = unsafe{ &mut *proc.extern_data.get() };
+        extern_data.ofile[fd] = Arc::new(
+            RefCell::new(
+                VFile::init()
+            )
+        );
+    }
 }
 
 impl CPU{
@@ -160,6 +180,7 @@ impl CPU{
         guard
         
     }
+
 
 }
 
