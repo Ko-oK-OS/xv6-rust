@@ -2,7 +2,7 @@ use crate::process::*;
 use super::*;
 
 pub fn sys_fork() -> SysResult {
-    let ret = unsafe{ fork() };
+    let ret = unsafe{ fork()? };
     Ok(ret as usize)
 }
 
