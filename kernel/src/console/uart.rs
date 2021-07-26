@@ -190,12 +190,7 @@ impl Uart {
         }
     }
 
-    /// Handle a uart interrupt, raised because input has
-    /// arrived, or the uart is ready for more output, or
-    /// both, called from trap.rs
-    pub fn intr(&mut self) {
 
-    }
 }
 
 impl Write for Uart {
@@ -207,6 +202,20 @@ impl Write for Uart {
             }
         }
         Ok(())
+    }
+}
+
+
+impl Spinlock<Uart> {
+    /// Handle a uart interrupt, raised because input has
+    /// arrived, or the uart is ready for more output, or
+    /// both, called from trap.rs
+    pub fn intr(&self) {
+        loop {
+            // read and process incoming characters. 
+            let c = uart_get();
+            console_intr(c);
+        }
     }
 }
 
@@ -226,11 +235,11 @@ pub fn uart_put(c: u8) {
 }
 
 
-pub fn uart_intr() {
-   loop {
-       // read and process incoming characters. 
-       let c = uart_get();
-       console_intr(c);
-   }
-}
+// pub fn uart_intr() {
+//    loop {
+//        // read and process incoming characters. 
+//        let c = uart_get();
+//        console_intr(c);
+//    }
+// }
 

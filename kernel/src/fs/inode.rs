@@ -318,7 +318,7 @@ impl InodeData {
     }
 
     /// Discard the inode data/content. 
-    fn truncate(&mut self, inode: &Inode) {
+    pub fn truncate(&mut self, inode: &Inode) {
         // direct block
         for i in 0..NDIRECT {
             if self.dinode.addrs[i] > 0 {

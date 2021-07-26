@@ -57,13 +57,13 @@ pub const ECAM:usize = 0x30000000;
 // define in hw/riscv/virt.c, which is used to execute shutdown. 
 pub const VIRT_TEST:usize = 0x100000;
 
-pub fn plic_spriority(hartid:usize) -> usize{
+pub fn plic_spriority(hartid: usize) -> usize{
     let ret:usize;
     ret = Into::<usize>::into(PLIC_SPRIORITY.add_addr(hartid*0x2000));
     ret
 }
 
-pub fn plic_mclaim(hartid:usize) -> usize{
+pub fn plic_mclaim(hartid: usize) -> usize{
     let ret:usize;
     ret = Into::<usize>::into(PLIC_MCLAIM.add_addr(hartid*0x2000));
     ret
@@ -95,6 +95,15 @@ pub fn plic_sclaim(hartid: usize) -> usize{
 }
 
 
+/// User memory layout.
+/// Address zero first:
+///   text
+///   original data and bss
+///   fixed-size stack
+///   expandable heap
+///   ...
+///   TRAPFRAME (p->trapframe, used by the trampoline)
+///   TRAMPOLINE (the same page as in the kernel)
 
 
 // the kernel expects there to be RAM
@@ -127,18 +136,6 @@ pub const MAXVA:usize =  1 << (9 + 9 + 9 + 12 - 1);
 // map the trampoline page to the highest address,
 // in both user and kernel space.
 pub const TRAMPOLINE:usize = MAXVA - PGSIZE;
-
-
-// User memory layout.
-// Address zero first:
-//   text
-//   original data and bss
-//   fixed-size stack
-//   expandable heap
-//   ...
-//   TRAPFRAME (p->trapframe, used by the trampoline)
-//   TRAMPOLINE (the same page as in the kernel)
-
 pub const TRAPFRAME:usize = TRAMPOLINE - PGSIZE;
 
 

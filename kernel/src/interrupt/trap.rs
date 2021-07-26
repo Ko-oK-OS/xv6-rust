@@ -1,7 +1,7 @@
-use crate::register::{
+use crate::{define::fs::DIRSIZ, driver::virtio_disk::DISK, register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
     satp, tp
-};
+}};
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::memlayout::*;
@@ -31,6 +31,7 @@ pub unsafe fn trap_init_hart() {
 //
 #[no_mangle]
 pub unsafe fn usertrap() {
+    println!("user trap");
     let sepc = sepc::read();
     let scause = scause::read();
 
@@ -153,7 +154,6 @@ pub unsafe fn kerneltrap(
    arg0: usize, arg1: usize, arg2: usize, _: usize,
    _: usize, _: usize, _: usize, which: usize
 ) {
-    println!("Enter kernel trap");
     let mut sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
@@ -167,39 +167,59 @@ pub unsafe fn kerneltrap(
     if sstatus::intr_get() {
         panic!("kerneltrap(): interrupts enabled");
     }
-    
-    let cause = device_intr();
+    // Update progrma counter
+    sepc += 4;
+    let scause = Scause::new(scause);
+    println!("{:?}", scause.cause());
+    match scause.cause(){
+        Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
-    match cause {
-        0 => {
-            // modify sepc to countine running after restoring context
-            sepc += 4;
-            
-            let scause = Scause::new(scause);
-            match scause.cause(){
-                Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
+        Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
-                Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
+        Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
 
-                Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
+        Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
 
-                Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+        Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
 
-                Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
+        Trap::Exception(Exception::InstructionFault) => instr_handler(sepc),
 
-                Trap::Exception(Exception::InstructionFault) => instr_handler(sepc),
+        // Device Interruput
+        Trap::Interrupt(Interrupt::SupervisorExternal) => {
+            // this is a supervisor external interrupt, via PLIC.
+            // irq indicates which device interrupted.
+            let irq = plic::plic_claim();
 
-                _ => panic!("Unresolved Trap! scause:{:?}", scause.cause())
+            if irq == UART0_IRQ as usize{
+                println!("uart interrupt");
+                UART.intr();
+
+            }else if irq == VIRTIO0_IRQ as usize{
+                DISK.acquire().intr();
             }
+            
+            plic::plic_complete(irq);
+            
+        },
+
+        // Clock Interrupt
+        Trap::Interrupt(Interrupt::SupervisorSoft) => {
+
+            // software interrupt from a machine-mode timer interrupt,
+            // forwarded by timervec in kernelvec.S.
+
+            if cpu::cpuid() == 0{
+                clockintr();
+            }
+
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            sip::write(sip::read() & !2);
         }
-        1 => {
-            panic!("Unsolved solution!");
-        }
-        2 => {
-            CPU_MANAGER.yield_proc();
-        }
+
         _ => {
-            unreachable!();
+            
+            panic!("Unresolved Trap!");
         }
     }
     // store context
@@ -236,7 +256,8 @@ unsafe fn device_intr() -> usize {
 
             if irq == UART0_IRQ as usize{
                 println!("uart interrupt");
-                uart_intr();
+                // uart_intr();
+                UART.intr();
 
             }else if irq == VIRTIO0_IRQ as usize{
                 // TODO: virtio_disk_intr

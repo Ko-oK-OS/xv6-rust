@@ -34,7 +34,6 @@ impl ProcManager{
             wait_lock: Spinlock::new((), "wait_lock"),
         }
     }
-
     
     pub fn get_table_mut(&mut self) -> &mut [Process; NPROC] {
         &mut self.proc
@@ -49,12 +48,12 @@ impl ProcManager{
         pid
     }
 
-    // initialize the proc table at boot time.
-    // Only used in boot.
-    pub unsafe fn proc_init(&mut self){
-        println!("procinit......");
+    /// initialize the proc table at boot time.
+    /// Only used in boot.
+    pub unsafe fn init(&mut self){
+        println!("process init......");
         for (pos, p) in self.proc.iter_mut().enumerate() {
-            p.extern_data.get_mut().set_kstack(kstack(pos));
+            p.init(kstack(pos));
         }
 
         println!("procinit done......");
@@ -177,6 +176,8 @@ impl ProcManager{
         }
         None
     }
+
+    
 }
 
 

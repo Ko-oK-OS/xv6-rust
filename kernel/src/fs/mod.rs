@@ -98,8 +98,10 @@ pub fn create(
         inode_guard.dinode.nlink += 1;
         inode_guard.update(&inode);
         // No nlink++ for . to avoid recycle ref count. 
-        // TODO: dirlink
+        inode_guard.dir_link(".".as_bytes(), inode.inum)?;
+        inode_guard.dir_link("..".as_bytes(), dirinode_guard.inum)?;
     }
+    dirinode_guard.dir_link(&name, inode_guard.inum)?;
     drop(inode_guard);
     Ok(inode)
 }

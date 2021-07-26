@@ -32,8 +32,8 @@ pub struct VFile {
     pub(crate) refs: usize,
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
-    pub(crate) pipe: Option<NonNull<Pipe>>,
-    pub(crate) inode: Option<NonNull<Inode>>,
+    pub(crate) pipe: Option<*mut Pipe>,
+    pub(crate) inode: Option<*mut Inode>,
     pub(crate) offset: u32,
     pub(crate) major: i16
 }
@@ -65,7 +65,8 @@ impl VFile {
 
         match self.ftype {
             FileType::Pipe => {
-                ret = unsafe{ (self.pipe.unwrap().as_ref()).read(addr, len)? };
+                let pipe = unsafe{ &*self.pipe.unwrap() };
+                ret = pipe.read(addr, len)?;
                 return Ok(ret)
             },
 
@@ -83,7 +84,7 @@ impl VFile {
             },
 
             FileType::Inode => {
-                let inode = unsafe{ &mut (*self.inode.unwrap().as_ptr()) };
+                let inode = unsafe{ &*self.inode.unwrap() };
                 let mut inode_guard = inode.lock();
                 match inode_guard.read(true, addr, self.offset, len as u32) {
                     Ok(_) => {
@@ -117,7 +118,8 @@ impl VFile {
 
         match self.ftype {
             FileType::Pipe => {
-                ret = unsafe{ (self.pipe.unwrap().as_ref()).write(addr, len).unwrap() };
+                let pipe = unsafe{ &*self.pipe.unwrap() };
+                ret = pipe.write(addr, len)?;
                 Ok(ret)
             },
 
@@ -151,7 +153,7 @@ impl VFile {
 
                     // start log
                     LOG.begin_op();
-                    let inode = unsafe{ &mut (*self.inode.unwrap().as_ptr()) };
+                    let inode = unsafe{ &mut *self.inode.unwrap() };
                     let mut inode_guard = inode.lock();
 
                     // return err when failt to write
@@ -210,12 +212,12 @@ impl VFile {
 
         match self.ftype {
             FileType::Pipe => {
-                let pipe = unsafe{ &mut (*self.pipe.unwrap().as_ptr()) };
+                let pipe = unsafe{ &mut *self.pipe.unwrap() };
                 pipe.close(self.writeable());
             },
 
             FileType::Inode => {
-                let inode = unsafe{ &(*self.inode.unwrap().as_ptr()) };
+                let inode = unsafe{ &*self.inode.unwrap() };
                 LOG.begin_op();
                 drop(inode);
             },
@@ -235,7 +237,7 @@ impl VFile {
         let mut stat: Stat = Stat::new();
         match self.ftype {
             FileType::Device | FileType::Inode => {
-                let inode = unsafe{ &mut (*self.inode.unwrap().as_ptr()) };
+                let inode = unsafe{ &mut *self.inode.unwrap() };
                 let inode_guard = inode.lock();
                 inode_guard.stat(&mut stat);
                 drop(inode_guard);
@@ -253,22 +255,7 @@ impl VFile {
     }
 }
 
-// impl Clone for VFile {
-//     fn clone(&self) -> Self {
-//         self.dup();
-//         Self {
-//             index: self.index,
-//             ftype: self.ftype,
-//             refs: self.refs,
-//             readable: self.readable,
-//             writeable: self.writeable,
-//             pipe: self.pipe,
-//             inode: self.inode,
-//             offset: self.offset,
-//             major: self.major
-//         }
-//     }
-// }
+
 
 
 

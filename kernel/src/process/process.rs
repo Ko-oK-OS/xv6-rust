@@ -1,9 +1,11 @@
+use core::borrow::Borrow;
 use core::ptr::*;
 use core::cell::{ UnsafeCell, RefCell };
 use alloc::vec::Vec;
 use alloc::vec;
 use alloc::sync::Arc;
 
+use crate::define::fs::NOFILE;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     kalloc::*,
@@ -13,7 +15,7 @@ use crate::memory::{
 };
 use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use super::*;
-use crate::fs::{ VFile, Inode };
+use crate::fs::{FileType, Inode, VFile};
 
 
 use alloc::boxed::Box;
@@ -61,9 +63,6 @@ impl ProcData {
     pub fn set_state(&mut self, state: Procstate) {
         self.state = state;
     }
-
-
-
 }
 
 pub struct ProcExtern {
@@ -139,6 +138,21 @@ impl ProcExtern {
         self.context.write_sp(kstack + PGSIZE);
     }
 
+    /// Find an unallocated file desprictor in proc
+    pub fn find_unallocated_fd(&self) -> Result<usize, &'static str> {
+        for fd in 0..self.ofile.len() {
+            let file: &VFile = &(*self.ofile[fd]).borrow();
+            match file.ftype {
+                FileType::None => {
+                    return Ok(fd)
+                },
+
+                _ => {}
+            }
+        } 
+        Err("Fail to find unallocted fd")
+    }
+
     // Create a user page table for a given process,
     // with no user memory, but with trampoline pages
     pub unsafe fn proc_pagetable(&mut self) {
@@ -175,6 +189,15 @@ impl ProcExtern {
 
         self.pagetable = Some(page_table);
     }
+
+    /// Close a fd
+    pub fn fd_close(&mut self, fd: usize) {
+        self.ofile[fd] = Arc::new(
+            RefCell::new(
+                VFile::init()
+            )
+        )
+    }
 }
 
 
@@ -187,6 +210,21 @@ impl Process{
         }
     }
 
+    pub fn init(&mut self, kstack: usize) {
+        let extern_data = unsafe {
+            &mut *self.extern_data.get()
+        };
+
+        extern_data.ofile = vec![
+            Arc::new(
+                RefCell::new(
+                    VFile::init()
+                )
+            )
+        ;NOFILE];
+
+        extern_data.set_kstack(kstack);
+    }
 
     pub fn as_ptr(&self) -> *const Process{
         self as *const Process
@@ -357,8 +395,21 @@ impl Process{
             guard.channel = 0;
             drop(guard);
         }
-        
+    }
 
+    /// Find a unallocated fd
+    pub fn fd_alloc(&mut self, file: &mut VFile) -> Result<usize, &'static str>{
+        let extern_data = unsafe {
+            &mut *self.extern_data.get()
+        };
+        let fd = extern_data.find_unallocated_fd()?;
+        extern_data.ofile[fd] = Arc::new(
+            RefCell::new(
+                *file
+            )
+        );
+        Ok(fd)
+        
     }
 }
 

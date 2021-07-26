@@ -3,6 +3,7 @@ mod console;
 pub use uart::*;
 
 pub use uart::UART;
+pub use console::console_write;
 
 use crate::fs::DEVICE_LIST;
 use crate::define::devices::CONSOLE;

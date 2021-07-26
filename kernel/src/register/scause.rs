@@ -57,11 +57,6 @@ pub enum Exception {
     Unknown
 }
 
-// #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-// pub enum TimerInterrupt{
-
-// }
-
 
 impl Interrupt{
     pub fn from(nr: usize) -> Self {
