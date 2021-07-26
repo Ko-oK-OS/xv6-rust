@@ -52,11 +52,9 @@ impl ProcManager{
     /// Only used in boot.
     pub unsafe fn init(&mut self){
         println!("process init......");
-        for (pos, p) in self.proc.iter_mut().enumerate() {
-            p.init(kstack(pos));
+        for (pos, proc) in self.proc.iter_mut().enumerate() {
+            proc.init(kstack(pos));
         }
-
-        println!("procinit done......");
     }
 
     /// Allocate a page for each process's kernel stack.
@@ -158,6 +156,7 @@ impl ProcManager{
         }
     }
 
+    /// Find a runnable and set status to allocated
     pub fn seek_runnable(&mut self) -> Option<&mut Process> {
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
@@ -165,7 +164,6 @@ impl ProcManager{
                 Procstate::RUNNABLE => {
                     guard.state = Procstate::ALLOCATED;
                     drop(guard);
-                    // unsafe{ println!("Process {} will run.", (&*p.extern_data.get()).name); }
                     return Some(p)
                 },
 
