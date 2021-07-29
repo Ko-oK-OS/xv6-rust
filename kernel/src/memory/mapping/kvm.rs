@@ -75,22 +75,22 @@ unsafe fn kvm_make() {
     );
 
     // PCI-E ECAM (configuration space), for pci.c
-    // println!("PCL-E ECAM map......");
-    // KERNEL_PAGETABLE.kernel_map(
-    //     VirtualAddress::new(ECAM),
-    //     PhysicalAddress::new(ECAM),
-    //     0x10000000,
-    //     PteFlags::R | PteFlags::W
-    // );
+    println!("PCL-E ECAM map......");
+    KERNEL_PAGETABLE.kernel_map(
+        VirtualAddress::new(ECAM),
+        PhysicalAddress::new(ECAM),
+        0x10000000,
+        PteFlags::R | PteFlags::W
+    );
 
     // pci maps the e1000's registers here.
-    // println!("e1000's registers map......");
-    // KERNEL_PAGETABLE.kernel_map(
-    //     VirtualAddress::new(E1000_REGS),
-    //     PhysicalAddress::new(E1000_REGS),
-    //     0x20000,
-    //     PteFlags::R | PteFlags::W
-    // );
+    println!("e1000's registers map......");
+    KERNEL_PAGETABLE.kernel_map(
+        VirtualAddress::new(E1000_REGS),
+        PhysicalAddress::new(E1000_REGS),
+        0x20000,
+        PteFlags::R | PteFlags::W
+    );
 
     println!("clint map......");
     // CLINT

@@ -147,8 +147,8 @@ pub unsafe fn usertrap_ret() -> ! {
 
 }
 
-// interrupts and exceptions from kernel code go here via kernelvec,
-// on whatever the current kernel stack is.
+/// interrupts and exceptions from kernel code go here via kernelvec,
+/// on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kerneltrap(
    arg0: usize, arg1: usize, arg2: usize, _: usize,

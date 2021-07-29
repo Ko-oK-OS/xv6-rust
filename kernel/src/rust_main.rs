@@ -42,7 +42,7 @@ pub unsafe extern "C" fn rust_main() {
         drop(plic);
         BCACHE.binit(); // buffer cache
         DISK.acquire().init(); // emulated hard disk
-        // pci_init(); // init pci
+        pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
 
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
