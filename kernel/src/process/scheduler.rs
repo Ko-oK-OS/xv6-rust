@@ -1,4 +1,5 @@
 use array_macro::array;
+use core::cell::RefCell;
 use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
@@ -7,13 +8,16 @@ use crate::define::{
     param::NPROC,
     memlayout::{ PGSIZE, TRAMPOLINE }
 };
+use crate::fs::VFile;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
 use crate::memory::*;
 
+pub static WAIT_LOCK: Spinlock<()> = Spinlock::new((), "wait_lock");
+
 pub struct ProcManager {
     proc: [Process; NPROC],
-    init_proc: Process,
+    init_proc: *mut Process,
     pid_lock: Spinlock<usize>,
     /// helps ensure that wakeups of wait()ing
     /// parents are not lost. helps obey the
@@ -29,7 +33,7 @@ impl ProcManager{
     pub const fn new() -> Self {
         Self{
             proc: array![_ => Process::new(); NPROC],
-            init_proc: Process::new(),
+            init_proc: 0 as *mut Process,
             pid_lock: Spinlock::new(0, "pid_lock"),
             wait_lock: Spinlock::new((), "wait_lock"),
         }
@@ -82,7 +86,7 @@ impl ProcManager{
 
         // allocate one user page and copy init's instructions
         // and data into it.
-        let extern_data = p.extern_data.get_mut();
+        let extern_data = &mut *p.extern_data.get();
         extern_data.pagetable.as_mut().unwrap().uvm_init(
             &INITCODE,
         );
@@ -101,6 +105,8 @@ impl ProcManager{
 
         drop(guard);
 
+        // set init process
+        self.init_proc = p as *mut Process;
     }
 
 
@@ -175,10 +181,122 @@ impl ProcManager{
         None
     }
 
+    /// Pass p's abandonded children to init. 
+    /// Caller must hold wait lock. 
+    pub fn reparent(&mut self, proc: &mut Process) {
+        for index in 0..self.proc.len() {
+            let p = &mut self.proc[index];
+                let extern_data = unsafe{ &mut *p.extern_data.get() };
+                if let Some(parent) = extern_data.parent {
+                    if parent as *const _ == proc as *const _ {
+                        extern_data.parent = Some(self.init_proc);
+                        self.wakeup(self.init_proc as usize);
+                    }
+                }
+        }
+    }
     
+    /// Exit the current process. Does not return. 
+    /// An exited process remains in the zombie state 
+    /// until its parent calls wait. 
+    pub fn exit(&mut self, status : usize) -> ! {
+        let my_proc = unsafe {
+            CPU_MANAGER.myproc().expect("Current cpu's process is none.")
+        };
+        // close all open files. 
+        let extern_data = unsafe{ &mut *my_proc.extern_data.get() };
+        let open_files = &mut extern_data.ofile;
+        for index in 0..open_files.len() {
+            let file = unsafe{ &mut *open_files[index].as_ptr() };
+            open_files[index] = Arc::new(
+                RefCell::new(
+                    VFile::init()
+                )
+            );
+            file.close();
+        }
+
+        LOG.begin_op();
+        let cwd = extern_data.cwd.as_mut().expect("Fail to get inode");
+        drop(cwd);
+        LOG.end_op();
+        extern_data.cwd = None;
+
+        let wait_guard = WAIT_LOCK.acquire();
+        // Give any children to init. 
+        self.reparent(my_proc);
+        // Parent might be sleeping in wait. 
+        self.wakeup(extern_data.parent.expect("Fail to find parent process") as usize);
+
+        let mut proc_data = my_proc.data.acquire();
+        proc_data.xstate = status;
+        proc_data.set_state(Procstate::ZOMBIE);
+
+        drop(wait_guard);
+
+        let my_cpu = unsafe {
+            CPU_MANAGER.mycpu()
+        };
+        unsafe {
+            my_cpu.sched(proc_data, &mut extern_data.context as *mut Context);
+        }
+
+        panic!("zombie exit!");
+    }
+
+    /// Wait for a child process to exit and return its pid. 
+    pub fn wait(&mut self, addr: usize) -> Option<usize> {
+        let mut pid = 0;
+        let mut have_kids = false;
+        let my_proc = unsafe {
+            CPU_MANAGER.myproc().expect("Fail to get my process")
+        };
+        // TODO: in xv6-riscv, wait lock acquire out of loop. 
+        loop {
+            let wait_guard = WAIT_LOCK.acquire();
+            // Scan through table looking for exited children. 
+            for index in 0..self.proc.len() {
+                let p = &mut self.proc[index];
+                let extern_data = unsafe {
+                    &mut *p.extern_data.get()
+                };
+                if let Some(parent) = extern_data.parent {
+                    if parent as *const _ == my_proc as *const _ {
+                        have_kids = true;
+                        // make sure the child isn't still in exit or swtch. 
+                        let proc_data = p.data.acquire();
+                        if proc_data.state == Procstate::ZOMBIE {
+                            // Found one 
+                            pid = proc_data.pid;
+                            let page_table = extern_data.pagetable.as_mut().expect("Fail to get pagetable");
+                            if page_table.copy_out(addr, proc_data.xstate as *const u8, size_of_val(&proc_data.xstate)).is_err() {
+                                drop(proc_data);
+                                drop(wait_guard);
+                                return None
+                            }
+                        }
+
+                        drop(proc_data);
+                        drop(wait_guard);
+                        p.free_proc();
+                        return Some(pid);
+                    }
+                    
+                }
+            }
+            let my_proc_data = my_proc.data.acquire();
+            // No point waiting if we don't have any children. 
+            if !have_kids || my_proc_data.killed {
+                drop(wait_guard);
+                drop(my_proc_data);
+                return None
+            }
+
+            // Wait for a child to exit.
+            my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
+        }
+    }
 }
-
-
 
 #[inline]
 fn kstack(pos: usize) -> usize {

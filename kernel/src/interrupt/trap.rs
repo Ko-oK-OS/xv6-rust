@@ -9,7 +9,7 @@ use crate::process::*;
 use crate::console::*;
 use super::*;
 
-static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
+pub static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
 
 pub fn trap_init(){
     println!("trap init......");
@@ -54,7 +54,7 @@ pub unsafe fn usertrap() {
 
     if scause == 8 {
         // system call 
-        if guard.killed != 0 {
+        if guard.killed {
             //TODO: exit
         }
 
@@ -74,10 +74,10 @@ pub unsafe fn usertrap() {
     }else {
         println!("usertrap(): unexpected scause {} pid={}", scause, guard.pid);
         println!("                       sepc={} stval={}", sepc, stval::read());
-        guard.killed = 1;
+        guard.killed = true;
     }
 
-    if guard.killed != 0{
+    if guard.killed {
         // TODO: exit
     }
 

@@ -6,12 +6,10 @@ use super::*;
 use alloc::vec;
 use bit_field::BitField;
 
-
-
 pub fn sys_dup() -> SysResult {
     let mut file: VFile = VFile::init();
     let fd: usize;
-    arg_fd(0, &mut 0, &mut file);
+    arg_fd(0, &mut 0, &mut file)?;
     match unsafe {
         CPU_MANAGER.alloc_fd(&mut file)
     } {
