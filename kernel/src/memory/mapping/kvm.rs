@@ -3,7 +3,7 @@ use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::memory::RawPage;
 use crate::define::memlayout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
-    PLIC, KERNBASE, PHYSTOP, TRAMPOLINE,
+    PLIC_BASE, KERNBASE, PHYSTOP, TRAMPOLINE,
     E1000_REGS, ECAM, VIRT_TEST, CLINT
 };
 use crate::register::{satp, sfence_vma};
@@ -104,8 +104,8 @@ unsafe fn kvm_make() {
     println!("plic map......");
     // PLIC
     KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(PLIC.as_usize()), 
-        PhysicalAddress::new(PLIC.as_usize()), 
+        VirtualAddress::new(PLIC_BASE.as_usize()), 
+        PhysicalAddress::new(PLIC_BASE.as_usize()), 
         0x400000, 
         PteFlags::R | PteFlags::W
     );
