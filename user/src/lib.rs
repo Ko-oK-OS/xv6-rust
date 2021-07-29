@@ -51,3 +51,9 @@ pub fn exec(path: &str, args: &[*const u8]) -> isize {
 pub fn write(fd: usize, buf: &[u8], n:usize) -> isize {
     sys_write(fd, buf, n)
 }
+
+// pub fn wait(status: isize) -> isize {
+//     loop {
+
+//     }   
+// }
