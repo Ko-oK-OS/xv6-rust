@@ -1,17 +1,22 @@
-use core::ptr::NonNull;
+use core::intrinsics::drop_in_place;
+use core::str::from_utf8;
+use core::usize;
+use core::{ptr::NonNull, slice::from_raw_parts_mut};
+use core::slice::from_raw_parts;
 
+use crate::define::memlayout::PGSIZE;
+use crate::define::param::MAXARG;
+use crate::memory::RawPage;
 use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile, create}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use super::*;
 
 use alloc::vec;
 use bit_field::BitField;
 
-
-
 pub fn sys_dup() -> SysResult {
     let mut file: VFile = VFile::init();
     let fd: usize;
-    arg_fd(0, &mut 0, &mut file);
+    arg_fd(0, &mut 0, &mut file)?;
     match unsafe {
         CPU_MANAGER.alloc_fd(&mut file)
     } {
@@ -189,4 +194,66 @@ pub fn sys_close() -> SysResult {
     };
     file.close();
     Ok(0)
+}
+
+pub fn sys_exec() -> SysResult {
+    let mut path = [0u8;MAXPATH];
+    let mut argv = [0 as *mut u8; MAXARG];
+    let mut user_argv = 0;
+    let mut user_arg:usize = 0;
+    arg_str(0, &mut path, MAXPATH)?;
+    arg_addr(1, &mut user_argv)?;
+    let path = from_utf8(&path).unwrap();
+
+    let mut count = 0;
+    loop {
+        if count >= argv.len() {
+            for i in 0..MAXARG {
+                if argv[i] != 0 as *mut u8 {
+                    unsafe{ drop_in_place(argv[i] as *mut RawPage) };
+                }
+            }
+            return Err(());
+        }
+        let mut buf = [0u8;8];
+        fetch_addr(
+            user_argv + count * size_of::<usize>(), 
+            &mut buf, 
+            8
+        )?;
+        // TODO: use little endian to create an native integer?
+        user_arg = usize::from_le_bytes(buf);
+        if user_arg == 0 {
+            argv[count] = 0 as *mut u8;
+            break;
+        }
+        let mem = unsafe{ RawPage::new_zeroed() as *mut u8 };
+        argv[count] = mem;
+        let buf = unsafe { from_raw_parts_mut(mem, PGSIZE) };
+
+        fetch_str(
+            user_arg, 
+            buf, 
+            PGSIZE
+        )?;        
+        count += 1;
+    }
+
+    let argv = unsafe{ 
+        from_raw_parts(
+            argv.as_ptr() as *const *const u8, 
+            MAXARG
+        ) 
+    };
+    let ret = unsafe {
+        exec(path, &argv).expect("Fail to exec")
+    };
+
+    for i in 0..MAXARG {
+        if argv[i] != 0 as *mut u8 {
+            unsafe{ drop_in_place(argv[i] as *mut RawPage) };
+        }
+    }
+    
+    Ok(ret)
 }

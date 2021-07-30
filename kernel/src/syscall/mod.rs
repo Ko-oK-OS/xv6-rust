@@ -13,7 +13,7 @@ use core::borrow::BorrowMut;
 use core::mem::size_of;
 use core::ops::IndexMut;
 
-type SyscallFn = fn() -> isize;
+type SyscallFn = fn() -> SysResult;
 
 pub const SYSCALL_NUM:usize = 1;
 
@@ -147,7 +147,7 @@ pub unsafe fn syscall() {
     let id = tf.a7;
 
     if id > 0 && id < SYSCALL_NUM {
-        tf.a0 = SYSCALL[id]() as usize;
+        tf.a0 = SYSCALL[id]().expect("Fail to syscall");
     }else {
         let guard = my_proc.data.acquire();
         let pid = guard.pid;

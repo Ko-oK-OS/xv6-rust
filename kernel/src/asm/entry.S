@@ -3,7 +3,7 @@
     # were a ROM. the code at 0x1000 jumps to
     # 0x80000000, the _entry function here,
     # in machine mode. each CPU starts here.
-    .text
+    .section .text
     .globl _entry
 _entry:
 	# set up a stack for Rust.
@@ -23,4 +23,4 @@ _entry:
     .section .data
     .align 4
 stack0:
-    .space 1024*16*8 # 8 is NCPU in param.rs
+    .space 16384*8 # 8 is NCPU in param.rs

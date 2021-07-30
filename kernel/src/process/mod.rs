@@ -79,7 +79,7 @@ pub unsafe fn fork() -> SysResult {
         drop(guard);
 
         let wait_guard = PROC_MANAGER.wait_lock.acquire();
-        other_extern_data.parent = NonNull::new(my_proc as *mut Process);
+        other_extern_data.parent = Some(my_proc as *mut Process);
         drop(wait_guard);
 
         let mut guard = other_proc.data.acquire();
@@ -122,7 +122,7 @@ pub unsafe fn exit(status: i32) {
     // TODO: Give any children to init
     
     // Parent might be sleeping in wait(). 
-    PROC_MANAGER.wakeup(extern_data.parent.unwrap().as_ptr() as usize);
+    PROC_MANAGER.wakeup(extern_data.parent.unwrap() as usize);
 
     let mut guard = my_proc.data.acquire();
 
