@@ -237,6 +237,19 @@ impl Process{
         self as *mut Process as usize
     }
 
+    pub fn killed(&self) -> bool {
+        let proc_data = self.data.acquire();
+        let killed = proc_data.killed;
+        drop(proc_data);
+        killed
+    }
+
+    pub fn page_table(&self) -> &mut Box<PageTable> {
+        let extern_data = unsafe{ &mut *self.extern_data.get() };
+        let page_table = extern_data.pagetable.as_mut().expect("Fail to get page table");
+        page_table
+    }
+
     /// Create a user page table for a given process,
     /// with no user memory, but with trampoline pages. 
     pub fn proc_pagetable(&self) -> Option<Box<PageTable>> {
@@ -361,7 +374,7 @@ impl Process{
 
     /// Atomically release lock and sleep on chan
     /// Reacquires lock when awakened.
-    pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<T>) {
+    pub fn sleep<T>(&self, channel: usize, lock: &SpinlockGuard<T>) {
         // Must acquire p->lock in order to 
         // change p->state and then call sched.
         // Once we hold p->lock, we can be
