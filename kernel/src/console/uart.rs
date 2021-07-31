@@ -28,16 +28,14 @@ const LSR_TX_IDLE: usize = 1 << 5; // THR can accept another character to send
 const UART_BUF_SIZE:usize = 32;
 pub static UART: Spinlock<Uart> = Spinlock::new(Uart::new(UART0), "uart");
 
-
-
-// init uart
+/// init uart
 pub unsafe fn uart_init() {
     let mut uart = UART.acquire();
     uart.init();
     drop(uart);
 }
 
-// UART DRIVER
+/// UART DRIVER
 pub struct Uart {
     // UART MMIO base address
     addr: usize,

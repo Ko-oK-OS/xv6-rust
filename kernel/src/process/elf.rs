@@ -336,14 +336,6 @@ pub unsafe fn exec(
     Ok(argc)
 }
 
-// pub fn err_page_table(mut page_table: Box<PageTable>, size: usize) {
-//     page_table.proc_freepagetable(size)
-// }
-
-// pub fn err_inode(ip: Box<Inode>) {
-//     ip.unlock_put();
-//     LOG.end_op();
-// }
 
 #[inline]
 fn align_sp(sp: usize) -> usize {
