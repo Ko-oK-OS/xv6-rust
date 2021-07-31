@@ -17,9 +17,9 @@ use std::rt::panic_count::get;
 use user::{
     fork,
     exec,
-    //waitpid,
+    // Waitpid,
     open,
-    //OpenFlags,
+    // OpenFlags,
     close,
     dup,
 };
