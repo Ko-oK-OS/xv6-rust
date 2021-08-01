@@ -1,5 +1,5 @@
 use crate::process::cpu::cpuid;
-
+use crate::console::UART;
 use crate::logo::LOGO;
 use crate::console::{self, console_init};
 use crate::interrupt::{

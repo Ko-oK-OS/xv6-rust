@@ -108,7 +108,7 @@ And then you can debug this programe step by step.
     - [x] Bitmap Layer
     - [x] File Descriptor Layer
     - [x] File Path
-    - [ ] Pipe 
+    - [x] Pipe 
     - [ ] RamDisk
     - [ ] Syscall
 - NetWork
