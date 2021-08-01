@@ -221,7 +221,7 @@ impl Spinlock<Disk> {
                 break;
             } else {
                 unsafe {
-                    CPU_MANAGER.myproc().unwrap().sleep(&guard.free[0] as *const bool as usize, guard);
+                    CPU_MANAGER.myproc().unwrap().sleep(&guard.free[0] as *const bool as usize, &guard);
                 }
                 guard = self.acquire();
             }
@@ -272,7 +272,7 @@ impl Spinlock<Disk> {
         // wait for the disk to handle the buf data
         while guard.info[idx[0]].disk {
             // choose the raw buf data as channel
-            unsafe { CPU_MANAGER.myproc().unwrap().sleep(buf_raw_data as usize, guard); }
+            unsafe { CPU_MANAGER.myproc().unwrap().sleep(buf_raw_data as usize, &guard); }
             guard = self.acquire();
         }
 

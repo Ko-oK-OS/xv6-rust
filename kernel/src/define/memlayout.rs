@@ -22,11 +22,11 @@ use super::*;
 use core::convert::Into;
 
 pub const UART0:usize = 0x10000000;
-pub const UART0_IRQ:usize = 10;
+pub const UART0_IRQ: u32 = 10;
 
 // virtio mmio interface
 pub const VIRTIO0:usize = 0x10001000;
-pub const VIRTIO0_IRQ:usize = 1;
+pub const VIRTIO0_IRQ: u32 = 1;
 
 // core local interruptor (CLINT), which contains the timer.
 pub const CLINT:Address = Address(0x2000000);
@@ -35,15 +35,15 @@ pub const CLINT_MTIMECMP:Address = CLINT.add_addr(0x4000);
 
 
 // qemu puts platform-level interrupt controller (PLIC) here.
-pub const PLIC:Address = Address(0x0c000000);
-pub const PLIC_PRIORITY:Address = PLIC.add_addr(0x0);
-pub const PLIC_PENDING:Address = PLIC.add_addr(0x1000);
-pub const PLIC_MENABLE:Address = PLIC.add_addr(0x2000);
-pub const PLIC_SENABLE:Address = PLIC.add_addr(0x2080);
-pub const PLIC_MPRIORITY:Address = PLIC.add_addr(0x200000);
-pub const PLIC_SPRIORITY:Address = PLIC.add_addr(0x201000);
-pub const PLIC_MCLAIM:Address = PLIC.add_addr(0x200004);
-pub const PLIC_SCLAIM:Address = PLIC.add_addr(0x201004);
+pub const PLIC_BASE:Address = Address(0x0c000000);
+pub const PLIC_PRIORITY:Address = PLIC_BASE.add_addr(0x0);
+pub const PLIC_PENDING:Address = PLIC_BASE.add_addr(0x1000);
+pub const PLIC_MENABLE:Address = PLIC_BASE.add_addr(0x2000);
+pub const PLIC_SENABLE:Address = PLIC_BASE.add_addr(0x2080);
+pub const PLIC_MPRIORITY:Address = PLIC_BASE.add_addr(0x200000);
+pub const PLIC_SPRIORITY:Address = PLIC_BASE.add_addr(0x201000);
+pub const PLIC_MCLAIM:Address = PLIC_BASE.add_addr(0x200004);
+pub const PLIC_SCLAIM:Address = PLIC_BASE.add_addr(0x201004);
 
 
 // we'll place the e1000 registers at this address.

@@ -39,13 +39,11 @@ pub struct Process {
 
 pub struct ProcData {
     // p->lock must be held when using these
-    pub state:Procstate,
-    pub channel:usize, // If non-zero, sleeping on chan
-    pub killed:usize, // If non-zero, have been killed
-    pub xstate:usize, // Exit status to be returned to parent's wait
+    pub state: Procstate,
+    pub channel: usize, // If non-zero, sleeping on chan
+    pub killed: bool, // If non-zero, have been killed
+    pub xstate: usize, // Exit status to be returned to parent's wait
     pub pid: usize,   // Process ID
-
-
 }
 
 impl ProcData {
@@ -53,7 +51,7 @@ impl ProcData {
         Self {
             state: Procstate::UNUSED,
             channel: 0,
-            killed: 0,
+            killed: false,
             xstate: 0,
             pid: 0,
 
@@ -72,12 +70,9 @@ pub struct ProcExtern {
     pub pagetable: Option<Box<PageTable>>, // User page table
     pub trapframe: *mut Trapframe, // data page for trampoline.S
     pub context: Context, // swtch() here to run processs
-
     pub name: &'static str,   // Process name (debugging)
-
     // proc_tree_lock must be held when using this:
-    pub parent: Option<NonNull<Process>>,
-    
+    pub parent: Option<*mut Process>,   
     pub ofile: Vec<Arc<RefCell<VFile>>>,
     pub cwd: Option<Inode>
 
@@ -106,7 +101,7 @@ impl ProcExtern {
         self.name = name;
     }
 
-    pub fn set_parent(&mut self, parent: Option<NonNull<Process>>) {
+    pub fn set_parent(&mut self, parent: Option<*mut Process>) {
         self.parent = parent;
     }
 
@@ -242,6 +237,19 @@ impl Process{
         self as *mut Process as usize
     }
 
+    pub fn killed(&self) -> bool {
+        let proc_data = self.data.acquire();
+        let killed = proc_data.killed;
+        drop(proc_data);
+        killed
+    }
+
+    pub fn page_table(&self) -> &mut Box<PageTable> {
+        let extern_data = unsafe{ &mut *self.extern_data.get() };
+        let page_table = extern_data.pagetable.as_mut().expect("Fail to get page table");
+        page_table
+    }
+
     /// Create a user page table for a given process,
     /// with no user memory, but with trampoline pages. 
     pub fn proc_pagetable(&self) -> Option<Box<PageTable>> {
@@ -310,7 +318,7 @@ impl Process{
 
             guard.pid = 0;
             guard.channel = 0;
-            guard.killed = 0;
+            guard.killed = false;
             guard.xstate = 0;
             guard.set_state(Procstate::UNUSED);
 
@@ -366,7 +374,7 @@ impl Process{
 
     /// Atomically release lock and sleep on chan
     /// Reacquires lock when awakened.
-    pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<T>) {
+    pub fn sleep<T>(&self, channel: usize, lock: &SpinlockGuard<T>) {
         // Must acquire p->lock in order to 
         // change p->state and then call sched.
         // Once we hold p->lock, we can be
@@ -383,14 +391,12 @@ impl Process{
 
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
-            let ctx = (&mut (*self.extern_data.get())).get_context_mut();
-            
+            let ctx = (&mut (*self.extern_data.get())).get_context_mut();           
             // get schedule process
             guard = my_cpu.sched(
                 guard, 
                 ctx
             );
-
             // Tide up
             guard.channel = 0;
             drop(guard);
@@ -411,6 +417,7 @@ impl Process{
         Ok(fd)
         
     }
+    
 }
 
 extern "C" {

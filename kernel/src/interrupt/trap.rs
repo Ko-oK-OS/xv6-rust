@@ -9,7 +9,7 @@ use crate::process::*;
 use crate::console::*;
 use super::*;
 
-static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
+pub static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
 
 pub fn trap_init(){
     println!("trap init......");
@@ -54,7 +54,7 @@ pub unsafe fn usertrap() {
 
     if scause == 8 {
         // system call 
-        if guard.killed != 0 {
+        if guard.killed {
             //TODO: exit
         }
 
@@ -74,10 +74,10 @@ pub unsafe fn usertrap() {
     }else {
         println!("usertrap(): unexpected scause {} pid={}", scause, guard.pid);
         println!("                       sepc={} stval={}", sepc, stval::read());
-        guard.killed = 1;
+        guard.killed = true;
     }
 
-    if guard.killed != 0{
+    if guard.killed {
         // TODO: exit
     }
 
@@ -147,8 +147,8 @@ pub unsafe fn usertrap_ret() -> ! {
 
 }
 
-// interrupts and exceptions from kernel code go here via kernelvec,
-// on whatever the current kernel stack is.
+/// interrupts and exceptions from kernel code go here via kernelvec,
+/// on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kerneltrap(
    arg0: usize, arg1: usize, arg2: usize, _: usize,
@@ -168,7 +168,7 @@ pub unsafe fn kerneltrap(
         panic!("kerneltrap(): interrupts enabled");
     }
     // Update progrma counter
-    sepc += 4;
+    sepc += 2;
     let scause = Scause::new(scause);
     println!("{:?}", scause.cause());
     match scause.cause(){
@@ -188,17 +188,24 @@ pub unsafe fn kerneltrap(
         Trap::Interrupt(Interrupt::SupervisorExternal) => {
             // this is a supervisor external interrupt, via PLIC.
             // irq indicates which device interrupted.
-            let irq = plic::plic_claim();
+            let plic = PLIC.acquire();
+            if let Some(interrupt) = plic.claim() {
+                match interrupt {
+                    VIRTIO0_IRQ => {
+                        DISK.acquire().intr();
+                    },
 
-            if irq == UART0_IRQ as usize{
-                println!("uart interrupt");
-                UART.intr();
+                    UART0_IRQ => {
+                        // UART.intr();
+                        panic!("uart intr");
+                    },
 
-            }else if irq == VIRTIO0_IRQ as usize{
-                DISK.acquire().intr();
+                    _ => {
+                        panic!("Unresolved interrupt");
+                    }
+                }
+                plic.complete(interrupt);
             }
-            
-            plic::plic_complete(irq);
             
         },
 
@@ -252,22 +259,22 @@ unsafe fn device_intr() -> usize {
                 println!("Supervisor Enternal Interrupt Occures!");
             // this is a supervisor external interrupt, via PLIC.
             // irq indicates which device interrupted.
-            let irq = plic::plic_claim();
+            let plic = PLIC.acquire();
+            if let Some(interrupt) = plic.claim() {
+                match interrupt {
+                    VIRTIO0_IRQ => {
+                        DISK.acquire().intr();
+                    },
 
-            if irq == UART0_IRQ as usize{
-                println!("uart interrupt");
-                // uart_intr();
-                UART.intr();
+                    UART0_IRQ => {
+                        UART.intr();
+                    },
 
-            }else if irq == VIRTIO0_IRQ as usize{
-                // TODO: virtio_disk_intr
-                println!("virtio0 interrupt");
-            }else if irq != 0 {
-                println!("unexpected intrrupt, irq={}", irq);
-            }
-
-            if irq != 0 {
-                plic::plic_complete(irq);
+                    _ => {
+                        panic!("Unresolved interrupt");
+                    }
+                }
+                plic.complete(interrupt);
             }
 
             1

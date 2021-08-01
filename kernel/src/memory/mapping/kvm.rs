@@ -3,7 +3,7 @@ use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::memory::RawPage;
 use crate::define::memlayout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
-    PLIC, KERNBASE, PHYSTOP, TRAMPOLINE,
+    PLIC_BASE, KERNBASE, PHYSTOP, TRAMPOLINE,
     E1000_REGS, ECAM, VIRT_TEST, CLINT
 };
 use crate::register::{satp, sfence_vma};
@@ -75,22 +75,22 @@ unsafe fn kvm_make() {
     );
 
     // PCI-E ECAM (configuration space), for pci.c
-    // println!("PCL-E ECAM map......");
-    // KERNEL_PAGETABLE.kernel_map(
-    //     VirtualAddress::new(ECAM),
-    //     PhysicalAddress::new(ECAM),
-    //     0x10000000,
-    //     PteFlags::R | PteFlags::W
-    // );
+    println!("PCL-E ECAM map......");
+    KERNEL_PAGETABLE.kernel_map(
+        VirtualAddress::new(ECAM),
+        PhysicalAddress::new(ECAM),
+        0x10000000,
+        PteFlags::R | PteFlags::W
+    );
 
     // pci maps the e1000's registers here.
-    // println!("e1000's registers map......");
-    // KERNEL_PAGETABLE.kernel_map(
-    //     VirtualAddress::new(E1000_REGS),
-    //     PhysicalAddress::new(E1000_REGS),
-    //     0x20000,
-    //     PteFlags::R | PteFlags::W
-    // );
+    println!("e1000's registers map......");
+    KERNEL_PAGETABLE.kernel_map(
+        VirtualAddress::new(E1000_REGS),
+        PhysicalAddress::new(E1000_REGS),
+        0x20000,
+        PteFlags::R | PteFlags::W
+    );
 
     println!("clint map......");
     // CLINT
@@ -104,8 +104,8 @@ unsafe fn kvm_make() {
     println!("plic map......");
     // PLIC
     KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(PLIC.as_usize()), 
-        PhysicalAddress::new(PLIC.as_usize()), 
+        VirtualAddress::new(PLIC_BASE.as_usize()), 
+        PhysicalAddress::new(PLIC_BASE.as_usize()), 
         0x400000, 
         PteFlags::R | PteFlags::W
     );
