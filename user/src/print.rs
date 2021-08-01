@@ -1,5 +1,6 @@
 use core::fmt::{Write, self};
 use super::{ sys_write, STDOUT };
+use core::panic::PanicInfo;
 
 struct Stdout;
 
@@ -30,4 +31,10 @@ macro_rules! println {
     ($fmt: literal $(, $($arg: tt)+)?) => {
     $crate::print::_print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?)); 
     };
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo<'_>) -> ! {
+    println!("\x1b[1;31mpanic: '{}'\x1b[0m", info);
+    loop {}
 }
