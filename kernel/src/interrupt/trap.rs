@@ -143,8 +143,10 @@ pub unsafe fn usertrap_ret() -> ! {
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
     core::mem::transmute(userret_virt);
 
+    println!("jump to trampoline to enter user pagetable");
+    println!("userret_virt addr: 0x{:x}", userret_virt as usize);
+    println!("userret addr: 0x{:x}", userret as usize);
     userret_virt(TRAMPOLINE, satp);
-
 }
 
 /// interrupts and exceptions from kernel code go here via kernelvec,
