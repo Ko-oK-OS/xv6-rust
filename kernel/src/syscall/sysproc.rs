@@ -2,9 +2,8 @@ use crate::process::*;
 use super::*;
 
 pub fn sys_fork() -> SysResult {
-    unsafe {
-        fork()
-    }
+    let ret = unsafe{ fork()? };
+    Ok(ret as usize)
 }
 
 pub fn sys_getpid() -> SysResult {
