@@ -48,17 +48,17 @@ pub unsafe extern "C" fn rust_main() {
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         // console_write_test();
         // sstatus::intr_on();
-        // STARTED.store(true, Ordering::SeqCst);
-        llvm_asm!("ebreak"::::"volatile");
-        loop{};
+        STARTED.store(true, Ordering::SeqCst);
+        // llvm_asm!("ebreak"::::"volatile");
+        // loop{};
     } else {
-        // while !STARTED.load(Ordering::SeqCst){}
+        while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());
         // kvm_init_hart(); // turn on paging
         // trap_init_hart();   // install kernel trap vector
         // plic_init_hart();   // ask PLIC for device interrupts
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        // loop{}
+        loop{}
     }
     CPU_MANAGER.scheduler();
     

@@ -10,7 +10,8 @@ use user::{
     exec,
     wait,
     O_RDWR,
-    CONSOLE
+    CONSOLE,
+    println
 };
 
 

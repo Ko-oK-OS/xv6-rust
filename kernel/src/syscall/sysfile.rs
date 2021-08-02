@@ -257,3 +257,31 @@ pub fn sys_exec() -> SysResult {
     
     Ok(ret)
 }
+
+pub fn sys_pipe() -> SysResult {
+    Ok(0)
+}
+
+pub fn sys_fstat() -> SysResult {
+    Ok(0)
+}
+
+pub fn sys_chdir() -> SysResult {
+    Ok(0)
+}
+
+pub fn sys_mkond() -> SysResult {
+    Ok(0)
+}
+
+pub fn sys_unlink() -> SysResult {
+    Ok(0)
+}
+
+pub fn sys_link() -> SysResult {
+    Ok(0)
+}
+
+pub fn sys_mkdir() -> SysResult {
+    Ok(0)
+}

@@ -1,12 +1,10 @@
-# target files
-target/
-
-# editor
-.vscode
-.idea
-
-kernel.S
-kernel-elf
-
-# net
-*.pcap
+*
+/*
+!src/*
+!.cargo/*
+!Cargo.toml
+!Cargo.lock
+!.gitignore
+!.gdbinit
+!Makefile
+!rust-toolchain.toml

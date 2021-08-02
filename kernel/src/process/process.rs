@@ -14,6 +14,7 @@ use crate::memory::{
     RawPage
 };
 use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
+use crate::register::satp;
 use super::*;
 use crate::fs::{FileType, Inode, VFile};
 
@@ -193,6 +194,24 @@ impl ProcExtern {
             )
         )
     }
+
+    /// Initialize first user process
+    pub fn user_init(&mut self) {
+        extern "C" {
+            fn usertrap();
+        }
+        let tf = unsafe{ &mut *self.trapframe };
+        // kernel page table
+        tf.kernel_trap = unsafe{ satp::read() };
+        // process's kernel stack 
+        tf.kernel_sp = self.kstack + PGSIZE * 4;
+        // kernel user trap address
+        tf.kernel_trap = usertrap as usize;
+        // current process's cpu id.
+        tf.kernel_hartid = unsafe {
+            cpu::cpuid()
+        };
+    }
 }
 
 
@@ -242,6 +261,19 @@ impl Process{
         let killed = proc_data.killed;
         drop(proc_data);
         killed
+    }
+
+    pub fn pid(&self) -> usize {
+        let proc_data = self.data.acquire();
+        let pid = proc_data.pid;
+        drop(proc_data);
+        pid
+    }
+
+    pub fn modify_kill(&self, killed: bool) {
+        let mut proc_data = self.data.acquire();
+        proc_data.killed = killed;
+        drop(proc_data);
     }
 
     pub fn page_table(&self) -> &mut Box<PageTable> {

@@ -1,3 +1,5 @@
+use crate::register::satp;
+
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the
 // user page table. not specially mapped in the kernel page table.
@@ -12,7 +14,7 @@
 // return-to-user path via usertrapret() doesn't return through
 // the entire kernel call stack.
 
-pub struct Trapframe{
+pub struct Trapframe {
     /*0 */      pub kernel_satp:usize, // kernel page table
     /*8 */      pub kernel_sp:usize, // top of process's kernel stack
     /*16 */     pub kernel_trap:usize, // usertrap()
@@ -49,5 +51,11 @@ pub struct Trapframe{
     /*264 */    pub t4:usize,
     /*272 */    pub t5:usize,
     /*280 */    pub t6:usize
+}
 
+
+impl Trapframe {
+    pub fn update_epc(&mut self) {
+        self.epc += 4;
+    }
 }

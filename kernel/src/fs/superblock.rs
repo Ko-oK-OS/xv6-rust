@@ -33,13 +33,14 @@ impl SuperBlock {
         if self.initialized.load(Ordering::Relaxed) {
             return
         }
-
+        println!("read superblock");
         let buf = BCACHE.bread(dev, 1);
         ptr::copy_nonoverlapping(
             buf.raw_data() as *const RawSuperBlock,
             self.data.as_mut_ptr(),
             1,
         );
+        println!("check magic number");
         if self.data.as_ptr().as_ref().unwrap().magic != FSMAGIC {
             panic!("invalid file system magic num");
         }

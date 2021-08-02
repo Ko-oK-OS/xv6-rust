@@ -154,8 +154,8 @@ unsafe fn fork_ret() -> ! {
     if FIRST {
         // File system initialization
         FIRST = false;
-        init(ROOTDEV);
+        // init(ROOTDEV);
     }
-
+    println!("user trap return");
     usertrap_ret();
 }

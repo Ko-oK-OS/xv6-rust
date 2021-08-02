@@ -82,6 +82,7 @@ impl CPUManager{
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
                     guard.state = Procstate::RUNNING;
+                    println!("Schedule process");
                     swtch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
@@ -165,6 +166,7 @@ impl CPU{
             panic!("sched: cpu hold mutliple locks");
         }
 
+        println!("guard state not running");
         if guard.state == Procstate::RUNNING {
             panic!("sched: proc is running");
         }
