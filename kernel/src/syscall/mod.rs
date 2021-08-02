@@ -15,10 +15,30 @@ use core::ops::IndexMut;
 
 type SyscallFn = fn() -> SysResult;
 
-pub const SYSCALL_NUM:usize = 1;
+pub const SYSCALL_NUM:usize = 21;
 
 pub static SYSCALL:[SyscallFn; SYSCALL_NUM] = [
-    sys_fork
+    sys_fork,
+    sys_exit,
+    sys_wait,
+    sys_pipe,
+    sys_read,
+    sys_write,
+    sys_close,
+    sys_kill,
+    sys_exec,
+    sys_open,
+    sys_mkond,
+    sys_unlink,
+    sys_fstat,
+    sys_link,
+    sys_mkdir,
+    sys_chdir,
+    sys_dup,
+    sys_getpid,
+    sys_sbrk,
+    sys_sleep,
+    sys_uptime
 ];
 
 pub type SysResult = Result<usize, ()>;
@@ -156,4 +176,8 @@ pub unsafe fn syscall() {
         // use max usize mean syscall failure
         tf.a0 = 2^64-1;
     }
+}
+
+pub fn sys_uptime() -> SysResult {
+    Ok(0)
 }

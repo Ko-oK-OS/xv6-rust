@@ -1,7 +1,7 @@
 use crate::{define::fs::DIRSIZ, driver::virtio_disk::DISK, register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
     satp, tp
-}};
+}, syscall::syscall};
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::memlayout::*;
@@ -25,17 +25,14 @@ pub unsafe fn trap_init_hart() {
 }
 
 
-//
-// handle an interrupt, exception, or system call from user space.
-// called from trampoline.S
-//
+/// handle an interrupt, exception, or system call from user space.
+/// called from trampoline.S
 #[no_mangle]
 pub unsafe fn usertrap() {
-    println!("user trap");
     let sepc = sepc::read();
-    let scause = scause::read();
+    let scause = Scause::new(scause::read());
 
-    let which_dev = device_intr();
+    // let which_dev = device_intr();
     if !sstatus::is_from_user() {
         panic!("usertrap(): not from user mode");
     }
@@ -45,53 +42,91 @@ pub unsafe fn usertrap() {
     stvec::write(kerneltrap as usize);
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
-
-    let mut guard = my_proc.data.acquire();
-
     let mut extern_data = my_proc.extern_data.get_mut();
 
-    (*extern_data.trapframe).epc = sepc;
+    let tf = &mut *extern_data.trapframe;
+    tf.epc = sepc;
 
-    if scause == 8 {
-        // system call 
-        if guard.killed {
-            //TODO: exit
+    match scause.cause() {
+        Trap::Exception(Exception::UserEnvCall) => {
+            // user system call
+            if my_proc.killed() {
+                exit(-1);
+            }
+            // Spec points to the ecall instruction,
+            // but we want to return to the next instrcution
+            tf.update_epc();
+
+            // An interrupt will change sstatus &c registers,
+            // so don't enable until done with those registers. 
+            sstatus::intr_on();
+            syscall();
+        },
+
+        // Device interrupt
+        Trap::Interrupt(Interrupt::SupervisorExternal) => {
+            // this is a supervisor external interrupt, via PLIC.
+            // irq indicates which device interrupted.
+            let plic = PLIC.acquire();
+            if let Some(interrupt) = plic.claim() {
+                match interrupt {
+                    VIRTIO0_IRQ => {
+                        DISK.acquire().intr();
+                    },
+
+                    UART0_IRQ => {
+                        // UART.intr();
+                        panic!("uart intr");
+                    },
+
+                    _ => {
+                        panic!("Unresolved interrupt");
+                    }
+                }
+                plic.complete(interrupt);
+            }
+            
+        },
+
+        // Clock Interrupt
+        Trap::Interrupt(Interrupt::SupervisorSoft) => {
+
+            // software interrupt from a machine-mode timer interrupt,
+            // forwarded by timervec in kernelvec.S.
+
+            if cpu::cpuid() == 0{
+                clockintr();
+            }
+
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            sip::write(sip::read() & !2);
+            
+            if my_proc.killed() {
+                exit(-1);
+            }
+            // yield up the CPU if this is a timer interrupt
+            my_proc.yielding();
+
+        },
+
+        _ => {
+            println!("usertrap: unexpected scacuse: {:?}\n pid: {}", scause.cause(), my_proc.pid());
+            println!("sepc: {}, stval: {}", sepc, stval::read());
+            my_proc.modify_kill(true);
         }
 
-        // sepc points to the ecall instruction,
-        // but we want to return to the next instruction.
-
-        (*extern_data.trapframe).epc += 4;
-
-
-        // an interrupt will change sstatus &c registers,
-        // so don't enable until done with those registers.
-        sstatus::intr_on();
-
-        // TODO:syscall()
-    }else if which_dev != 0 {
-        // ok
-    }else {
-        println!("usertrap(): unexpected scause {} pid={}", scause, guard.pid);
-        println!("                       sepc={} stval={}", sepc, stval::read());
-        guard.killed = true;
     }
 
-    if guard.killed {
-        // TODO: exit
+    if my_proc.killed() {
+        exit(-1);
     }
-
-    // give up the CPU if this a timer interrupt
-    if which_dev ==  2 {
-        CPU_MANAGER.yield_proc();
-    }
-
+    
+    usertrap_ret();
 }
 
-//
-// return to user space
-//
 
+/// return to user space
 #[no_mangle]
 pub unsafe fn usertrap_ret() -> ! {
     extern "C" {
@@ -115,16 +150,11 @@ pub unsafe fn usertrap_ret() -> ! {
     // the process next re-enters the kernel.
 
 
-    let mut extern_data = my_proc.extern_data.get_mut();
-
-    (*extern_data.trapframe).kernel_satp = satp::read(); // kernel page table
-    (*extern_data.trapframe).kernel_sp = extern_data.kstack + PGSIZE; // process's kernel stack
-    (*extern_data.trapframe).kernel_trap = usertrap as usize;
-    (*extern_data.trapframe).kernel_hartid = tp::read(); // hartid for cpuid()
+    let extern_data = my_proc.extern_data.get_mut();
+    extern_data.user_init();
 
     // set up the registers that trampoline.S's sret will use
     // to get to user space.
-
     let mut sstatus = sstatus::read();
     sstatus = sstatus::clear_spp(sstatus); // clear SPP to 0 for user mode
     sstatus = sstatus::user_intr_on(sstatus); // enable interrupts in user mode
@@ -139,12 +169,17 @@ pub unsafe fn usertrap_ret() -> ! {
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,
     // and switches to user mode with sret. 
+    // println!("trampoline address: 0x{:x}", trampoline as usize);
+    // println!("userret address: 0x{:x}", userret as usize);
     let userret_virt = TRAMPOLINE + (userret as usize - trampoline as usize);
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
     core::mem::transmute(userret_virt);
 
-    userret_virt(TRAMPOLINE, satp);
 
+    // println!("jump to trampoline to enter user pagetable");
+    // println!("userret_virt addr: 0x{:x}", userret_virt as usize);
+    // println!("userret addr: 0x{:x}", userret as usize);
+    userret_virt(TRAPFRAME, satp);
 }
 
 /// interrupts and exceptions from kernel code go here via kernelvec,
@@ -159,10 +194,10 @@ pub unsafe fn kerneltrap(
     let scause = scause::read();
     let stval = stval::read();
 
-    println!("sepc: 0x{:x}", sepc);
-    println!("sstatus: 0x{:x}", sstatus);
-    println!("scause: 0x{:x}", scause);
-    println!("stval: 0x{:x}", stval);
+    // println!("sepc: 0x{:x}", sepc);
+    // println!("sstatus: 0x{:x}", sstatus);
+    // println!("scause: 0x{:x}", scause);
+    // println!("stval: 0x{:x}", stval);
 
     if sstatus::intr_get() {
         panic!("kerneltrap(): interrupts enabled");
@@ -170,7 +205,7 @@ pub unsafe fn kerneltrap(
     // Update progrma counter
     sepc += 2;
     let scause = Scause::new(scause);
-    println!("{:?}", scause.cause());
+    // println!("{:?}", scause.cause());
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
@@ -183,6 +218,8 @@ pub unsafe fn kerneltrap(
         Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
 
         Trap::Exception(Exception::InstructionFault) => instr_handler(sepc),
+
+        Trap::Exception(Exception::InstructionPageFault) => instr_handler(sepc),
 
         // Device Interruput
         Trap::Interrupt(Interrupt::SupervisorExternal) => {
@@ -224,8 +261,7 @@ pub unsafe fn kerneltrap(
             sip::write(sip::read() & !2);
         }
 
-        _ => {
-            
+        _ => {       
             panic!("Unresolved Trap!");
         }
     }
@@ -239,67 +275,8 @@ pub unsafe fn kerneltrap(
 pub unsafe fn clockintr(){
     let mut ticks = TICKSLOCK.acquire();
     *ticks = *ticks + 1;
-    if *ticks % 100 == 0{
-        println!("TICKS: {}", *ticks);
-    }
+    // if *ticks % 100 == 0{
+    //     println!("TICKS: {}", *ticks);
+    // }
     drop(ticks);
-}
-
-/// check if it's an external interrupt or software interrupt,
-/// and handle it.
-/// returns 2 if timer interrupt,
-/// 1 if other device,
-/// 0 if not recognized.
-unsafe fn device_intr() -> usize {
-    let scause = scause::read();
-    let scause = Scause::new(scause);
-
-    match scause.cause(){
-            Trap::Interrupt(Interrupt::SupervisorExternal) => {
-                println!("Supervisor Enternal Interrupt Occures!");
-            // this is a supervisor external interrupt, via PLIC.
-            // irq indicates which device interrupted.
-            let plic = PLIC.acquire();
-            if let Some(interrupt) = plic.claim() {
-                match interrupt {
-                    VIRTIO0_IRQ => {
-                        DISK.acquire().intr();
-                    },
-
-                    UART0_IRQ => {
-                        UART.intr();
-                    },
-
-                    _ => {
-                        panic!("Unresolved interrupt");
-                    }
-                }
-                plic.complete(interrupt);
-            }
-
-            1
-        }
-
-        Trap::Interrupt(Interrupt::SupervisorSoft) => {
-
-            // software interrupt from a machine-mode timer interrupt,
-            // forwarded by timervec in kernelvec.S.
-
-            if cpu::cpuid() == 0{
-                clockintr();
-            }
-
-            // acknowledge the software interrupt by clearing
-            // the SSIP bit in sip.
-            sip::write(sip::read() & !2);
-
-            2
-        }
-
-        _ => {
-            0
-        }
-    }
-    
-
 }

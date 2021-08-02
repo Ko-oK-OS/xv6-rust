@@ -1,11 +1,18 @@
 import os
+import shutil
 
-path = "../user/bin"
-output_path = "../mkfs"
-output_file = "userprog"
+output_dir = "../bin/"
 bin_dir = "../user/target/riscv64gc-unknown-none-elf/debug/"
 
-for (root, dirs, files) in os.walk(path):
+user_programes = [
+    "init",
+    "hello_world",
+    "sh"
+]
+
+for (root, dirs, files) in os.walk(bin_dir):
     for f in files:
-        with open(output_file, 'a+') as of:
-            of.write(bin + f + '\n')
+        if f in user_programes:
+            shutil.copy(src = bin_dir + f, dst = output_dir + f)
+            print("copy file form" + bin_dir+f + " to " + output_dir+f + "\n")
+print("success.")
