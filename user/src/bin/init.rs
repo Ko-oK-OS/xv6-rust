@@ -17,7 +17,6 @@ use user::{
 
 #[no_mangle]
 fn main() {
-    println!("Hello init");
     let argv = &["sh".as_ptr(), 0 as *const u8];
     let mut pid;
     if open("console", O_RDWR) < 0 {
