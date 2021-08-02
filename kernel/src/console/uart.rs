@@ -233,11 +233,3 @@ pub fn uart_put(c: u8) {
 }
 
 
-// pub fn uart_intr() {
-//    loop {
-//        // read and process incoming characters. 
-//        let c = uart_get();
-//        console_intr(c);
-//    }
-// }
-

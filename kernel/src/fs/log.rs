@@ -166,7 +166,7 @@ impl Spinlock<Log> {
                 (guard.outstanding+1) as usize * MAXOPBLOCKS > LOGSIZE
             {
                 let channel = guard.deref() as *const Log as usize;
-                unsafe { CPU_MANAGER.myproc().unwrap().sleep(channel, &guard); }
+                unsafe { CPU_MANAGER.myproc().unwrap().sleep(channel, guard); }
                 guard = self.acquire();
             } else {
                 guard.outstanding += 1;

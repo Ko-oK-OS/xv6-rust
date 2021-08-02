@@ -42,7 +42,7 @@ impl<T: ?Sized> SleepLock<T> {
         let mut guard = self.lock.acquire();
         while self.locked.get() {
             unsafe {
-                CPU_MANAGER.myproc().unwrap().sleep(self.locked.as_ptr() as usize, &guard);
+                CPU_MANAGER.myproc().unwrap().sleep(self.locked.as_ptr() as usize, guard);
             }
             guard = self.lock.acquire();
         }
@@ -67,31 +67,6 @@ impl<T: ?Sized> SleepLock<T> {
             PROC_MANAGER.wakeup(self.locked.as_ptr() as usize);
         }
     }
-
-    // /// Always test holding might not be efficient
-    // pub fn holding(&self) -> bool {
-    //     self.lock.load(Ordering::Relaxed)
-    // }
-
-    // fn acquire(&self) {
-    //     push_off();
-    //     if self.holding() {
-    //         panic!("sleeplock {} acquire", self.name);
-    //     }
-    //     while self.lock.swap(true, Ordering::Acquire) {
-    //         spin_loop();
-    //     }
-    //     fence(Ordering::SeqCst);
-    // }
-
-    // fn release(&self) {
-    //     if !self.holding() {
-    //         panic!("sleeplock {} release", self.name);
-    //     }
-    //     fence(Ordering::SeqCst);
-    //     self.lock.store(false, Ordering::Release);
-    //     pop_off();
-    // }
 }
 
 

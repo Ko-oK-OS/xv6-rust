@@ -319,12 +319,8 @@ impl Process{
                 return None
             }
         }
-
-
         Some(page_table)
     }
-
-
 
     /// free a proc structure and the data hanging from it,
     /// including user pages.
@@ -406,7 +402,7 @@ impl Process{
 
     /// Atomically release lock and sleep on chan
     /// Reacquires lock when awakened.
-    pub fn sleep<T>(&self, channel: usize, lock: &SpinlockGuard<T>) {
+    pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<'_, T>) {
         // Must acquire p->lock in order to 
         // change p->state and then call sched.
         // Once we hold p->lock, we can be
@@ -414,16 +410,15 @@ impl Process{
         // (wakeup locks p->lock)
         // so it's okay to release lk;
         let mut guard = self.data.acquire();
-        // let extern_data = self.extern_data.get_mut();
         drop(lock);
-
         // Go to sleep.
         guard.channel = channel;
         guard.set_state(Procstate::SLEEPING);
-
+        // println!("cpu noff: {}", unsafe{ CPU_MANAGER.mycpu().noff });
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
-            let ctx = (&mut (*self.extern_data.get())).get_context_mut();           
+            let ctx = (&mut (*self.extern_data.get())).get_context_mut();  
+            // println!("cpu noff: {}", CPU_MANAGER.mycpu().noff);      
             // get schedule process
             guard = my_cpu.sched(
                 guard, 
@@ -446,10 +441,8 @@ impl Process{
                 *file
             )
         );
-        Ok(fd)
-        
-    }
-    
+        Ok(fd)       
+    } 
 }
 
 extern "C" {

@@ -3,36 +3,6 @@
 #![feature(asm)]
 
 // extern crate alloc;
-
-use core::alloc::{GlobalAlloc, Layout};
-
-use allocator::*;
-use spin::Mutex;
-
-// #[global_allocator]
-// pub static USER_HEAP: UserHeap = UserHeap::uninit();
-
-// pub struct UserHeap(Mutex<BuddySystem>);
-
-// unsafe impl GlobalAlloc for UserHeap {
-//     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-//         let ptr = self.0.lock().alloc(layout);
-//         // println!("alloc addr: 0x{:x}", ptr as usize);
-//         ptr
-//     }
-
-//     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-//         self.0.lock().dealloc(ptr, layout)
-//     }
-// }
-
-// impl UserHeap {
-//     const fn uninit() -> Self {
-//         Self(Mutex::new(BuddySystem::uninit()))
-//     }
-
-// }
-
 #[macro_use]
 pub mod syscall;
 pub mod print;
@@ -79,7 +49,11 @@ pub fn exec(path: &str, args: &[*const u8]) -> isize {
     sys_exec(path, args)
 }
 
-pub fn write(fd: usize, buf: &[u8], n:usize) -> isize {
+pub fn read(fd: usize, buf: &mut [u8], n: usize) -> isize {
+    sys_read(fd, buf, n)
+}
+
+pub fn write(fd: usize, buf: &[u8], n: usize) -> isize {
     sys_write(fd, buf, n)
 }
 

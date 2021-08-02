@@ -161,21 +161,24 @@ impl CPU{
         if !guard.holding() {
             panic!("sched: not holding proc's lock");
         }
-
+        // only holding self.proc.lock
         if self.noff != 1 {
+            println!("self noff is {}", self.noff);
             panic!("sched: cpu hold mutliple locks");
         }
-
-        println!("guard state not running");
+            
+        // proc is not running. 
         if guard.state == Procstate::RUNNING {
             panic!("sched: proc is running");
         }
 
+        // should not be interruptible
         if sstatus::intr_get() {
             panic!("sched: interruptible");
         }
 
         let intena = self.intena;
+        println!("switch...");
         swtch(ctx, &mut self.context as *mut Context);
         self.intena = intena;
 
@@ -217,5 +220,4 @@ pub fn pop_off() {
     if c.noff == 0 && c.intena != 0 {
         unsafe{ sstatus::intr_on() };
     }
-
 }
