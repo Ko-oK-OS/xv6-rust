@@ -58,10 +58,6 @@ qemu-gdb:
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
-gen:
-	@cd utils
-	@python gen.py
-
 # 一键运行
 run: build qemu
 

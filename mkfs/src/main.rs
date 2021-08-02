@@ -18,7 +18,11 @@ use fs_lib::SuperBlock;
 
 
 pub static FS_IMG: &'static str = "../fs.img";
-pub static USERPROG_DIR: &'static str = "../user/target/riscv64gc-unknown-none-elf/debug/";
+pub static USERPROG_DIR: &'static str = "../bin/";
+pub static USER_PROGRAMS: [&'static str; 2] = [
+    "init",
+    "hello_world",
+];
 
 pub static mut SUPER_BLOCK: SuperBlock = SuperBlock::uninit();
 pub static mut FREE_INODE: usize = 1;
@@ -362,22 +366,22 @@ pub fn main() {
     block_device.append_inode(root_inode, data, size_of::<DirEntry>());
 
     // Initialize use programe
-    let user_progs = File::open("userprog").unwrap();
-    let user_progs = BufReader::new(user_progs);
-    for prog_path in user_progs.lines() {
+    for prog in USER_PROGRAMS.iter() {
         let short_str: &str = "null";
+        let path = format!("{}{}", USERPROG_DIR, prog);
         let inum = block_device.alloc_inode(InodeType::File as u16);
         let mut dir_entry = DirEntry::new();
         dir_entry.inum = inum as u16;
         unsafe{
-            ptr::copy_nonoverlapping(short_str.as_bytes().as_ptr(), dir_entry.name.as_mut_ptr(), dot_dot.len());
+            ptr::copy_nonoverlapping(short_str.as_ptr(), dir_entry.name.as_mut_ptr(), dot_dot.len());
         }
-        let mut prog = File::open(prog_path.unwrap()).unwrap();
-        let mut buf = vec![0;BSIZE];
-        while prog.read(&mut buf).unwrap() > 0 {
+        println!("path: {}", path);
+        let mut exec_file = File::open(path).unwrap();
+        let mut buf = [0u8;BSIZE];
+        while exec_file.read(&mut buf).unwrap() > 0 {
             block_device.append_inode(inum, buf.as_ptr(), BSIZE);
         }
-        drop(prog);
+        drop(exec_file);
     }
 
     // fix size of root inode dir

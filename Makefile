@@ -10,3 +10,7 @@ run: fs
 
 fs:
 	make -C mkfs run
+
+gen:
+	@cd utils && \ 
+	@python gen.py

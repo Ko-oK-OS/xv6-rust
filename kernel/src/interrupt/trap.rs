@@ -261,9 +261,8 @@ pub unsafe fn kerneltrap(
             sip::write(sip::read() & !2);
         }
 
-        _ => {
-            
-            // panic!("Unresolved Trap!");
+        _ => {       
+            panic!("Unresolved Trap!");
         }
     }
     // store context
