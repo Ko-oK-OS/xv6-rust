@@ -1,9 +1,3 @@
-*
-/*
-!src/*
-!.cargo/config.toml
-!Cargo.toml
-!Cargo.lock
-!.gitignore
-!Makefile
-!rust-toolchain.toml
+target/*
+*.S
+*.pcap
