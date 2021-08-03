@@ -2,7 +2,7 @@
 #![no_main]
 
 use user::println;
-pub fn main() {
+pub extern "C" fn _start() {
     println!("Hello world!");
 }
 

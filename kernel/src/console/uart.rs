@@ -1,6 +1,6 @@
 use core::ptr;
 use core::convert::{ Into, TryInto };
-use core::fmt::{self, Write};
+use core::fmt::{self, Write, Error};
 
 use crate::process::PROC_MANAGER;
 use crate::{define::memlayout::UART0, println};
@@ -192,12 +192,18 @@ impl Uart {
 }
 
 impl Write for Uart {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let mut buffer = [0u8; 4];
-        for c in s.chars() {
-            for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
-                self.put(*code_point as u8);
-            }
+    // fn write_str(&mut self, s: &str) -> fmt::Result {
+    //     let mut buffer = [0u8; 4];
+    //     for c in s.chars() {
+    //         for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
+    //             self.put(*code_point as u8);
+    //         }
+    //     }
+    //     Ok(())
+    // }
+    fn write_str(&mut self, out: &str) -> Result<(), Error> {
+        for c in out.bytes() {
+            self.put(c);
         }
         Ok(())
     }
@@ -233,11 +239,32 @@ pub fn uart_put(c: u8) {
 }
 
 
-// pub fn uart_intr() {
-//    loop {
-//        // read and process incoming characters. 
-//        let c = uart_get();
-//        console_intr(c);
-//    }
-// }
+/// Process UART interrupt. Should only be called when interrupt.
+pub fn uart_intr() {
+    let mut uart = UART.acquire();
+    if let Some(c) = uart.get() {
+        drop(uart);
+        match c {
+            8 => {
+                // This is a backspace, so we
+                // essentially have to write a space and
+                // backup again:
+                println!("{} {}", 8 as char, 8 as char);
+            }
+            10 | 13 => {
+                // Newline or carriage-return
+                println!("");
+            }
+            _ => {
+                println!("{}", c as char);
+                if c == 97 {
+                    // crate::process::debug();
+                }
+            }
+        }
+    }
+}
+
+
+
 

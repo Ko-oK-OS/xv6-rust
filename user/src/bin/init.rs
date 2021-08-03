@@ -16,7 +16,8 @@ use user::{
 
 
 #[no_mangle]
-fn main() {
+pub extern "C" fn _start() -> ! {
+    println!("init process");
     let argv = &["sh".as_ptr(), 0 as *const u8];
     let mut pid;
     if open("console", O_RDWR) < 0 {

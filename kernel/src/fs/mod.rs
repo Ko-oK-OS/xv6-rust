@@ -7,7 +7,6 @@ mod bio;
 mod superblock;
 mod file;
 mod pipe;
-mod stdio;
 mod inode;
 mod dinode;
 mod devices;

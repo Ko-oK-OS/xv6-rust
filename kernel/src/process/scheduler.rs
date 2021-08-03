@@ -172,7 +172,6 @@ impl ProcManager{
                     drop(guard);
                     return Some(p)
                 },
-
                 _ => {
                     drop(guard);
                 },
@@ -293,7 +292,7 @@ impl ProcManager{
             }
 
             // Wait for a child to exit.
-            my_proc.sleep(&wait_guard as *const _ as usize, &wait_guard);
+            my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
         }
     }
 }

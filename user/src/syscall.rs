@@ -50,11 +50,11 @@ pub fn sys_pipe(pipe: &mut [usize]) -> isize {
     syscall(SYS_PIPE, [pipe.as_mut_ptr() as usize, 0, 0])
 }
 
-pub fn sys_read(fd:usize, buf: &mut [u8], n:usize) -> isize {
+pub fn sys_read(fd: usize, buf: &mut [u8], n: usize) -> isize {
     syscall(SYS_READ, [fd, buf.as_mut_ptr() as usize, n])
 }
 
-pub fn sys_write(fd:usize, buf: &[u8], n:usize) -> isize {
+pub fn sys_write(fd: usize, buf: &[u8], n: usize) -> isize {
     syscall(SYS_WRITE, [fd, buf.as_ptr() as usize, n])
 }
 
@@ -76,6 +76,10 @@ pub fn sys_mknod(path: &str, mode: usize, dev: usize) -> isize {
 
 pub fn sys_exec(path: &str, args: &[*const u8]) -> isize {
     syscall(SYS_EXEC, [path.as_ptr() as usize, args.as_ptr() as usize, 0])
+}
+
+pub fn sys_sbrk(bytes: usize) -> isize {
+    syscall(SYS_SBRK, [bytes, 0, 0])
 }
 
 

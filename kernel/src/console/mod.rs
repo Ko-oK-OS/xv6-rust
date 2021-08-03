@@ -2,7 +2,7 @@ mod uart;
 mod console;
 pub use uart::*;
 
-pub use uart::UART;
+pub use uart::{ UART, uart_intr };
 pub use console::console_write;
 
 use crate::fs::DEVICE_LIST;
@@ -14,3 +14,5 @@ pub unsafe fn console_init() {
     // DEVICE_LIST.table[CONSOLE].read = console::console_read as *const u8;
     // DEVICE_LIST.table[CONSOLE].write = console::console_write as *const u8;
 }
+
+

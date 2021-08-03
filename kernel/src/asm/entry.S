@@ -1,4 +1,4 @@
- # qemu -kernel starts at 0x1000. the instructions
+    # qemu -kernel starts at 0x1000. the instructions
     # there seem to be provided by qemu, as if it
     # were a ROM. the code at 0x1000 jumps to
     # 0x80000000, the _entry function here,
@@ -9,10 +9,10 @@ _entry:
 	# set up a stack for Rust.
     # stack0 is declared below,
     # with a 16KB stack per CPU.
-    # sp = stack0 + (hartid * 16*1024)
+    # sp = stack0 + (hartid * 16384)
     # PS: 16KB stack for few stack bump
     la sp, stack0
-    li a0, 1024*16
+    li a0, 16384
 	csrr a1, mhartid
     addi a1, a1, 1
     mul a0, a0, a1
