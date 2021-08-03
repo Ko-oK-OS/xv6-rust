@@ -6,6 +6,6 @@ pub unsafe fn read() -> usize {
 }
 
 #[inline]
-pub unsafe fn write(x:usize){
-    llvm_asm!("csrw medeleg, $0"::"r"(x)::"volatile");
+pub unsafe fn write(medeleg: usize){
+    llvm_asm!("csrw medeleg, $0"::"r"(medeleg)::"volatile");
 }

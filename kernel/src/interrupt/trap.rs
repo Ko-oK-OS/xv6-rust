@@ -1,3 +1,5 @@
+use core::panic;
+
 use crate::{define::fs::DIRSIZ, driver::virtio_disk::DISK, register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
     satp, tp
@@ -11,11 +13,7 @@ use super::*;
 
 pub static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
 
-pub fn trap_init(){
-    println!("trap init......");
-}
-
-// set up to take exceptions and traps while in the kernel.
+/// Set up to take exceptions and traps while in the kernel.
 pub unsafe fn trap_init_hart() {
     println!("trap init hart......");
     extern "C" {
@@ -203,10 +201,9 @@ pub unsafe fn kerneltrap(
         panic!("kerneltrap(): interrupts enabled");
     }
     // Update progrma counter
-    sepc += 2;
+    sepc += 4;
     let scause = Scause::new(scause);
-    // println!("{:?}", scause.cause());
-    match scause.cause(){
+    match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
 
         Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
@@ -219,12 +216,16 @@ pub unsafe fn kerneltrap(
 
         Trap::Exception(Exception::InstructionFault) => instr_handler(sepc),
 
-        Trap::Exception(Exception::InstructionPageFault) => instr_handler(sepc),
+        Trap::Exception(Exception::InstructionPageFault) => {
+            println!("sepc: 0x{:x}", sepc);
+            println!("stval: 0x{:x}", stval);
+            panic!();
+        },
 
         // Device Interruput
         Trap::Interrupt(Interrupt::SupervisorExternal) => {
             // this is a supervisor external interrupt, via PLIC.
-            // irq indicates which device interrupted.
+            // interrupt indicates which device interrupted.
             let plic = PLIC.acquire();
             if let Some(interrupt) = plic.claim() {
                 match interrupt {

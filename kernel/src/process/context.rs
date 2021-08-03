@@ -41,6 +41,10 @@ impl Context{
         }
     }
 
+    pub fn ra(&self) -> usize {
+        self.ra
+    }
+
     pub fn write_zero(&mut self) {
         self.ra = 0;
         self.sp = 0;

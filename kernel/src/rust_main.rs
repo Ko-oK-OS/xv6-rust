@@ -4,7 +4,7 @@ use crate::logo::LOGO;
 use crate::console::{self, console_init};
 use crate::interrupt::{
     PLIC,
-    trap::{trap_init_hart, trap_init}
+    trap::trap_init_hart
 };
 
 use crate::memory::{
@@ -15,7 +15,7 @@ use crate::memory::{
 use crate::driver::pci::pci_init;
 
 use crate::process::*;
-use crate::register::sstatus;
+use crate::register::{sie, sstatus};
 use crate::fs::*;
 use crate::driver::virtio_disk::DISK;
 use crate::test::console_write_test;
@@ -34,7 +34,6 @@ pub unsafe extern "C" fn rust_main() {
         kvm_init(); // create kernel page table
         kvm_init_hart(); // turn on paging
         PROC_MANAGER.init(); // process table
-        trap_init();      // trap vectors
         trap_init_hart(); // trap vectors
         let plic = PLIC.acquire();
         plic.init(); // set up interrupt controller
@@ -42,21 +41,21 @@ pub unsafe extern "C" fn rust_main() {
         drop(plic);
         BCACHE.binit(); // buffer cache
         DISK.acquire().init(); // emulated hard disk
-        pci_init(); // init pci
+        // pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
-
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
-        // console_write_test();
-        // sstatus::intr_on();
         STARTED.store(true, Ordering::SeqCst);
         // llvm_asm!("ebreak"::::"volatile");
-        // loop{};
+        sstatus::intr_on();
+        loop{};
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());
         // kvm_init_hart(); // turn on paging
-        // trap_init_hart();   // install kernel trap vector
-        // plic_init_hart();   // ask PLIC for device interrupts
+        // trap_init_hart(); // install kernel trap vector
+        // let plic = PLIC.acquire();
+        // plic.init(); // set up interrupt controller
+        // plic.init_hart(); // ask PLIC for device interrupts
+        // drop(plic);
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         loop{}
     }

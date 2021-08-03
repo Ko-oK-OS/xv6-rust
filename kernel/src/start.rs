@@ -23,7 +23,7 @@ pub unsafe fn start() -> !{
     // delegate all interrupts and exceptions to supervisor mode.
     medeleg::write(0xffff);
     mideleg::write(0xffff);
-    sie::write(sie::read() | sie::SIE::SEIE as usize | sie::SIE::STIE as usize | sie::SIE::SSIE as usize);
+    sie::intr_on();
 
     // ask for clock interrupts.
     timerinit();

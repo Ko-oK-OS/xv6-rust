@@ -4,6 +4,8 @@ const MSTATUS_MPP_S:usize =  1 << 11;
 const MSTATUS_MPP_U:usize =  0 << 11;
 const MSTATUS_MIE:usize =  1 << 3;   // machine-mode interrupt enable.
 
+use bit_field::BitField;
+
 
 // read register from M mode
 #[inline]
@@ -29,6 +31,8 @@ pub unsafe fn set_mpp(){
 
 // enable machine-mode interrupts.
 pub unsafe fn enable_interrupt(){
-    write(read() | MSTATUS_MIE);
+    let mut mstatus = read();
+    mstatus.set_bit(3, true);
+    write(mstatus);
 }
 

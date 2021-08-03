@@ -144,7 +144,7 @@ impl UserAllocator {
             &mut *frame
         };
         frame.prev = Some(frame);
-        unsafe{ addr.offset(size_of::<Frame>() as isize) }
+        frame.addr
     }
 
     /// Free memory by pointer to get special frame information,

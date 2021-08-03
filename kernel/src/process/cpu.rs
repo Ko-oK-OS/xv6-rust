@@ -178,11 +178,11 @@ impl CPU{
 
         let intena = self.intena;
         println!("Switch...");
+        println!("return address: 0x{:x}", (&mut *ctx).ra());
         swtch(
             ctx, 
             &mut self.context as *mut Context
         );
-        println!("After switch");
         self.intena = intena;
 
         guard

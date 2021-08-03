@@ -35,7 +35,7 @@ pub unsafe fn kvm_init(){
 
 /// Switch h/w page table register to the kernel's page table,
 /// and enable paging.
-pub unsafe fn kvm_init_hart(){
+pub unsafe fn kvm_init_hart() {
     println!("kvminithart......");
     satp::write(KERNEL_PAGETABLE.as_satp());
     sfence_vma();

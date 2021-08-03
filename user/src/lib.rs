@@ -3,12 +3,13 @@
 #![feature(asm)]
 #![feature(alloc_error_handler)]
 
-// extern crate alloc;
 #[macro_use]
 pub mod syscall;
 pub mod print;
 pub use syscall::*;
 mod allocator;
+
+extern crate alloc;
 
   
 pub const O_RDONLY: u32 = 0x000;
