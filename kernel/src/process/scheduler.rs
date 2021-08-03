@@ -172,7 +172,6 @@ impl ProcManager{
                     drop(guard);
                     return Some(p)
                 },
-
                 _ => {
                     drop(guard);
                 },
@@ -246,56 +245,55 @@ impl ProcManager{
 
     /// Wait for a child process to exit and return its pid. 
     pub fn wait(&mut self, addr: usize) -> Option<usize> {
-        Some(0)
-        // let mut pid = 0;
-        // let mut have_kids = false;
-        // let my_proc = unsafe {
-        //     CPU_MANAGER.myproc().expect("Fail to get my process")
-        // };
-        // // TODO: in xv6-riscv, wait lock acquire out of loop. 
-        // loop {
-        //     let wait_guard = WAIT_LOCK.acquire();
-        //     // Scan through table looking for exited children. 
-        //     for index in 0..self.proc.len() {
-        //         let p = &mut self.proc[index];
-        //         let extern_data = unsafe {
-        //             &mut *p.extern_data.get()
-        //         };
-        //         if let Some(parent) = extern_data.parent {
-        //             if parent as *const _ == my_proc as *const _ {
-        //                 have_kids = true;
-        //                 // make sure the child isn't still in exit or swtch. 
-        //                 let proc_data = p.data.acquire();
-        //                 if proc_data.state == Procstate::ZOMBIE {
-        //                     // Found one 
-        //                     pid = proc_data.pid;
-        //                     let page_table = extern_data.pagetable.as_mut().expect("Fail to get pagetable");
-        //                     if page_table.copy_out(addr, proc_data.xstate as *const u8, size_of_val(&proc_data.xstate)).is_err() {
-        //                         drop(proc_data);
-        //                         drop(wait_guard);
-        //                         return None
-        //                     }
-        //                 }
+        let mut pid = 0;
+        let mut have_kids = false;
+        let my_proc = unsafe {
+            CPU_MANAGER.myproc().expect("Fail to get my process")
+        };
+        // TODO: in xv6-riscv, wait lock acquire out of loop. 
+        loop {
+            let wait_guard = WAIT_LOCK.acquire();
+            // Scan through table looking for exited children. 
+            for index in 0..self.proc.len() {
+                let p = &mut self.proc[index];
+                let extern_data = unsafe {
+                    &mut *p.extern_data.get()
+                };
+                if let Some(parent) = extern_data.parent {
+                    if parent as *const _ == my_proc as *const _ {
+                        have_kids = true;
+                        // make sure the child isn't still in exit or swtch. 
+                        let proc_data = p.data.acquire();
+                        if proc_data.state == Procstate::ZOMBIE {
+                            // Found one 
+                            pid = proc_data.pid;
+                            let page_table = extern_data.pagetable.as_mut().expect("Fail to get pagetable");
+                            if page_table.copy_out(addr, proc_data.xstate as *const u8, size_of_val(&proc_data.xstate)).is_err() {
+                                drop(proc_data);
+                                drop(wait_guard);
+                                return None
+                            }
+                        }
 
-        //                 drop(proc_data);
-        //                 drop(wait_guard);
-        //                 p.free_proc();
-        //                 return Some(pid);
-        //             }
+                        drop(proc_data);
+                        drop(wait_guard);
+                        p.free_proc();
+                        return Some(pid);
+                    }
                     
-        //         }
-        //     }
-        //     let my_proc_data = my_proc.data.acquire();
-        //     // No point waiting if we don't have any children. 
-        //     if !have_kids || my_proc_data.killed {
-        //         drop(wait_guard);
-        //         drop(my_proc_data);
-        //         return None
-        //     }
+                }
+            }
+            let my_proc_data = my_proc.data.acquire();
+            // No point waiting if we don't have any children. 
+            if !have_kids || my_proc_data.killed {
+                drop(wait_guard);
+                drop(my_proc_data);
+                return None
+            }
 
-        //     // Wait for a child to exit.
-        //     my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
-        // }
+            // Wait for a child to exit.
+            my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
+        }
     }
 }
 

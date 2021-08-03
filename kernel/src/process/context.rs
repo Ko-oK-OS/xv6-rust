@@ -1,5 +1,6 @@
 // Saved registers for kernel context switches.
 #[repr(C)]
+#[derive(Debug)]
 pub struct Context{
     ra:usize,
     sp:usize,

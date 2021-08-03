@@ -78,5 +78,9 @@ pub fn sys_exec(path: &str, args: &[*const u8]) -> isize {
     syscall(SYS_EXEC, [path.as_ptr() as usize, args.as_ptr() as usize, 0])
 }
 
+pub fn sys_sbrk(bytes: usize) -> isize {
+    syscall(SYS_SBRK, [bytes, 0, 0])
+}
+
 
  

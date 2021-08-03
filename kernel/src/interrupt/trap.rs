@@ -234,6 +234,7 @@ pub unsafe fn kerneltrap(
 
                     UART0_IRQ => {
                         // UART.intr();
+                        uart_intr();
                         panic!("uart intr");
                     },
 

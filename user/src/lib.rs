@@ -1,12 +1,14 @@
 #![no_std]
 #![feature(llvm_asm)]
 #![feature(asm)]
+#![feature(alloc_error_handler)]
 
 // extern crate alloc;
 #[macro_use]
 pub mod syscall;
 pub mod print;
 pub use syscall::*;
+mod allocator;
 
   
 pub const O_RDONLY: u32 = 0x000;
@@ -59,4 +61,8 @@ pub fn write(fd: usize, buf: &[u8], n: usize) -> isize {
 
 pub fn wait(status: isize) -> isize {
     sys_wait(status)
+}
+
+pub fn sbrk(bytes: usize) -> isize {
+    sys_sbrk(bytes)
 }

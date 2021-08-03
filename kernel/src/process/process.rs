@@ -414,16 +414,15 @@ impl Process{
         // Go to sleep.
         guard.channel = channel;
         guard.set_state(Procstate::SLEEPING);
-        // println!("cpu noff: {}", unsafe{ CPU_MANAGER.mycpu().noff });
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
-            let ctx = (&mut (*self.extern_data.get())).get_context_mut();  
-            // println!("cpu noff: {}", CPU_MANAGER.mycpu().noff);      
+            let ctx = (&mut (*self.extern_data.get())).get_context_mut();      
             // get schedule process
             guard = my_cpu.sched(
                 guard, 
                 ctx
             );
+            println!("After sched");
             // Tide up
             guard.channel = 0;
             drop(guard);

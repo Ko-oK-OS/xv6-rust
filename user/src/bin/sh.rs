@@ -34,7 +34,7 @@ pub fn get_char() -> u8 {
 }
 
 #[no_mangle]
-fn main()->isize{
+pub extern "C" fn _start() -> isize {
     println!("shell init...");
     let mut buf:String = String::new();
     print!(">>>");

@@ -272,7 +272,6 @@ impl Spinlock<Disk> {
         // wait for the disk to handle the buf data
         while guard.info[idx[0]].disk {
             // choose the raw buf data as channel
-            // println!("cpu noff: {}", unsafe{ CPU_MANAGER.mycpu().noff });
             unsafe { CPU_MANAGER.myproc().unwrap().sleep(buf_raw_data as usize, guard); }
             guard = self.acquire();
         }

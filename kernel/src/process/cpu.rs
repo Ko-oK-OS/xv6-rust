@@ -145,7 +145,6 @@ impl CPU{
     /// be proc->intena and proc->noff, but that would
     /// break in the few places where a lock is held but
     /// there's no process.
-
     pub unsafe fn sched<'a>
     (
         &mut self, 
@@ -178,8 +177,12 @@ impl CPU{
         }
 
         let intena = self.intena;
-        println!("switch...");
-        swtch(ctx, &mut self.context as *mut Context);
+        println!("Switch...");
+        swtch(
+            ctx, 
+            &mut self.context as *mut Context
+        );
+        println!("After switch");
         self.intena = intena;
 
         guard
