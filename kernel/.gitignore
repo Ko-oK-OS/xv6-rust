@@ -1,10 +1,9 @@
 *
 /*
 !src/*
-!.cargo/*
+!.cargo/config.toml
 !Cargo.toml
 !Cargo.lock
 !.gitignore
-!.gdbinit
 !Makefile
 !rust-toolchain.toml
