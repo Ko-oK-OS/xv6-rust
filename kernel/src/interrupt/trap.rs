@@ -15,7 +15,6 @@ pub static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
 
 /// Set up to take exceptions and traps while in the kernel.
 pub unsafe fn trap_init_hart() {
-    println!("trap init hart......");
     extern "C" {
         fn kernelvec();
     }
@@ -40,7 +39,7 @@ pub unsafe fn usertrap() {
     stvec::write(kerneltrap as usize);
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
-    let mut extern_data = my_proc.extern_data.get_mut();
+    let extern_data = my_proc.extern_data.get_mut();
 
     let tf = &mut *extern_data.trapframe;
     tf.epc = sepc;
@@ -201,7 +200,7 @@ pub unsafe fn kerneltrap(
         panic!("kerneltrap(): interrupts enabled");
     }
     // Update progrma counter
-    sepc += 4;
+    sepc += 2;
     let scause = Scause::new(scause);
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),

@@ -26,7 +26,7 @@ static STARTED:AtomicBool = AtomicBool::new(false);
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() {
     if cpu::cpuid() == 0 {
-        // console::uart_init(); //  uart init
+        // console init
         console_init();
         println!("{}",LOGO); 
         println!("xv6-rust kernel is booting!");
@@ -41,12 +41,11 @@ pub unsafe extern "C" fn rust_main() {
         drop(plic);
         BCACHE.binit(); // buffer cache
         DISK.acquire().init(); // emulated hard disk
-        // pci_init(); // init pci
+        pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
         STARTED.store(true, Ordering::SeqCst);
-        // llvm_asm!("ebreak"::::"volatile");
-        sstatus::intr_on();
-        loop{};
+        println!("device interrupt: {}", sstatus::intr_get());
+        // sstatus::intr_on();
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());

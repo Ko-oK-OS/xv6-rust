@@ -14,14 +14,14 @@ pub enum SSTATUS {
 
 #[inline]
 pub unsafe fn read() -> usize {
-    let ret:usize;
-    llvm_asm!("csrr $0, sstatus":"=r"(ret):::"volatile");
-    ret
+    let sstatus: usize;
+    llvm_asm!("csrr $0, sstatus":"=r"(sstatus):::"volatile");
+    sstatus
 }
 
 #[inline]
-pub unsafe fn write(x:usize) {
-    llvm_asm!("csrw sstatus, $0"::"r"(x)::"volatile");
+pub unsafe fn write(sstatus: usize) {
+    llvm_asm!("csrw sstatus, $0"::"r"(sstatus)::"volatile");
 }
 
 #[inline]
@@ -34,33 +34,33 @@ pub unsafe fn is_from_user() -> bool {
     (read() & SSTATUS::SPP as usize) == 0
 }
 
-// enable device interrupts
+/// enable device interrupts
 #[inline]
 pub unsafe fn intr_on() {
     write(read() | SSTATUS::SIE as usize);
 }
 
-// disable device interrupts
+/// disable device interrupts
 #[inline]
-pub unsafe fn intr_off(){
+pub unsafe fn intr_off() {
     write(read() & !(SSTATUS::SIE as usize));
 }
 
 
-// are device interrupts enabled?
+/// are device interrupts enabled?
 #[inline]
 pub unsafe fn intr_get() -> bool {
     let x = read();
     return (x & SSTATUS::SIE as usize) != 0;
 }
 
-// clear SPP to 0
+/// clear SPP to 0
 #[inline]
 pub fn clear_spp(sstatus: usize) -> usize {
     sstatus & !(SSTATUS::SPP as usize)
 }
 
-// enable interrupts in user mode
+/// enable interrupts in user mode
 #[inline]
 pub fn user_intr_on(sstatus: usize) -> usize {
     sstatus | (SSTATUS::SPIE as usize)

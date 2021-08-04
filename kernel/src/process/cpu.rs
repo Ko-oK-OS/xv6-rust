@@ -82,7 +82,6 @@ impl CPUManager{
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
                     guard.state = Procstate::RUNNING;
-                    println!("Schedule process");
                     swtch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
@@ -177,8 +176,6 @@ impl CPU{
         }
 
         let intena = self.intena;
-        println!("Switch...");
-        println!("return address: 0x{:x}", (&mut *ctx).ra());
         swtch(
             ctx, 
             &mut self.context as *mut Context
