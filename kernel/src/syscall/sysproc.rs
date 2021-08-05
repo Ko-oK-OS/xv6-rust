@@ -1,4 +1,4 @@
-use crate::{interrupt::trap::TICKSLOCK, process::*};
+use crate::{interrupt::trap::TICKS_LOCK, process::*};
 use super::*;
 
 pub fn sys_fork() -> SysResult {

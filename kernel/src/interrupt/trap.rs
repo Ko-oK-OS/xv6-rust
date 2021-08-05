@@ -11,7 +11,7 @@ use crate::process::*;
 use crate::console::*;
 use super::*;
 
-pub static mut TICKSLOCK:Spinlock<usize> = Spinlock::new(0, "time");
+pub static mut TICKS_LOCK:Spinlock<usize> = Spinlock::new(0, "time");
 
 /// Set up to take exceptions and traps while in the kernel.
 pub unsafe fn trap_init_hart() {
@@ -29,14 +29,15 @@ pub unsafe fn usertrap() {
     let sepc = sepc::read();
     let scause = Scause::new(scause::read());
 
-    // let which_dev = device_intr();
     if !sstatus::is_from_user() {
         panic!("usertrap(): not from user mode");
     }
-
     // send interrupts and exceptions to kerneltrap(),
     // since we're now in the kernel.
-    stvec::write(kerneltrap as usize);
+    extern "C" {
+        fn kernelvec();
+    }
+    stvec::write(kernelvec as usize);
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
     let extern_data = my_proc.extern_data.get_mut();
@@ -92,12 +93,12 @@ pub unsafe fn usertrap() {
             // forwarded by timervec in kernelvec.S.
 
             if cpu::cpuid() == 0{
-                clockintr();
+                clock_intr();
             }
 
             // acknowledge the software interrupt by clearing
             // the SSIP bit in sip.
-            sip::write(sip::read() & !2);
+            sip::clear_ssip();
             
             if my_proc.killed() {
                 exit(-1);
@@ -137,16 +138,14 @@ pub unsafe fn usertrap_ret() -> ! {
     // we're about to switch the destination of traps from
     // kerneltrap() to usertrap(), so turn off interrupts until
     // we're back in user space, where usertrap() is correct.
-
     sstatus::intr_off();
 
     // send syscalls, interrupts, and exceptions to trampoline.S
-    stvec::write(TRAMPOLINE + (uservec as usize - trampoline as usize));
+    // stvec::write(TRAMPOLINE + (uservec as usize - trampoline as usize));
+    stvec::write(TRAMPOLINE);
 
     // set up trapframe values that uservec will need when
     // the process next re-enters the kernel.
-
-
     let extern_data = my_proc.extern_data.get_mut();
     extern_data.user_init();
 
@@ -166,16 +165,10 @@ pub unsafe fn usertrap_ret() -> ! {
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,
     // and switches to user mode with sret. 
-    // println!("trampoline address: 0x{:x}", trampoline as usize);
-    // println!("userret address: 0x{:x}", userret as usize);
     let userret_virt = TRAMPOLINE + (userret as usize - trampoline as usize);
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
     core::mem::transmute(userret_virt);
 
-
-    // println!("jump to trampoline to enter user pagetable");
-    // println!("userret_virt addr: 0x{:x}", userret_virt as usize);
-    // println!("userret addr: 0x{:x}", userret as usize);
     userret_virt(TRAPFRAME, satp);
 }
 
@@ -186,24 +179,27 @@ pub unsafe fn kerneltrap(
    arg0: usize, arg1: usize, arg2: usize, _: usize,
    _: usize, _: usize, _: usize, which: usize
 ) {
-    let mut sepc = sepc::read();
+    let sepc = sepc::read();
     let sstatus = sstatus::read();
     let scause = scause::read();
     let stval = stval::read();
 
-    // println!("sepc: 0x{:x}", sepc);
-    // println!("sstatus: 0x{:x}", sstatus);
-    // println!("scause: 0x{:x}", scause);
-    // println!("stval: 0x{:x}", stval);
+    if !sstatus::is_from_supervisor() {
+        panic!("not from supervisor mode");
+    }
 
     if sstatus::intr_get() {
         panic!("kerneltrap(): interrupts enabled");
     }
+
+    let mut local_spec = sepc;
     // Update progrma counter
-    sepc += 2;
     let scause = Scause::new(scause);
     match scause.cause() {
-        Trap::Exception(Exception::Breakpoint) => println!("BreakPoint!"),
+        Trap::Exception(Exception::Breakpoint) => {
+            local_spec += 2;
+            println!("BreakPoint!")
+        },
 
         Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
@@ -223,6 +219,7 @@ pub unsafe fn kerneltrap(
 
         // Device Interruput
         Trap::Interrupt(Interrupt::SupervisorExternal) => {
+            println!("Supervisor External Trap occurs here.");
             // this is a supervisor external interrupt, via PLIC.
             // interrupt indicates which device interrupted.
             let plic = PLIC.acquire();
@@ -249,17 +246,18 @@ pub unsafe fn kerneltrap(
 
         // Clock Interrupt
         Trap::Interrupt(Interrupt::SupervisorSoft) => {
-
             // software interrupt from a machine-mode timer interrupt,
             // forwarded by timervec in kernelvec.S.
 
             if cpu::cpuid() == 0{
-                clockintr();
+                clock_intr();
             }
-
             // acknowledge the software interrupt by clearing
             // the SSIP bit in sip.
-            sip::write(sip::read() & !2);
+            sip::clear_ssip();
+
+            // give up the cpu. 
+            CPU_MANAGER.mycpu().try_yield_proc();
         }
 
         _ => {       
@@ -267,17 +265,14 @@ pub unsafe fn kerneltrap(
         }
     }
     // store context
-    sepc::write(sepc);
+    sepc::write(local_spec);
     sstatus::write(sstatus);
 
 }
 
 
-pub unsafe fn clockintr(){
-    let mut ticks = TICKSLOCK.acquire();
+pub unsafe fn clock_intr(){
+    let mut ticks = TICKS_LOCK.acquire();
     *ticks = *ticks + 1;
-    // if *ticks % 100 == 0{
-    //     println!("TICKS: {}", *ticks);
-    // }
     drop(ticks);
 }

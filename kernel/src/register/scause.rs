@@ -127,22 +127,9 @@ impl Scause{
 
     // Is trap cause an interrupt
     #[inline]
-    pub fn is_interrupt(&self) -> bool{
+    pub fn is_interrupt(&self) -> bool {
         self.bits.get_bit(size_of::<usize>()*8 - 1)
     }
-
-    // Is trap cause a supervisor external interrupt
-    // #[inline]
-    // pub fn is_supervisor_external_interrput(&self) -> bool{
-    //     self.is_interrupt() && (self.bits() & 0xff) == 9
-    // }
-
-    // // Is trap cause timer interrupt
-    // #[inline]
-    // pub fn is_timer(&self) -> bool{
-    //     self.bits == 0x8000000000000001
-    // }
-
     // Is trap cause an exception
     #[inline]
     pub fn is_exception(&self) -> bool{

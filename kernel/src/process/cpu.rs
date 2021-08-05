@@ -186,6 +186,21 @@ impl CPU{
         
     }
 
+    /// Yield the holding process if any and it's RUNNING.
+    /// Directly return if none.
+    pub fn try_yield_proc(&mut self) {
+        if !self.process.is_none() {
+            let guard = unsafe {
+                (&mut *self.process.unwrap().as_ptr()).data.acquire()
+            };
+            if guard.state == Procstate::RUNNING {
+                drop(guard);
+                unsafe { self.process.unwrap().as_mut().yielding() }
+            } else {
+                drop(guard);
+            }
+        }
+    }
 
 }
 

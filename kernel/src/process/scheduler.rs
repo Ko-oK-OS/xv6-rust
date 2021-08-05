@@ -299,5 +299,5 @@ impl ProcManager{
 
 #[inline]
 fn kstack(pos: usize) -> usize {
-    Into::<usize>::into(TRAMPOLINE) - (pos + 1) * 2 * PGSIZE
+    Into::<usize>::into(TRAMPOLINE) - (pos + 1) * 5 * PGSIZE
 }

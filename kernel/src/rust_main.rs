@@ -44,8 +44,9 @@ pub unsafe extern "C" fn rust_main() {
         pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
         STARTED.store(true, Ordering::SeqCst);
+        sstatus::intr_on();
         println!("device interrupt: {}", sstatus::intr_get());
-        // sstatus::intr_on();
+        loop{}
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());
