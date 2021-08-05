@@ -2,7 +2,7 @@ use crate::define::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE,
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
-use crate::memory::{either_copy_in, either_copy_out};
+use crate::memory::{copy_in, copy_out};
 use crate::misc::{ min, mem_set };
 use crate::process::CPU_MANAGER;
 
@@ -427,7 +427,7 @@ impl InodeData {
             let block_no = self.bmap(block_basic as u32)?;
             let buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, BSIZE - block_offset);
-            if either_copy_out(
+            if copy_out(
                 is_user, 
                 dst, 
                 unsafe{ (buf.raw_data() as *mut u8).offset((offset % BSIZE) as isize) },
@@ -474,7 +474,7 @@ impl InodeData {
             let block_no = self.bmap(block_basic as u32)?;
             let mut buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, block_offset % BSIZE);
-            if either_copy_in(
+            if copy_in(
                 unsafe{ (buf.raw_data_mut() as *mut u8).offset((offset % BSIZE) as isize ) }, 
                 is_user, 
                 src, 

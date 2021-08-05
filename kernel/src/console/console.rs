@@ -1,150 +1,181 @@
-use crate::{lock::spinlock::Spinlock, memory::{either_copy_in, either_copy_out}, process::{CPU_MANAGER, PROC_MANAGER}};
-use super::{UART, uart_get, uart_put};
+use core::num::Wrapping;
 
-pub static mut CONSOLE: Spinlock<Console> = Spinlock::new(Console::new(), "console");
+use crate::{lock::spinlock::Spinlock, memory::{copy_in, copy_out}, process::{CPU_MANAGER, PROC_MANAGER}};
+use super::{UART, putc_sync, uart_get, uart_put};
+
+static CONSOLE: Spinlock<Console> = Spinlock::new(Console::new(), "console");
 const INPUT_BUF: usize = 128;
 
-const CTRL_P: u8 = b'P' - b'@';
-const CTRL_U: u8 = b'U' - b'@';
-const CTRL_H: u8 = b'H' - b'@';
-const CTRL_D: u8 = b'D' - b'@';
-const BACKSPACE: u8 = 100;
+/// end of transmit/file.line
+pub const CTRL_EOT: u8 = 0x04;
+
+/// backspace
+pub const CTRL_BS: u8 = 0x08;
+
+/// line feed, '\n'
+pub const CTRL_LF: u8 = 0x0A;
+
+/// carriage return
+pub const CTRL_CR: u8 = 0x0D;
+
+/// DEL
+pub const CTRL_DEL: u8 = 0x7f;
+
+/// for debug, print process list
+pub const CTRL_PRINT_PROCESS: u8 = 0x10;
+
+/// backspace the whole line
+// TODO
+pub const CTRL_BS_LINE: u8 = 0x15;
 
 #[derive(Clone, Copy)]
 pub struct Console {
     buf: [u8;INPUT_BUF],
-    read_index: usize,
-    write_index: usize,
-    edit_index: usize
+    read_index: Wrapping<usize>,
+    write_index: Wrapping<usize>,
+    edit_index: Wrapping<usize>
 }
 
 impl Console {
     const fn new() -> Self {
         Self {
             buf: [0;INPUT_BUF],
-            read_index: 0,
-            write_index: 0,
-            edit_index: 0
+            read_index: Wrapping(0),
+            write_index: Wrapping(0),
+            edit_index: Wrapping(0)
         }
     }
+}
 
-    fn put(&self, c: u8) {
-       uart_put(c);
+/// Put a single character to console. 
+pub(crate) fn putc(c: u8) {
+    if c == CTRL_BS {
+        putc_sync(CTRL_BS);
+        putc_sync(b' ');
+        putc_sync(CTRL_BS);
+    } else {
+        putc_sync(c);
     }
+}
 
-    fn intr(&mut self, mut c: u8) {
-        match c {
-            CTRL_P => {},
-            CTRL_U => {},
-            CTRL_H => {},
-            _ => {
-                if c != 0 && self.edit_index - self.read_index < INPUT_BUF {
-                    if c == '\r' as u8 {
-                        c = '\n' as u8;
-                    }
+/// User read from the console go here. 
+/// copy a whole input line to dst. 
+/// is_user indicated whether dst is a user
+/// or kernel address. 
+pub(super) fn console_read(
+    is_user: bool, 
+    mut dst: usize, 
+    size: usize
+) -> Option<usize> {
+    let mut console = CONSOLE.acquire();
 
-                    // echo back to user
-                    self.put(c);
+    let mut left = size;
+    while left > 0 {
+        // if no available data in console buf 
+        // wait until the console device write some data. 
+        while console.read_index == console.write_index {
+            let p = unsafe {
+                CPU_MANAGER.myproc().expect("Fail to get my process")
+            };
+            if p.killed() {
+                return None
+            }
+            p.sleep(&console.read_index as *const _ as usize, console);
+            console = CONSOLE.acquire();
+        }
 
-                    // store for consuption by console_read
-                    self.buf[self.edit_index % INPUT_BUF] = c;
-                    self.edit_index += 1;
-                    if c == '\n' as u8 || c == CTRL_D || self.edit_index == self.read_index + INPUT_BUF {
-                        // wake up console_read() if a whole line (or end-of-file)
-                        // has arrived. 
-                        self.write_index = self.edit_index;
-                        unsafe {
-                            PROC_MANAGER.wakeup((&self.read_index) as *const _ as usize);
-                        }
+        // read
+        let c = console.buf[console.read_index.0 % INPUT_BUF];
+        console.read_index += Wrapping(1);
 
-                    }
+        // encounter EOF
+        // return earlier
+        if c == CTRL_EOT {
+            if left < size {
+                console.read_index -= Wrapping(1);
+            }
+            break;
+        }
+
+        // copy to user/kernel space memory
+        if copy_out(is_user, dst, &c as *const u8, 1).is_err() {
+            break;
+        }
+
+        // update
+        dst += 1;
+        left -= 1;
+
+        // encounter a line feed
+        if c == CTRL_LF {
+            break;
+        }
+    }
+    Some(0)
+}
+
+/// User write to the console go here. 
+pub(super) fn console_write(
+    is_user: bool,
+    mut src: usize,
+    size: usize
+) -> Option<usize> {
+    for i in 0..size {
+        let mut c = 0u8;
+        if copy_in(&mut c as *mut u8, is_user, src, 1).is_err() {
+            return Some(i)
+        }
+        UART.putc(c);
+        src += 1;
+    }
+    Some(size)
+}
+
+
+/// The console interrupt handler. 
+/// The normal routine is: 
+/// 1. user input;
+/// 2. uart handler interrupt;
+/// 3. console handle interrupt. 
+/// 4. console echo back input or do extra controlling. 
+pub(super) fn console_intr(c: u8) {
+    let mut console = CONSOLE.acquire();
+
+    match c {
+        CTRL_PRINT_PROCESS => {
+
+        },
+
+        CTRL_BS_LINE => {
+            while console.edit_index != console.write_index &&
+            console.buf[(console.edit_index - Wrapping(1)).0 % INPUT_BUF] != CTRL_LF {
+                console.edit_index -= Wrapping(1);
+                putc(CTRL_BS);
+            }
+        },
+
+        CTRL_BS | CTRL_DEL => {
+            if console.edit_index != console.write_index {
+                console.edit_index -= Wrapping(1);
+                putc(CTRL_BS);
+            }
+        },
+
+        _ => {
+            // echo back
+            if c != 0 && (console.edit_index - console.read_index).0 < INPUT_BUF {
+                let c = if c == CTRL_CR { CTRL_LF } else { c };
+                putc(c);
+                let edit_index = console.edit_index.0 % INPUT_BUF;
+                console.buf[edit_index] = c;
+                console.edit_index += Wrapping(1);
+                if c == CTRL_LF || c == CTRL_EOT || (console.edit_index - console.read_index).0 == INPUT_BUF {
+                    console.write_index = console.edit_index;
+                    unsafe{
+                        PROC_MANAGER.wakeup(&console.read_index as *const _ as usize)
+                    };
                 }
             }
         }
     }
-}
-
-
-/// user read from the console go here. 
-/// copy a whole input line to dst. 
-/// is_user indicates whether dst is a user
-/// or kernel address. 
-// pub fn console_read(is_user: bool, mut dst: usize, len: usize) -> Option<usize> {
-//     let mut count  = 0;
-//     while count < len {
-//         let mut console_guard = unsafe {
-//             CONSOLE.acquire()
-//         };
-//         // Wait until interrupt handler has put some
-//         // input into buf
-//         let read_index = console_guard.read_index;
-//         let write_index = console_guard.write_index;
-//         while read_index == write_index {
-//             let my_proc = unsafe {
-//                 CPU_MANAGER.myproc().unwrap()
-//             };
-//             let proc_data = my_proc.data.acquire();
-//             if proc_data.killed == 0 {
-//                 drop(proc_data);
-//                 drop(console_guard);
-//                 return None
-//             }
-//             drop(proc_data);
-//             my_proc.sleep((&console_guard.read_index) as *const usize as usize, console_guard);
-            
-//         }
-
-//         let c = console_guard.buf[console_guard.read_index % INPUT_BUF];
-//         console_guard.read_index += 1;
-
-//         if c == CTRL_D {
-//             // End of a file
-//             if count != 0 {
-//                 // Save ^D for next time, to make sure
-//                 // caller gets a 0-byte result. 
-//                 console_guard.read_index -= 1;
-//             }
-//             break;
-//         }
-
-//         // Copy the input byte to the user_space buffer. 
-//         if either_copy_out(is_user, dst, &c as *const u8, 1).is_err() {
-//             return None
-//         }
-//         dst += 1;
-//         count += 1;
-//         if c == '\n' as u8 {
-//             // a whole line has arrived, return to
-//             // the user-level read
-//             break;
-//         }
-//         drop(console_guard);
-//     }
-
-//     // drop(console_guard);
-//     Some(count)
-// }
-
-/// user write to the console go here.
-pub fn console_write(is_user: bool, src: usize, len: usize) -> Option<usize> {
-    for i in 0..len {
-        let mut c: u8 = 0;
-        if either_copy_in((&mut c) as *mut u8, is_user, src + i, len).is_err() {
-            return None
-        }
-        uart_put(c);
-    }
-    Some(len)
-}
-
-/// The console input interrupt handler. 
-/// only called by UART::intr() to get input character. 
-/// do erase/kill processing, append to cons.buf,
-/// wakeup up console_read if a whole line has arrived. 
-pub fn console_intr(c: u8) {
-    let mut console_guard = unsafe {
-        CONSOLE.acquire()
-    };
-    console_guard.intr(c);
-    drop(console_guard);
 }
