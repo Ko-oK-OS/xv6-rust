@@ -43,8 +43,8 @@ pub unsafe extern "C" fn rust_main() {
         PROC_MANAGER.user_init(); // first user process
         STARTED.store(true, Ordering::SeqCst);
         sstatus::intr_on();
-        println!("device interrupt: {}", sstatus::intr_get());
-        loop{}
+        // println!("device interrupt: {}", sstatus::intr_get());
+        // loop{}
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());

@@ -130,6 +130,7 @@ pub unsafe fn usertrap_ret() -> ! {
         fn uservec();
         fn trampoline();
         fn userret();
+        fn etext();
     }
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
@@ -166,8 +167,7 @@ pub unsafe fn usertrap_ret() -> ! {
     // and switches to user mode with sret. 
     let userret_virt = TRAMPOLINE + (userret as usize - trampoline as usize);
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
-    core::mem::transmute(userret_virt);
-
+    core::mem::transmute(userret_virt as usize);
     userret_virt(TRAPFRAME, satp);
 }
 

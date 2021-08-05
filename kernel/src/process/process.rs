@@ -422,7 +422,6 @@ impl Process{
                 guard, 
                 ctx
             );
-            println!("After sched");
             // Tide up
             guard.channel = 0;
             drop(guard);

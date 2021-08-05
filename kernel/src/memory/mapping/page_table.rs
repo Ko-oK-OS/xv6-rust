@@ -39,7 +39,7 @@ impl PageTable{
 
     /// Convert the page table to be the usize
     /// that can be written in satp register
-    pub fn as_satp(&self) -> usize{
+    pub fn as_satp(&self) -> usize {
         satp::SATP_SV39 | ((self.entries.as_ptr() as usize) >> PGSHIFT)
     }
 

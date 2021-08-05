@@ -271,7 +271,28 @@ pub fn sys_chdir() -> SysResult {
 }
 
 pub fn sys_mkond() -> SysResult {
-    Ok(0)
+    let mut path: [u8; MAXPATH] = [0;MAXPATH];
+    let mut major = 0;
+    let mut minor = 0;
+    LOG.begin_op();
+    // Get file path
+    arg_str(0, &mut path, MAXPATH)?;
+    arg_int(1, &mut major)?;
+    arg_int(2, &mut minor)?;
+    match create(&path, InodeType::Device, major as i16, minor as i16) {
+        Ok(inode) => {
+            LOG.end_op();
+            drop(inode);
+            Ok(0)
+        },
+
+        Err(err) => {
+            println!("err: {}", err);
+            LOG.end_op();
+            Err(())
+        }
+    }
+
 }
 
 pub fn sys_unlink() -> SysResult {

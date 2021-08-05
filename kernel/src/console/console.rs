@@ -54,7 +54,7 @@ impl Console {
                         // has arrived. 
                         self.write_index = self.edit_index;
                         unsafe {
-                            PROC_MANAGER.wakeup((&self.read_index) as *const usize as usize);
+                            PROC_MANAGER.wakeup((&self.read_index) as *const _ as usize);
                         }
 
                     }

@@ -12,7 +12,7 @@ use crate::define::devices::CONSOLE;
 pub unsafe fn console_init() {
     uart::uart_init();
     // DEVICE_LIST.table[CONSOLE].read = console::console_read as *const u8;
-    // DEVICE_LIST.table[CONSOLE].write = console::console_write as *const u8;
+    DEVICE_LIST.table[CONSOLE].write = console::console_write as *const u8;
 }
 
 
