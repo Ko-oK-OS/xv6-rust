@@ -90,8 +90,8 @@ unsafe fn kernel_map() {
 
     // PLIC
     KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(PLIC_BASE.as_usize()), 
-        PhysicalAddress::new(PLIC_BASE.as_usize()), 
+        VirtualAddress::new(PLIC_BASE), 
+        PhysicalAddress::new(PLIC_BASE), 
         0x400000, 
         PteFlags::R | PteFlags::W
     );

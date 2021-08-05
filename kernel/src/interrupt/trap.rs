@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::{define::fs::DIRSIZ, driver::virtio_disk::DISK, register::{
+use crate::{define::fs::DIRSIZ, driver::{plic::{plic_claim, plic_complete}, virtio_disk::DISK}, register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
     satp, tp
 }, syscall::syscall};
@@ -65,8 +65,7 @@ pub unsafe fn usertrap() {
         Trap::Interrupt(Interrupt::SupervisorExternal) => {
             // this is a supervisor external interrupt, via PLIC.
             // irq indicates which device interrupted.
-            let plic = PLIC.acquire();
-            if let Some(interrupt) = plic.claim() {
+            if let Some(interrupt) = plic_claim() {
                 match interrupt {
                     VIRTIO0_IRQ => {
                         DISK.acquire().intr();
@@ -81,7 +80,7 @@ pub unsafe fn usertrap() {
                         panic!("Unresolved interrupt");
                     }
                 }
-                plic.complete(interrupt);
+                plic_complete(interrupt);
             }
             
         },
@@ -198,7 +197,7 @@ pub unsafe fn kerneltrap(
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => {
             local_spec += 2;
-            println!("BreakPoint!")
+            println!("BreakPoint!");
         },
 
         Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
@@ -219,27 +218,24 @@ pub unsafe fn kerneltrap(
 
         // Device Interruput
         Trap::Interrupt(Interrupt::SupervisorExternal) => {
-            println!("Supervisor External Trap occurs here.");
             // this is a supervisor external interrupt, via PLIC.
             // interrupt indicates which device interrupted.
-            let plic = PLIC.acquire();
-            if let Some(interrupt) = plic.claim() {
+            if let Some(interrupt) = plic_claim() {
                 match interrupt {
                     VIRTIO0_IRQ => {
                         DISK.acquire().intr();
                     },
 
                     UART0_IRQ => {
-                        // UART.intr();
-                        uart_intr();
-                        panic!("uart intr");
+                        UART.intr();
+                        // uart_intr();
                     },
 
                     _ => {
                         panic!("Unresolved interrupt");
                     }
                 }
-                plic.complete(interrupt);
+                plic_complete(interrupt);
             }
             
         },

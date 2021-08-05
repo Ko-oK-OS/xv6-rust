@@ -1,9 +1,9 @@
+use crate::driver::plic::{plic_init, plic_init_hart};
 use crate::process::cpu::cpuid;
 use crate::console::UART;
 use crate::logo::LOGO;
 use crate::console::{self, console_init};
 use crate::interrupt::{
-    PLIC,
     trap::trap_init_hart
 };
 
@@ -35,10 +35,8 @@ pub unsafe extern "C" fn rust_main() {
         kvm_init_hart(); // turn on paging
         PROC_MANAGER.init(); // process table
         trap_init_hart(); // trap vectors
-        let plic = PLIC.acquire();
-        plic.init(); // set up interrupt controller
-        plic.init_hart(); // ask PLIC for device interrupts
-        drop(plic);
+        plic_init(); // set up interrupt controller
+        plic_init_hart(); // ask PLIC for device interrupts
         BCACHE.binit(); // buffer cache
         DISK.acquire().init(); // emulated hard disk
         pci_init(); // init pci
@@ -52,10 +50,8 @@ pub unsafe extern "C" fn rust_main() {
         // println!("hart {} starting\n", cpu::cpuid());
         // kvm_init_hart(); // turn on paging
         // trap_init_hart(); // install kernel trap vector
-        // let plic = PLIC.acquire();
-        // plic.init(); // set up interrupt controller
-        // plic.init_hart(); // ask PLIC for device interrupts
-        // drop(plic);
+        // plic_init(); // set up interrupt controller
+        // plic_init_hart(); // ask PLIC for device interrupts
         // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         loop{}
     }
