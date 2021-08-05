@@ -143,7 +143,9 @@ pub(super) fn console_intr(c: u8) {
 
     match c {
         CTRL_PRINT_PROCESS => {
-
+            unsafe {
+                PROC_MANAGER.proc_dump();
+            }
         },
 
         CTRL_BS_LINE => {

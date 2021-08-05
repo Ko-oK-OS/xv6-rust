@@ -101,7 +101,7 @@ impl ProcManager{
         extern_data.set_name("initcode");
         
         let mut guard = p.data.acquire();
-        guard.set_state(Procstate::RUNNABLE);
+        guard.set_state(ProcState::RUNNABLE);
 
         drop(guard);
 
@@ -121,9 +121,9 @@ impl ProcManager{
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             match guard.state {
-                Procstate::UNUSED => {
+                ProcState::UNUSED => {
                     guard.pid = alloc_pid;
-                    guard.set_state(Procstate::ALLOCATED);
+                    guard.set_state(ProcState::ALLOCATED);
 
                     let extern_data = p.extern_data.get_mut();
                     // Allocate a trapframe page.
@@ -155,8 +155,8 @@ impl ProcManager{
     pub fn wakeup(&self, channel: usize) {
         for p in self.proc.iter() {
             let mut guard = p.data.acquire();
-            if guard.state == Procstate::SLEEPING && guard.channel == channel {
-                guard.state = Procstate::RUNNABLE;
+            if guard.state == ProcState::SLEEPING && guard.channel == channel {
+                guard.state = ProcState::RUNNABLE;
             }
             drop(guard);
         }
@@ -167,8 +167,8 @@ impl ProcManager{
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             match guard.state {
-                Procstate::RUNNABLE => {
-                    guard.state = Procstate::ALLOCATED;
+                ProcState::RUNNABLE => {
+                    guard.state = ProcState::ALLOCATED;
                     drop(guard);
                     return Some(p)
                 },
@@ -229,7 +229,7 @@ impl ProcManager{
 
         let mut proc_data = my_proc.data.acquire();
         proc_data.xstate = status;
-        proc_data.set_state(Procstate::ZOMBIE);
+        proc_data.set_state(ProcState::ZOMBIE);
 
         drop(wait_guard);
 
@@ -264,7 +264,7 @@ impl ProcManager{
                         have_kids = true;
                         // make sure the child isn't still in exit or swtch. 
                         let proc_data = p.data.acquire();
-                        if proc_data.state == Procstate::ZOMBIE {
+                        if proc_data.state == ProcState::ZOMBIE {
                             // Found one 
                             pid = proc_data.pid;
                             let page_table = extern_data.pagetable.as_mut().expect("Fail to get pagetable");
@@ -295,6 +295,18 @@ impl ProcManager{
             my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
         }
     }
+
+    /// Print a process listing to console. For debugging. 
+/// Runs when user type ^P on console. 
+/// No lock to avoid wedging a stuck machine further
+pub fn proc_dump(&self) {
+    for proc in self.proc.iter() {
+        if proc.state() == ProcState::UNUSED { continue; }
+        else {
+            println!("pid: {} state: {:?} name: {}", proc.pid(), proc.state(), proc.name());
+        }
+    }
+}
 }
 
 #[inline]

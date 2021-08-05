@@ -24,6 +24,7 @@ pub use inode::{ Inode, InodeData, ICACHE };
 pub use dinode::{ DiskInode, DirEntry, InodeType };
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 pub use devices::DEVICE_LIST;
+pub use pipe::Pipe;
 
 use log::Log;
 use bio::BufData;

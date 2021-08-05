@@ -83,7 +83,7 @@ pub unsafe fn fork() -> SysResult {
         drop(wait_guard);
 
         let mut guard = other_proc.data.acquire();
-        guard.set_state(Procstate::RUNNABLE);
+        guard.set_state(ProcState::RUNNABLE);
         drop(guard);
 
         return Ok(pid)
@@ -126,7 +126,7 @@ pub unsafe fn exit(status: i32) {
 
     let mut guard = my_proc.data.acquire();
 
-    guard.set_state(Procstate::ZOMBIE);
+    guard.set_state(ProcState::ZOMBIE);
     guard.xstate = status as usize;
     
     drop(guard);
@@ -159,3 +159,5 @@ unsafe fn fork_ret() -> ! {
     println!("user trap return");
     usertrap_ret();
 }
+
+

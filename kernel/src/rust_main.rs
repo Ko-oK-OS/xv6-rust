@@ -43,7 +43,7 @@ pub unsafe extern "C" fn rust_main() {
         STARTED.store(true, Ordering::SeqCst);
         sstatus::intr_on();
         // println!("device interrupt: {}", sstatus::intr_get());
-        loop{}
+        // loop{}
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());

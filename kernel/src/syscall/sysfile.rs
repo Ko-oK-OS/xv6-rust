@@ -3,13 +3,16 @@ use core::str::from_utf8;
 use core::usize;
 use core::{ptr::NonNull, slice::from_raw_parts_mut};
 use core::slice::from_raw_parts;
+use core::cell::RefCell;
 
 use crate::define::memlayout::PGSIZE;
 use crate::define::param::MAXARG;
 use crate::memory::RawPage;
 use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile, create}, lock::sleeplock::{SleepLock, SleepLockGuard}};
+use crate::fs::Pipe;
 use super::*;
 
+use alloc::sync::Arc;
 use alloc::vec;
 use bit_field::BitField;
 
@@ -259,6 +262,22 @@ pub fn sys_exec() -> SysResult {
 }
 
 pub fn sys_pipe() -> SysResult {
+    // User use an array to represent two file. 
+    let mut fd_array: usize = 0;
+    let mut rf: &mut VFile = &mut VFile::init();
+    let mut wf: &mut VFile = &mut VFile::init();
+    arg_addr(0, &mut &mut fd_array)?;
+    let pipe = Pipe::alloc(&mut rf, &mut wf);
+
+    let p = unsafe {
+        CPU_MANAGER.myproc().expect("Fail to get my process.")
+    };
+
+    p.fd_alloc(rf).unwrap();
+    p.fd_alloc(wf).unwrap();
+    let extern_data = unsafe {
+        &mut *p.extern_data.get()
+    };
     Ok(0)
 }
 
@@ -304,5 +323,19 @@ pub fn sys_link() -> SysResult {
 }
 
 pub fn sys_mkdir() -> SysResult {
-    Ok(0)
+    let mut path = [0u8; MAXPATH];
+    LOG.begin_op();
+    arg_str(0, &mut path, MAXPATH)?;
+    match create(&path, InodeType::Directory, 0, 0) {
+        Ok(inode) => {
+            drop(inode);
+            LOG.end_op();
+            Ok(0)
+        },
+
+        Err(err) => {
+            println!("err: {}", err);
+            Err(())
+        }
+    }
 }

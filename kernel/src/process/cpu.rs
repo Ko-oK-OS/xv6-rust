@@ -48,7 +48,7 @@ impl CPUManager{
     pub fn yield_proc(&mut self) {
         if let Some(my_proc) = unsafe{ self.myproc() } {
             let guard = my_proc.data.acquire();
-            if guard.state == Procstate::RUNNING {
+            if guard.state == ProcState::RUNNING {
                 drop(guard);
                 my_proc.yielding();
             }else {
@@ -81,7 +81,7 @@ impl CPUManager{
                     // before jumping back to us.
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
-                    guard.state = Procstate::RUNNING;
+                    guard.state = ProcState::RUNNING;
                     swtch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
@@ -166,7 +166,7 @@ impl CPU{
         }
             
         // proc is not running. 
-        if guard.state == Procstate::RUNNING {
+        if guard.state == ProcState::RUNNING {
             panic!("sched: proc is running");
         }
 
@@ -193,7 +193,7 @@ impl CPU{
             let guard = unsafe {
                 (&mut *self.process.unwrap().as_ptr()).data.acquire()
             };
-            if guard.state == Procstate::RUNNING {
+            if guard.state == ProcState::RUNNING {
                 drop(guard);
                 unsafe { self.process.unwrap().as_mut().yielding() }
             } else {
