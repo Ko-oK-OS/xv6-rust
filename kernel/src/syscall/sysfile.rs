@@ -273,11 +273,76 @@ pub fn sys_pipe() -> SysResult {
         CPU_MANAGER.myproc().expect("Fail to get my process.")
     };
 
-    p.fd_alloc(rf).unwrap();
-    p.fd_alloc(wf).unwrap();
+    // Allocate file descriptor for r/w file. 
+    let rfd: usize;
+    let wfd: usize;
+    match p.fd_alloc(rf) {
+        Ok(fd) => {
+            rfd = fd;
+        },
+
+        Err(err) => {
+            rf.close();
+            println!("err: {}", err);
+            return Err(())
+        }
+    }
+    
+    match p.fd_alloc(wf) {
+        Ok(fd) => {
+            wfd = fd;
+        },
+
+        Err(err) => {
+            rf.close();
+            wf.close();
+            println!("err: {}", err);
+            return Err(())
+        }
+    }
+
+    let pgt = p.page_table();
     let extern_data = unsafe {
         &mut *p.extern_data.get()
     };
+    let open_files = &mut extern_data.ofile;
+    if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
+        open_files[rfd] = Arc::new(
+            RefCell::new(
+                VFile::init()
+            )
+        );
+
+        open_files[wfd] = Arc::new(
+            RefCell::new(
+                VFile::init()
+            )
+        );
+        rf.close();
+        wf.close();
+        return Err(())
+    }
+
+    if pgt.copy_out(
+        fd_array + size_of::<usize>(), 
+        wf as *const _ as *const u8, 
+        size_of::<usize>()
+    ).is_err() {
+        open_files[rfd] = Arc::new(
+            RefCell::new(
+                VFile::init()
+            )
+        );
+
+        open_files[wfd] = Arc::new(
+            RefCell::new(
+                VFile::init()
+            )
+        );
+        rf.close();
+        wf.close();
+        return Err(())
+    }
     Ok(0)
 }
 
