@@ -56,9 +56,8 @@ pub fn sys_sleep() -> SysResult {
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Fail to get my procsss")
         };
-        let proc_data = my_proc.data.acquire();
-        if proc_data.killed {
-            
+        if my_proc.killed() {
+            drop(ticks_guard);           
             return Err(())
         } else {
             my_proc.sleep(0, ticks_guard);
@@ -73,9 +72,25 @@ pub fn sys_sleep() -> SysResult {
 }
 
 pub fn sys_wait() -> SysResult {
-    Ok(0)
+    let mut addr = 0;
+    arg_addr(0, &mut addr)?;
+    match unsafe {
+        PROC_MANAGER.wait(addr)
+    } {
+        Some(pid) => {
+            Ok(pid)
+        },
+
+        None => {
+            Err(())
+        }
+    }
 }
 
 pub fn sys_kill() -> SysResult {
-    Ok(0)
+    let mut pid = 0;
+    arg_int(0, &mut pid)?;
+    unsafe {
+        PROC_MANAGER.kill(pid)
+    }
 }

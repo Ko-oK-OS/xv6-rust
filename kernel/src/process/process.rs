@@ -270,6 +270,18 @@ impl Process{
         pid
     }
 
+    pub fn set_state(&mut self, state: ProcState) {
+        let mut proc_data = self.data.acquire();
+        proc_data.set_state(state);
+        drop(proc_data);
+    }
+
+    pub fn set_killed(&mut self, killed: bool) {
+        let mut proc_data = self.data.acquire();
+        proc_data.killed = killed;
+        drop(proc_data);
+    }
+
     pub fn state(&self) -> ProcState {
         let proc_data = self.data.acquire();
         let state = proc_data.state;

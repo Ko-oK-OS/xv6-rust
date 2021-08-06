@@ -174,7 +174,7 @@ pub(super) fn console_intr(c: u8) {
                 if c == CTRL_LF || c == CTRL_EOT || (console.edit_index - console.read_index).0 == INPUT_BUF {
                     console.write_index = console.edit_index;
                     unsafe{
-                        PROC_MANAGER.wakeup(&console.read_index as *const _ as usize)
+                        PROC_MANAGER.wake_up(&console.read_index as *const _ as usize)
                     };
                 }
             }

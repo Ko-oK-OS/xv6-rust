@@ -133,7 +133,7 @@ impl Uart {
             let c = self.buf[read_index];
             self.read_index += Wrapping(1);
             unsafe{
-                PROC_MANAGER.wakeup(&self.read_index as *const Wrapping<_> as usize);
+                PROC_MANAGER.wake_up(&self.read_index as *const Wrapping<_> as usize);
             }
             write_reg(UART_BASE_ADDR + THR, c);
         }

@@ -58,13 +58,13 @@ impl<T: ?Sized> SleepLock<T> {
     pub fn unlock(&self) {
         let guard = self.lock.acquire();
         self.locked.set(false);
-        self.wakeup();
+        self.wake_up();
         drop(guard);
     }
 
-    fn wakeup(&self) {
+    fn wake_up(&self) {
         unsafe{ 
-            PROC_MANAGER.wakeup(self.locked.as_ptr() as usize);
+            PROC_MANAGER.wake_up(self.locked.as_ptr() as usize);
         }
     }
 }

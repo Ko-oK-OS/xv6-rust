@@ -152,7 +152,7 @@ impl ProcManager{
 
     /// Wake up all processes sleeping on chan.
     /// Must be called without any p->lock.
-    pub fn wakeup(&self, channel: usize) {
+    pub fn wake_up(&self, channel: usize) {
         for p in self.proc.iter() {
             let mut guard = p.data.acquire();
             if guard.state == ProcState::SLEEPING && guard.channel == channel {
@@ -189,7 +189,7 @@ impl ProcManager{
                 if let Some(parent) = extern_data.parent {
                     if parent as *const _ == proc as *const _ {
                         extern_data.parent = Some(self.init_proc);
-                        self.wakeup(self.init_proc as usize);
+                        self.wake_up(self.init_proc as usize);
                     }
                 }
         }
@@ -225,7 +225,7 @@ impl ProcManager{
         // Give any children to init. 
         self.reparent(my_proc);
         // Parent might be sleeping in wait. 
-        self.wakeup(extern_data.parent.expect("Fail to find parent process") as usize);
+        self.wake_up(extern_data.parent.expect("Fail to find parent process") as usize);
 
         let mut proc_data = my_proc.data.acquire();
         proc_data.xstate = status;
@@ -296,7 +296,24 @@ impl ProcManager{
         }
     }
 
-    /// Print a process listing to console. For debugging. 
+/// Kill the process with the given pid. 
+/// The victim won't exit until it tries to return. 
+/// to user space (user_trap)
+pub fn kill(&mut self, pid: usize) -> Result<usize, ()> {
+    for proc in self.proc.iter_mut() {
+        if proc.pid() == pid {
+            proc.set_killed(true);
+            if proc.state() == ProcState::SLEEPING {
+                // Wake process from sleep. 
+                proc.set_state(ProcState::RUNNABLE);
+                return Ok(0)
+            }
+        }
+    }
+    Err(())
+}
+
+/// Print a process listing to console. For debugging. 
 /// Runs when user type ^P on console. 
 /// No lock to avoid wedging a stuck machine further
 pub fn proc_dump(&self) {

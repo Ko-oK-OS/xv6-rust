@@ -84,7 +84,7 @@ impl Pipe {
             i = index;
         }
 
-        unsafe{ PROC_MANAGER.wakeup(&pipe_guard.write_number as *const _ as usize) };
+        unsafe{ PROC_MANAGER.wake_up(&pipe_guard.write_number as *const _ as usize) };
         drop(pipe_guard);
         Ok(i)
     }
@@ -104,7 +104,7 @@ impl Pipe {
 
             if pipe_guard.write_number == pipe_guard.read_number + PIPE_SIZE {
                 unsafe {
-                    PROC_MANAGER.wakeup(&pipe_guard.read_number as *const _ as usize);
+                    PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
                 }
                 my_proc.sleep(&pipe_guard.write_number as *const _ as usize, pipe_guard);
                 pipe_guard = self.guard.acquire();
@@ -121,7 +121,7 @@ impl Pipe {
         }
 
         unsafe {
-            PROC_MANAGER.wakeup(&pipe_guard.read_number as *const _ as usize);
+            PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
         }
         drop(pipe_guard);
 
@@ -133,12 +133,12 @@ impl Pipe {
         if writeable {
             pipe_guard.write_open = false;
             unsafe {
-                PROC_MANAGER.wakeup(&pipe_guard.read_number as *const _ as usize);
+                PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
             }
         } else {
             pipe_guard.read_open = false;
             unsafe {
-                PROC_MANAGER.wakeup(&pipe_guard.write_number as *const _ as usize);
+                PROC_MANAGER.wake_up(&pipe_guard.write_number as *const _ as usize);
             }
         }
         
