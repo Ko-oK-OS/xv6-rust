@@ -24,23 +24,23 @@ pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
 
-pub fn fork() -> isize {
+pub fn fork() -> SysRet {
     sys_fork()
 }
 
-pub fn open(path: &str, flags: u32) -> isize {
+pub fn open(path: &str, flags: u32) -> SysRet {
     sys_open(path, flags)
 }
 
-pub fn close(fd: usize) -> isize {
+pub fn close(fd: usize) -> SysRet {
     sys_close(fd)
 }
 
-pub fn dup(fd: usize) -> isize {
+pub fn dup(fd: usize) -> SysRet {
     sys_dup(fd)
 }
 
-pub fn mknod(path: &str, mode: usize, dev: usize) -> isize {
+pub fn mknod(path: &str, mode: usize, dev: usize) -> SysRet {
     sys_mknod(path, mode, dev)
 }
 
@@ -48,22 +48,22 @@ pub fn exit(exit_code: i32) -> ! {
     sys_exit(exit_code)
 }
 
-pub fn exec(path: &str, args: &[*const u8]) -> isize {
+pub fn exec(path: &str, args: &[*const u8]) -> SysRet {
     sys_exec(path, args)
 }
 
-pub fn read(fd: usize, buf: &mut [u8], n: usize) -> isize {
+pub fn read(fd: usize, buf: &mut [u8], n: usize) -> SysRet {
     sys_read(fd, buf, n)
 }
 
-pub fn write(fd: usize, buf: &[u8], n: usize) -> isize {
+pub fn write(fd: usize, buf: &[u8], n: usize) -> SysRet {
     sys_write(fd, buf, n)
 }
 
-pub fn wait(status: isize) -> isize {
+pub fn wait(status: isize) -> SysRet {
     sys_wait(status)
 }
 
-pub fn sbrk(bytes: usize) -> isize {
+pub fn sbrk(bytes: usize) -> SysRet {
     sys_sbrk(bytes)
 }

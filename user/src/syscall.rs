@@ -20,7 +20,9 @@ pub const SYS_SBRK:usize = 18;
 pub const SYS_SLEEP:usize = 19;
 pub const SYS_UPTIME:usize = 20;
 
-fn syscall(id: usize, args:[usize; 3]) -> isize {
+pub type SysRet = isize;
+
+fn syscall(id: usize, args:[usize; 3]) -> SysRet {
     let ret:isize;
     unsafe{
         llvm_asm!("ecall"
@@ -33,7 +35,7 @@ fn syscall(id: usize, args:[usize; 3]) -> isize {
     ret
 }
 
-pub fn sys_fork() -> isize {
+pub fn sys_fork() -> SysRet {
     syscall(SYS_FORK, [0, 0, 0])
 }
 
@@ -42,43 +44,43 @@ pub fn sys_exit(exit_code: i32) -> ! {
     panic!("exit never return");
 }
 
-pub fn sys_wait(status: isize) -> isize {
+pub fn sys_wait(status: isize) -> SysRet {
     syscall(SYS_WAIT, [status as usize, 0, 0])
 }
 
-pub fn sys_pipe(pipe: &mut [usize]) -> isize {
+pub fn sys_pipe(pipe: &mut [usize]) -> SysRet {
     syscall(SYS_PIPE, [pipe.as_mut_ptr() as usize, 0, 0])
 }
 
-pub fn sys_read(fd: usize, buf: &mut [u8], n: usize) -> isize {
+pub fn sys_read(fd: usize, buf: &mut [u8], n: usize) -> SysRet {
     syscall(SYS_READ, [fd, buf.as_mut_ptr() as usize, n])
 }
 
-pub fn sys_write(fd: usize, buf: &[u8], n: usize) -> isize {
+pub fn sys_write(fd: usize, buf: &[u8], n: usize) -> SysRet {
     syscall(SYS_WRITE, [fd, buf.as_ptr() as usize, n])
 }
 
-pub fn sys_open(path: &str, flags: u32) -> isize {
+pub fn sys_open(path: &str, flags: u32) -> SysRet {
     syscall(SYS_OPEN, [path.as_ptr() as usize, flags as usize, 0])
 }
 
-pub fn sys_close(fd: usize) -> isize {
+pub fn sys_close(fd: usize) -> SysRet {
     syscall(SYS_CLOSE, [fd, 0, 0])
 }
 
-pub fn sys_dup(fd: usize) -> isize {
+pub fn sys_dup(fd: usize) -> SysRet {
     syscall(SYS_DUP, [fd, 0, 0])
 }
 
-pub fn sys_mknod(path: &str, mode: usize, dev: usize) -> isize {
+pub fn sys_mknod(path: &str, mode: usize, dev: usize) -> SysRet {
     syscall(SYS_MKNOD, [path.as_ptr() as usize, mode, dev])
 }
 
-pub fn sys_exec(path: &str, args: &[*const u8]) -> isize {
+pub fn sys_exec(path: &str, args: &[*const u8]) -> SysRet {
     syscall(SYS_EXEC, [path.as_ptr() as usize, args.as_ptr() as usize, 0])
 }
 
-pub fn sys_sbrk(bytes: usize) -> isize {
+pub fn sys_sbrk(bytes: usize) -> SysRet {
     syscall(SYS_SBRK, [bytes, 0, 0])
 }
 

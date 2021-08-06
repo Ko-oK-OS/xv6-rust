@@ -203,7 +203,7 @@ pub fn sys_exec() -> SysResult {
     let mut path = [0u8;MAXPATH];
     let mut argv = [0 as *mut u8; MAXARG];
     let mut user_argv = 0;
-    let mut user_arg:usize = 0;
+    let mut user_arg: usize = 0;
     arg_str(0, &mut path, MAXPATH)?;
     arg_addr(1, &mut user_argv)?;
     let path = from_utf8(&path).unwrap();
@@ -267,7 +267,7 @@ pub fn sys_pipe() -> SysResult {
     let mut rf: &mut VFile = &mut VFile::init();
     let mut wf: &mut VFile = &mut VFile::init();
     arg_addr(0, &mut &mut fd_array)?;
-    let pipe = Pipe::alloc(&mut rf, &mut wf);
+    Pipe::alloc(&mut rf, &mut wf);
 
     let p = unsafe {
         CPU_MANAGER.myproc().expect("Fail to get my process.")
