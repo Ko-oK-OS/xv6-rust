@@ -163,7 +163,6 @@ impl ProcExtern {
         // at the highest user virtual address.
         // only the supervisor uses it, on the way
         // to/from user space, so not PTE_U. 
-        // let page_table = &mut *page_table;
         if !page_table.map(
             VirtualAddress::new(TRAMPOLINE),
             PhysicalAddress::new(trampoline as usize),

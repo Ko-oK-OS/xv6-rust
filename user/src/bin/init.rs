@@ -16,7 +16,7 @@ use user::{
 
 
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn start() -> ! {
     let argv = &["sh".as_ptr(), 0 as *const u8];
     let mut pid;
     if open("console", O_RDWR) < 0 {

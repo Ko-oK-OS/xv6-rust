@@ -1,5 +1,5 @@
 use crate::shutdown::*;
-use crate::kernel_syscall::*;
+use crate::syscall::kernel_env_call;
 use crate::register::satp;
 use crate::console::*;
 use crate::memory::*;
@@ -37,12 +37,6 @@ pub fn kernel_syscall(
     }
 }
 
-// pub fn supervisor_external() {
-//     let mut uart = UART.acquire();
-//     let c = uart.get().unwrap();
-//     println!("{}", c);
-//     drop(uart);
-// }
 
 pub fn instr_handler(sepc: usize) {
     panic!("Instruction Fault occuer in 0x{:x}", sepc);

@@ -17,7 +17,6 @@
 .globl trampoline
 trampoline:
 
-.align 4
 .globl uservec
 uservec:
     # user_trap_ret() sets stvec to point here, so

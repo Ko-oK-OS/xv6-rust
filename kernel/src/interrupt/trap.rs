@@ -26,6 +26,7 @@ pub unsafe fn trap_init_hart() {
 /// called from trampoline.S
 #[no_mangle]
 pub unsafe fn usertrap() {
+    println!("User Trap");
     let sepc = sepc::read();
     let scause = Scause::new(scause::read());
 
@@ -72,8 +73,7 @@ pub unsafe fn usertrap() {
                     },
 
                     UART0_IRQ => {
-                        // UART.intr();
-                        panic!("uart intr");
+                        UART.intr();
                     },
 
                     _ => {
@@ -141,8 +141,7 @@ pub unsafe fn usertrap_ret() -> ! {
     sstatus::intr_off();
 
     // send syscalls, interrupts, and exceptions to trampoline.S
-    // stvec::write(TRAMPOLINE + (uservec as usize - trampoline as usize));
-    stvec::write(TRAMPOLINE);
+    stvec::write(TRAMPOLINE + (uservec as usize - trampoline as usize));
 
     // set up trapframe values that uservec will need when
     // the process next re-enters the kernel.
@@ -151,6 +150,7 @@ pub unsafe fn usertrap_ret() -> ! {
 
     // set up the registers that trampoline.S's sret will use
     // to get to user space.
+    // Set S Previous Privilege mode to User. 
     let mut sstatus = sstatus::read();
     sstatus = sstatus::clear_spp(sstatus); // clear SPP to 0 for user mode
     sstatus = sstatus::user_intr_on(sstatus); // enable interrupts in user mode
