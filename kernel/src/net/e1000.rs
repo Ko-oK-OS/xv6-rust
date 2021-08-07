@@ -1,5 +1,5 @@
 use crate::lock::spinlock::Spinlock;
-use crate::define::memlayout::E1000_REGS;
+use crate::define::layout::E1000_REGS;
 use crate::define::e1000::*;
 use super::mbuf::*;
 use super::protocol::*;

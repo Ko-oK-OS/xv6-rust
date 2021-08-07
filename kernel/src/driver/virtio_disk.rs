@@ -15,7 +15,7 @@ use core::sync::atomic::{fence, Ordering};
 use core::ptr;
 use core::convert::TryInto;
 
-use crate::define::memlayout::{PGSHIFT, PGSIZE, VIRTIO0};
+use crate::define::layout::{PGSHIFT, PGSIZE, VIRTIO0};
 use crate::define::fs::BSIZE;
 use crate::define::virtio::*;
 use crate::fs::Buf;

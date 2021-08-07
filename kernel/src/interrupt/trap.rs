@@ -6,7 +6,7 @@ use crate::{define::fs::DIRSIZ, driver::{plic::{plic_claim, plic_complete}, virt
 }, syscall::syscall};
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
-use crate::define::memlayout::*;
+use crate::define::layout::*;
 use crate::process::*;
 use crate::console::*;
 use super::*;

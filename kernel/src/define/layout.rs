@@ -13,35 +13,32 @@
 // unused RAM after 80000000.
 
 // the kernel uses physical memory thus:
-// 80000000 -- entry.S, then kernel text and data
+// 0x80000000 -- entry.S, then kernel text and data
 // end -- start of kernel page allocation area
 // PHYSTOP -- end RAM used by the kernel
 
-// qemu puts UART registers here in physical memory.
 use super::*;
-use core::convert::Into;
 
+/// qemu puts UART registers here in physical memory.
 pub const UART0:usize = 0x10000000;
 pub const UART0_IRQ: u32 = 10;
 
-// virtio mmio interface
+/// virtio mmio interface
 pub const VIRTIO0:usize = 0x10001000;
 pub const VIRTIO0_IRQ: u32 = 1;
 
-// core local interruptor (CLINT), which contains the timer.
-pub const CLINT:Address = Address(0x2000000);
-pub const CLINT_MTIME:Address = CLINT.add_addr(0xBFF8);
-pub const CLINT_MTIMECMP:Address = CLINT.add_addr(0x4000);
+/// core local interruptor (CLINT), which contains the timer.
+pub const CLINT: usize = 0x2000000;
+pub const CLINT_MTIME: usize = CLINT + 0xBFF8;
+pub const CLINT_MTIMECMP: usize = CLINT + 0x4000;
 
 // qemu puts platform-level interrupt controller (PLIC) here.
 pub const PLIC_BASE: usize = 0x0c000000;
 
 // we'll place the e1000 registers at this address.
-// vm.c maps this range.
 pub const E1000_REGS:usize = 0x40000000;
 
 // qemu -machine virt puts PCIe config space here.
-// vm.c maps this range.
 pub const ECAM:usize = 0x30000000;
 
 // define in hw/riscv/virt.c, which is used to execute shutdown. 
@@ -62,32 +59,27 @@ pub const VIRT_TEST:usize = 0x100000;
 // for use by the kernel and user pages
 // from physical address 0x80000000 to PHYSTOP.
 
-pub const KERNBASE:Address =  Address(0x80000000);
-pub const PHYSTOP:Address = KERNBASE.add_addr(128*1024*1024);
+// the size of memory: 128M
+pub const MEM_SIZE: usize = 128 * 1024 * 1024;
+pub const KERNEL_BASE: usize =  0x80000000;
+pub const PHYSTOP: usize = KERNEL_BASE + MEM_SIZE;
 
-pub const PGSIZE:usize = 4096; // bytes per page
-pub const PGSHIFT:usize = 12; // bits of offset within a page
-pub const PGMASKLEN:usize = 9;
-pub const PGMASK:usize = 0x1FF;
-
-pub const PTE_V:usize = 1 << 0; // valid
-pub const PTE_R:usize = 1 << 1;
-pub const PTE_W:usize = 1 << 2;
-pub const PTE_X:usize = 1 << 3;
-pub const PTE_U:usize = 1 << 4; // 1 -> user can access
-
+pub const PGSIZE: usize = 4096; // bytes per page
+pub const PGSHIFT: usize = 12; // bits of offset within a page
+pub const PGMASKLEN: usize = 9;
+pub const PGMASK: usize = 0x1FF;
 
 
 /// One beyond the highest possible virtual address.
 /// MAXVA is actually one bit less than the max allowed by
 /// Sv39, to avoid having to sign-extend virtual addresses
 /// that have the high bit set.
-pub const MAXVA:usize =  1 << (9 + 9 + 9 + 12 - 1); 
+pub const MAXVA: usize =  1 << (9 + 9 + 9 + 12 - 1); 
 
 // map the trampoline page to the highest address,
 // in both user and kernel space.
-pub const TRAMPOLINE:usize = MAXVA - PGSIZE;
-pub const TRAPFRAME:usize = TRAMPOLINE - PGSIZE;
+pub const TRAMPOLINE: usize = MAXVA - PGSIZE;
+pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 
 
 

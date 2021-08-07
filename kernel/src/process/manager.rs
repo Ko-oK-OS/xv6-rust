@@ -6,14 +6,12 @@ use core::ops::{ DerefMut };
 use super::*;
 use crate::define::{
     param::NPROC,
-    memlayout::{ PGSIZE, TRAMPOLINE }
+    layout::{ PGSIZE, TRAMPOLINE }
 };
 use crate::fs::VFile;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
 use crate::memory::*;
-
-pub static WAIT_LOCK: Spinlock<()> = Spinlock::new((), "wait_lock");
 
 pub struct ProcManager {
     proc: [Process; NPROC],
@@ -182,9 +180,9 @@ impl ProcManager{
 
     /// Pass p's abandonded children to init. 
     /// Caller must hold wait lock. 
-    pub fn reparent(&mut self, proc: &mut Process) {
+    pub fn reparent(&self, proc: &mut Process) {
         for index in 0..self.proc.len() {
-            let p = &mut self.proc[index];
+            let p = &self.proc[index];
                 let extern_data = unsafe{ &mut *p.extern_data.get() };
                 if let Some(parent) = extern_data.parent {
                     if parent as *const _ == proc as *const _ {
@@ -221,7 +219,7 @@ impl ProcManager{
         LOG.end_op();
         extern_data.cwd = None;
 
-        let wait_guard = WAIT_LOCK.acquire();
+        let wait_guard = self.wait_lock.acquire();
         // Give any children to init. 
         self.reparent(my_proc);
         // Parent might be sleeping in wait. 
@@ -250,9 +248,8 @@ impl ProcManager{
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Fail to get my process")
         };
-        // TODO: in xv6-riscv, wait lock acquire out of loop. 
+        let mut wait_guard = self.wait_lock.acquire();
         loop {
-            let wait_guard = WAIT_LOCK.acquire();
             // Scan through table looking for exited children. 
             for index in 0..self.proc.len() {
                 let p = &mut self.proc[index];
@@ -293,6 +290,7 @@ impl ProcManager{
 
             // Wait for a child to exit.
             my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
+            wait_guard = self.wait_lock.acquire();
         }
     }
 
@@ -328,5 +326,5 @@ pub fn proc_dump(&self) {
 
 #[inline]
 fn kstack(pos: usize) -> usize {
-    Into::<usize>::into(TRAMPOLINE) - (pos + 1) * 5 * PGSIZE
+    TRAMPOLINE - (pos + 1) * 5 * PGSIZE
 }

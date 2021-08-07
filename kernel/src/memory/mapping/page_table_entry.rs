@@ -1,12 +1,14 @@
 use alloc::boxed::Box;
-
-use crate::define::memlayout::{
-    PTE_V, PTE_R, PTE_W, PTE_X, PTE_U
-};
 use crate::memory::address::{ PhysicalAddress, Addr};
 use super::page_table::PageTable;
 
 use core::ptr::drop_in_place;
+
+pub const PTE_V:usize = 1 << 0; // valid
+pub const PTE_R:usize = 1 << 1;
+pub const PTE_W:usize = 1 << 2;
+pub const PTE_X:usize = 1 << 3;
+pub const PTE_U:usize = 1 << 4; // 1 -> user can access
 
 #[derive(Debug, Clone, Copy)]
 pub struct PageTableEntry(pub usize);

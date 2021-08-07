@@ -49,7 +49,7 @@ pub extern "C" fn _start() -> isize {
                 // to be continued
             }
 
-            _=>{
+            _ => {
                 // order just push.
                 println!("{}", c as char);
                 buf.push(c as char);

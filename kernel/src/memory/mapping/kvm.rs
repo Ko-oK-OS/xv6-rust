@@ -1,9 +1,9 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::memory::RawPage;
-use crate::define::memlayout::{ 
+use crate::define::layout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
-    PLIC_BASE, KERNBASE, PHYSTOP, TRAMPOLINE,
+    PLIC_BASE, KERNEL_BASE, PHYSTOP, TRAMPOLINE,
     E1000_REGS, ECAM, VIRT_TEST, CLINT
 };
 use crate::register::{satp, sfence_vma};
@@ -82,8 +82,8 @@ unsafe fn kernel_map() {
 
     // CLINT
     KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(CLINT.as_usize()),
-        PhysicalAddress::new(CLINT.as_usize()),
+        VirtualAddress::new(CLINT),
+        PhysicalAddress::new(CLINT),
         0x10000,
         PteFlags::R | PteFlags::W
     );
@@ -98,9 +98,9 @@ unsafe fn kernel_map() {
 
     // map kernel text exectuable and read-only
     KERNEL_PAGETABLE.kernel_map(
-        VirtualAddress::new(KERNBASE.as_usize()), 
-        PhysicalAddress::new(KERNBASE.as_usize()), 
-        etext as usize - Into::<usize>::into(KERNBASE), 
+        VirtualAddress::new(KERNEL_BASE), 
+        PhysicalAddress::new(KERNEL_BASE), 
+        etext as usize - KERNEL_BASE, 
         PteFlags::R | PteFlags::X
     );
 

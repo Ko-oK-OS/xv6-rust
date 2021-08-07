@@ -1,6 +1,6 @@
 use crate::lock::spinlock::Spinlock;
 use crate::define::param::{ LEAF_SIZE, MAX_ALIGNMENT };
-use crate::define::memlayout::{PGSIZE, PHYSTOP};
+use crate::define::layout::{PGSIZE, PHYSTOP};
 use super::address::{PhysicalAddress, Addr};
 use core::alloc::{ GlobalAlloc, Layout };
 
@@ -54,7 +54,7 @@ impl KernelHeap {
             fn end();
         }
         let end = end as usize;
-        println!("KernelHeap: available memory: [{:#x}, {:#x})", end, PHYSTOP.as_usize());
-        self.init(end, PHYSTOP.as_usize());
+        println!("KernelHeap: available memory: [{:#x}, {:#x})", end, PHYSTOP);
+        self.init(end, PHYSTOP);
     }
 }

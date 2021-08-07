@@ -13,7 +13,7 @@ use crate::memory::{
     mapping::{ page_table::PageTable, page_table_entry::PteFlags},
     RawPage
 };
-use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
+use crate::define::layout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use crate::register::satp;
 use super::*;
 use crate::fs::{FileType, Inode, VFile};
@@ -382,12 +382,12 @@ impl Process{
     
     /// Grow or shrink user memory by n bytes. 
     /// Return true on success, false on failure. 
-    pub fn grow_proc(&mut self, n: isize) -> Result<(), &'static str> {
+    pub fn grow_proc(&mut self, count: isize) -> Result<(), &'static str> {
         let mut extern_data = self.extern_data.get_mut();
         let mut size = extern_data.size; 
         let page_table = extern_data.pagetable.as_mut().unwrap();
-        if n > 0 {
-            match unsafe { page_table.uvm_alloc(size, size + n as usize) } {
+        if count > 0 {
+            match unsafe { page_table.uvm_alloc(size, size + count as usize) } {
                 Some(new_size) => {
                     size = new_size;
                 },
@@ -396,8 +396,8 @@ impl Process{
                     return Err("Fail to allocate virtual memory for user")
                 }
             }
-        }else if n < 0 {
-            let new_size = (size as isize + n) as usize;
+        } else if count < 0 {
+            let new_size = (size as isize + count) as usize;
             size = page_table.uvm_dealloc(size, new_size);
         }
 

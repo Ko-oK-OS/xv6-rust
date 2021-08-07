@@ -1,6 +1,6 @@
 use crate::lock::sleeplock::SleepLockGuard;
 use crate::memory::{Addr, PageTable, VirtualAddress, page_round_up};
-use crate::define::memlayout::PGSIZE;
+use crate::define::layout::PGSIZE;
 use crate::define::param::MAXARG;
 use crate::fs::{ICACHE, Inode};
 use crate::fs::LOG;

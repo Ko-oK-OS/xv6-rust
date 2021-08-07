@@ -557,6 +557,31 @@ impl InodeData {
         )?;
         Ok(())
     }
+
+    /// Is the directory empty execpt for "." and ".." ?
+    pub fn is_dir_empty(&mut self) -> bool {
+        let mut dir_entry = DirEntry::new();
+        // "." and ".." size
+        let init_size = 2 * size_of::<DirEntry>() as u32;
+        let final_size = self.dinode.size;
+        for offset in (init_size..final_size).step_by(size_of::<DirEntry>()) {
+            // Check each direntry, foreach step by size of DirEntry. 
+            if self.read(
+                false, 
+                &mut dir_entry as *mut DirEntry as usize, 
+                offset, 
+                size_of::<DirEntry>() as u32
+            ).is_err() {
+                panic!("is_dir_empty(): Fail to read dir content");
+            }
+
+            if dir_entry.inum != 0 {
+                return true
+            }
+        }
+        false
+
+    }
 }
 
 /// Inode handed out by inode cache. 
