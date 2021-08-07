@@ -10,7 +10,7 @@ use crate::interrupt::{
 use crate::memory::{
     RawPage,
     kalloc::*,
-    mapping::kvm::{ kvm_init, kvm_init_hart }
+    mapping::kernel_map::{ kvm_init, kvm_init_hart }
 };
 use crate::driver::pci::pci_init;
 
