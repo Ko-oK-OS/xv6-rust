@@ -8,7 +8,7 @@ pub use kalloc::*;
 pub use mapping::*;
 pub use address::*;
 
-use crate::{define::memlayout::PGSIZE, process::{ CPU_MANAGER }};
+use crate::{define::layout::PGSIZE, process::{ CPU_MANAGER }};
 use crate::misc::mem_copy;
 
 use alloc::boxed::Box;
@@ -31,7 +31,7 @@ impl RawPage {
 /// Copy from either a user address, or kernel address,
 /// depending on is_user. 
 /// Returns Result<(), &'static str>
-pub fn either_copy_in(
+pub fn copy_in(
     dst: *mut u8, 
     is_user: bool, 
     src: usize, 
@@ -58,7 +58,7 @@ pub fn either_copy_in(
 /// Copy to either a user address, or kernel address,
 /// depending on usr_dst. 
 /// Returns 0 on success, -1 on error. 
-pub fn either_copy_out(
+pub fn copy_out(
     is_user: bool,
     dst: usize,
     src: *const u8,

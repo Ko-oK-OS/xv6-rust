@@ -2,7 +2,7 @@ use core::convert::From;
 
 use crate::memory::address::Addr;
 
-pub mod memlayout;
+pub mod layout;
 pub mod param;
 pub mod virtio;
 pub mod fs;

@@ -4,7 +4,7 @@ use core::convert::Into;
 use core::ops::{Add, Sub};
 use bit_field::BitField;
 
-use crate::define::memlayout::{
+use crate::define::layout::{
     PGSHIFT, PGSIZE, PGMASKLEN, PGMASK
 };
 

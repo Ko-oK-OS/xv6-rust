@@ -13,7 +13,7 @@
 #       otherwise rust code need to add some address to the function pointer,
 #       which is not allowed.
 
-.section trampsec
+    .section trampsec
 .globl trampoline
 trampoline:
 

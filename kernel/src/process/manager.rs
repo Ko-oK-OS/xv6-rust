@@ -6,14 +6,12 @@ use core::ops::{ DerefMut };
 use super::*;
 use crate::define::{
     param::NPROC,
-    memlayout::{ PGSIZE, TRAMPOLINE }
+    layout::{ PGSIZE, TRAMPOLINE }
 };
 use crate::fs::VFile;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::register::sstatus::intr_on;
 use crate::memory::*;
-
-pub static WAIT_LOCK: Spinlock<()> = Spinlock::new((), "wait_lock");
 
 pub struct ProcManager {
     proc: [Process; NPROC],
@@ -101,7 +99,7 @@ impl ProcManager{
         extern_data.set_name("initcode");
         
         let mut guard = p.data.acquire();
-        guard.set_state(Procstate::RUNNABLE);
+        guard.set_state(ProcState::RUNNABLE);
 
         drop(guard);
 
@@ -121,9 +119,9 @@ impl ProcManager{
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             match guard.state {
-                Procstate::UNUSED => {
+                ProcState::UNUSED => {
                     guard.pid = alloc_pid;
-                    guard.set_state(Procstate::ALLOCATED);
+                    guard.set_state(ProcState::ALLOCATED);
 
                     let extern_data = p.extern_data.get_mut();
                     // Allocate a trapframe page.
@@ -152,11 +150,11 @@ impl ProcManager{
 
     /// Wake up all processes sleeping on chan.
     /// Must be called without any p->lock.
-    pub fn wakeup(&self, channel: usize) {
+    pub fn wake_up(&self, channel: usize) {
         for p in self.proc.iter() {
             let mut guard = p.data.acquire();
-            if guard.state == Procstate::SLEEPING && guard.channel == channel {
-                guard.state = Procstate::RUNNABLE;
+            if guard.state == ProcState::SLEEPING && guard.channel == channel {
+                guard.state = ProcState::RUNNABLE;
             }
             drop(guard);
         }
@@ -167,8 +165,8 @@ impl ProcManager{
         for p in self.proc.iter_mut() {
             let mut guard = p.data.acquire();
             match guard.state {
-                Procstate::RUNNABLE => {
-                    guard.state = Procstate::ALLOCATED;
+                ProcState::RUNNABLE => {
+                    guard.state = ProcState::ALLOCATED;
                     drop(guard);
                     return Some(p)
                 },
@@ -182,14 +180,14 @@ impl ProcManager{
 
     /// Pass p's abandonded children to init. 
     /// Caller must hold wait lock. 
-    pub fn reparent(&mut self, proc: &mut Process) {
+    pub fn reparent(&self, proc: &mut Process) {
         for index in 0..self.proc.len() {
-            let p = &mut self.proc[index];
+            let p = &self.proc[index];
                 let extern_data = unsafe{ &mut *p.extern_data.get() };
                 if let Some(parent) = extern_data.parent {
                     if parent as *const _ == proc as *const _ {
                         extern_data.parent = Some(self.init_proc);
-                        self.wakeup(self.init_proc as usize);
+                        self.wake_up(self.init_proc as usize);
                     }
                 }
         }
@@ -221,15 +219,15 @@ impl ProcManager{
         LOG.end_op();
         extern_data.cwd = None;
 
-        let wait_guard = WAIT_LOCK.acquire();
+        let wait_guard = self.wait_lock.acquire();
         // Give any children to init. 
         self.reparent(my_proc);
         // Parent might be sleeping in wait. 
-        self.wakeup(extern_data.parent.expect("Fail to find parent process") as usize);
+        self.wake_up(extern_data.parent.expect("Fail to find parent process") as usize);
 
         let mut proc_data = my_proc.data.acquire();
         proc_data.xstate = status;
-        proc_data.set_state(Procstate::ZOMBIE);
+        proc_data.set_state(ProcState::ZOMBIE);
 
         drop(wait_guard);
 
@@ -250,9 +248,8 @@ impl ProcManager{
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Fail to get my process")
         };
-        // TODO: in xv6-riscv, wait lock acquire out of loop. 
+        let mut wait_guard = self.wait_lock.acquire();
         loop {
-            let wait_guard = WAIT_LOCK.acquire();
             // Scan through table looking for exited children. 
             for index in 0..self.proc.len() {
                 let p = &mut self.proc[index];
@@ -264,7 +261,7 @@ impl ProcManager{
                         have_kids = true;
                         // make sure the child isn't still in exit or swtch. 
                         let proc_data = p.data.acquire();
-                        if proc_data.state == Procstate::ZOMBIE {
+                        if proc_data.state == ProcState::ZOMBIE {
                             // Found one 
                             pid = proc_data.pid;
                             let page_table = extern_data.pagetable.as_mut().expect("Fail to get pagetable");
@@ -293,11 +290,41 @@ impl ProcManager{
 
             // Wait for a child to exit.
             my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
+            wait_guard = self.wait_lock.acquire();
         }
     }
+
+/// Kill the process with the given pid. 
+/// The victim won't exit until it tries to return. 
+/// to user space (user_trap)
+pub fn kill(&mut self, pid: usize) -> Result<usize, ()> {
+    for proc in self.proc.iter_mut() {
+        if proc.pid() == pid {
+            proc.set_killed(true);
+            if proc.state() == ProcState::SLEEPING {
+                // Wake process from sleep. 
+                proc.set_state(ProcState::RUNNABLE);
+                return Ok(0)
+            }
+        }
+    }
+    Err(())
+}
+
+/// Print a process listing to console. For debugging. 
+/// Runs when user type ^P on console. 
+/// No lock to avoid wedging a stuck machine further
+pub fn proc_dump(&self) {
+    for proc in self.proc.iter() {
+        if proc.state() == ProcState::UNUSED { continue; }
+        else {
+            println!("pid: {} state: {:?} name: {}", proc.pid(), proc.state(), proc.name());
+        }
+    }
+}
 }
 
 #[inline]
 fn kstack(pos: usize) -> usize {
-    Into::<usize>::into(TRAMPOLINE) - (pos + 1) * 2 * PGSIZE
+    TRAMPOLINE - (pos + 1) * 5 * PGSIZE
 }

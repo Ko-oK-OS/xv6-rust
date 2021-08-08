@@ -1,7 +1,7 @@
 use core::convert::Into;
 use core::ptr;
 
-use crate::define::memlayout::{CLINT_MTIME, CLINT_MTIMECMP, CLINT};
+use crate::define::layout::{CLINT_MTIME, CLINT_MTIMECMP, CLINT};
 
 // core local interruptor (CLINT), which contains the timer.
 

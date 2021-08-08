@@ -1,4 +1,4 @@
-use crate::define::memlayout::{ ECAM, E1000_REGS };
+use crate::define::layout::{ ECAM, E1000_REGS };
 use crate::net::e1000::e1000_init;
 use core::ptr;
 use core::mem::size_of;

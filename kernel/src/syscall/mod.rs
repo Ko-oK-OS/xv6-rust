@@ -44,6 +44,29 @@ pub static SYSCALL:[SyscallFn; SYSCALL_NUM] = [
 pub type SysResult = Result<usize, ()>;
 
 
+pub const SHUTDOWN: usize = 8;
+pub const REBOOT: usize = 9;
+
+#[inline]
+pub fn kernel_env_call(
+    which: usize,
+    arg0: usize,
+    arg1: usize,
+    arg2: usize,   
+) -> usize {
+    let mut ret;
+    unsafe {
+        llvm_asm!("ecall"
+            : "={x10}" (ret)
+            : "{x10}" (arg0), "{x11}" (arg1), "{x12}" (arg2), "{x17}" (which)
+            : "memory"
+            : "volatile"
+        );
+    }
+    ret
+}
+
+
 /// Fetch the uint64 at addr from the current process.
 pub fn fetch_addr(addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
     let my_proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
@@ -116,6 +139,8 @@ pub fn arg_int(id: usize, arg: &mut usize) -> Result<(), ()> {
     *arg = arg_raw(id)?;
     Ok(())
 }
+
+
 
 /// Retrieve an argument as a pointer. 
 /// Doesn't check for legality, since

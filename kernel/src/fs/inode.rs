@@ -2,7 +2,7 @@ use crate::define::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE,
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
-use crate::memory::{either_copy_in, either_copy_out};
+use crate::memory::{copy_in, copy_out};
 use crate::misc::{ min, mem_set };
 use crate::process::CPU_MANAGER;
 
@@ -427,7 +427,7 @@ impl InodeData {
             let block_no = self.bmap(block_basic as u32)?;
             let buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, BSIZE - block_offset);
-            if either_copy_out(
+            if copy_out(
                 is_user, 
                 dst, 
                 unsafe{ (buf.raw_data() as *mut u8).offset((offset % BSIZE) as isize) },
@@ -474,7 +474,7 @@ impl InodeData {
             let block_no = self.bmap(block_basic as u32)?;
             let mut buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, block_offset % BSIZE);
-            if either_copy_in(
+            if copy_in(
                 unsafe{ (buf.raw_data_mut() as *mut u8).offset((offset % BSIZE) as isize ) }, 
                 is_user, 
                 src, 
@@ -556,6 +556,31 @@ impl InodeData {
             size_of::<DirEntry>() as u32
         )?;
         Ok(())
+    }
+
+    /// Is the directory empty execpt for "." and ".." ?
+    pub fn is_dir_empty(&mut self) -> bool {
+        let mut dir_entry = DirEntry::new();
+        // "." and ".." size
+        let init_size = 2 * size_of::<DirEntry>() as u32;
+        let final_size = self.dinode.size;
+        for offset in (init_size..final_size).step_by(size_of::<DirEntry>()) {
+            // Check each direntry, foreach step by size of DirEntry. 
+            if self.read(
+                false, 
+                &mut dir_entry as *mut DirEntry as usize, 
+                offset, 
+                size_of::<DirEntry>() as u32
+            ).is_err() {
+                panic!("is_dir_empty(): Fail to read dir content");
+            }
+
+            if dir_entry.inum != 0 {
+                return true
+            }
+        }
+        false
+
     }
 }
 

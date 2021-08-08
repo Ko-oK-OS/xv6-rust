@@ -26,7 +26,7 @@ pub unsafe fn start() -> !{
     sie::intr_on();
 
     // ask for clock interrupts.
-    timerinit();
+    timer_init();
 
     // keep each CPU's hartid in its tp register, for cpuid().
     let id:usize = mhartid::read(); 
@@ -43,7 +43,7 @@ pub unsafe fn start() -> !{
 // which arrive at timervec in kernelvec.S,
 // which turns them into software interrupts for
 // devintr() in trap.rs.
-unsafe fn timerinit(){
+unsafe fn timer_init(){
     // each CPU has a separate source of timer interrupts.
     let id = mhartid::read();
 

@@ -1,12 +1,12 @@
 OUTPUT_ARCH( "riscv" )
 
-ENTRY( _start )
+ENTRY( start )
 
 SECTIONS
 {
     .text :
     {
-        *(.text._start) *(.text .text.*)
+        *(.text.start) *(.text .text.*)
     }
 
     .rodata :

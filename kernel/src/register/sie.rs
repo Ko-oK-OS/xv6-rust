@@ -1,5 +1,5 @@
 // Supervisor Interrupt Enable
-pub enum SIE{
+pub enum SIE {
     SEIE = 1 << 9, // external
     STIE = 1 << 5, // timer
     SSIE = 1 << 1, // software

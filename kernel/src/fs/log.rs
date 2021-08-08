@@ -223,7 +223,7 @@ impl Spinlock<Log> {
             log_ptr = guard.deref_mut() as *mut Log;
         } else {
             let channel = guard.deref() as *const Log as usize;
-            unsafe { PROC_MANAGER.wakeup(channel); }
+            unsafe { PROC_MANAGER.wake_up(channel); }
         }
         drop(guard);
 
@@ -234,7 +234,7 @@ impl Spinlock<Log> {
             let mut guard = self.acquire();
             guard.committing = false;
             let channel = guard.deref() as *const Log as usize;
-            unsafe { PROC_MANAGER.wakeup(channel); }
+            unsafe { PROC_MANAGER.wake_up(channel); }
             drop(guard);
         }
     }

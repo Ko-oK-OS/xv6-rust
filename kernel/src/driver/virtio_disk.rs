@@ -15,7 +15,7 @@ use core::sync::atomic::{fence, Ordering};
 use core::ptr;
 use core::convert::TryInto;
 
-use crate::define::memlayout::{PGSHIFT, PGSIZE, VIRTIO0};
+use crate::define::layout::{PGSHIFT, PGSIZE, VIRTIO0};
 use crate::define::fs::BSIZE;
 use crate::define::virtio::*;
 use crate::fs::Buf;
@@ -161,7 +161,7 @@ impl Disk {
         self.desc[i].next = 0;
         self.free[i] = true;
         unsafe {
-            PROC_MANAGER.wakeup(&self.free[0] as *const bool as usize);
+            PROC_MANAGER.wake_up(&self.free[0] as *const bool as usize);
         }
     }
 
@@ -200,9 +200,9 @@ impl Disk {
             }
 
             let buf_raw_data = self.info[id].buf_channel.clone()
-                .expect("virtio disk intr handler not found pre-stored buf channel to wakeup");
+                .expect("virtio disk intr handler not found pre-stored buf channel to wake up");
             self.info[id].disk = false;
-            unsafe { PROC_MANAGER.wakeup(buf_raw_data); }
+            unsafe { PROC_MANAGER.wake_up(buf_raw_data); }
 
             self.used_idx += 1;
         }

@@ -5,7 +5,7 @@ use core::ptr::copy;
 use crate::interrupt::trap::kerneltrap;
 use crate::register::{ sfence_vma, satp };
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
-use crate::define::memlayout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
+use crate::define::layout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc::KERNEL_HEAP,
@@ -39,7 +39,7 @@ impl PageTable{
 
     /// Convert the page table to be the usize
     /// that can be written in satp register
-    pub fn as_satp(&self) -> usize{
+    pub fn as_satp(&self) -> usize {
         satp::SATP_SV39 | ((self.entries.as_ptr() as usize) >> PGSHIFT)
     }
 

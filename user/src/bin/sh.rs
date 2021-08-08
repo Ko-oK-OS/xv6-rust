@@ -34,25 +34,25 @@ pub fn get_char() -> u8 {
 }
 
 #[no_mangle]
-pub extern "C" fn _start() -> isize {
+pub extern "C" fn start() -> isize {
     println!("shell init...");
-    let mut buf:String = String::new();
+    let mut buf: String = String::new();
     print!(">>>");
     loop{
-        let temp=get_char();
-        match temp {
+        let c=get_char();
+        match c {
             LF | CR =>{
                 //to be continued
             }
 
             BS | DL =>{
-                //to be continued
+                // to be continued
             }
 
-            _=>{
-                //order just push.
-                print!("{}", temp as char);
-                buf.push(temp as char);
+            _ => {
+                // order just push.
+                println!("{}", c as char);
+                buf.push(c as char);
             }
         }
     }

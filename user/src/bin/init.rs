@@ -16,15 +16,14 @@ use user::{
 
 
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
-    println!("init process");
+pub extern "C" fn start() -> ! {
     let argv = &["sh".as_ptr(), 0 as *const u8];
     let mut pid;
     if open("console", O_RDWR) < 0 {
         mknod("console", CONSOLE, 0);
         open("console", O_RDWR);
     }
-
+    println!("init process");
     dup(0);
     dup(0);
     loop {

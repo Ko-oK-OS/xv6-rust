@@ -12,14 +12,14 @@ use crate::syscall::SysResult;
 pub mod cpu;
 mod context;
 mod trapframe;
-mod scheduler;
+mod manager;
 mod elf;
 mod process;
 pub use context::*;
 pub use trapframe::*;
 pub use cpu::*;
 pub use process::*;
-pub use scheduler::*;
+pub use manager::*;
 pub use elf::*;
 
 static INITCODE: [u8; 51] = [
@@ -83,7 +83,7 @@ pub unsafe fn fork() -> SysResult {
         drop(wait_guard);
 
         let mut guard = other_proc.data.acquire();
-        guard.set_state(Procstate::RUNNABLE);
+        guard.set_state(ProcState::RUNNABLE);
         drop(guard);
 
         return Ok(pid)
@@ -122,11 +122,11 @@ pub unsafe fn exit(status: i32) {
     // TODO: Give any children to init
     
     // Parent might be sleeping in wait(). 
-    PROC_MANAGER.wakeup(extern_data.parent.unwrap() as usize);
+    PROC_MANAGER.wake_up(extern_data.parent.unwrap() as usize);
 
     let mut guard = my_proc.data.acquire();
 
-    guard.set_state(Procstate::ZOMBIE);
+    guard.set_state(ProcState::ZOMBIE);
     guard.xstate = status as usize;
     
     drop(guard);
@@ -159,3 +159,5 @@ unsafe fn fork_ret() -> ! {
     println!("user trap return");
     usertrap_ret();
 }
+
+

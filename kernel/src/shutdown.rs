@@ -1,4 +1,7 @@
-use crate::kernel_syscall::{*, self};
+use crate::syscall::kernel_env_call;
+
+pub const SHUTDOWN: usize = 8;
+pub const REBOOT: usize = 9;
 
 #[doc(hidden)] #[allow(unused)]
 pub const RESET_TYPE_SHUTDOWN: usize = 0x0000_0000;
@@ -42,9 +45,9 @@ pub fn system_reset(reset_type: usize, reset_reason: usize) {
 }
 
 pub fn shutdown() {
-    kernel_syscall(SHUTDOWN, 0, 0, 0);
+    kernel_env_call(SHUTDOWN, 0, 0, 0);
 }
 
 pub fn reboot() {
-    kernel_syscall(REBOOT, 0, 0, 0);
+    kernel_env_call(REBOOT, 0, 0, 0);
 }

@@ -13,7 +13,7 @@ use crate::memory::{
     mapping::{ page_table::PageTable, page_table_entry::PteFlags},
     RawPage
 };
-use crate::define::memlayout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
+use crate::define::layout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use crate::register::satp;
 use super::*;
 use crate::fs::{FileType, Inode, VFile};
@@ -21,8 +21,8 @@ use crate::fs::{FileType, Inode, VFile};
 
 use alloc::boxed::Box;
 
-#[derive(PartialEq, Copy, Clone)]
-pub enum Procstate{
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum ProcState{
     UNUSED,
     USED,
     SLEEPING,
@@ -40,7 +40,7 @@ pub struct Process {
 
 pub struct ProcData {
     // p->lock must be held when using these
-    pub state: Procstate,
+    pub state: ProcState,
     pub channel: usize, // If non-zero, sleeping on chan
     pub killed: bool, // If non-zero, have been killed
     pub xstate: usize, // Exit status to be returned to parent's wait
@@ -50,7 +50,7 @@ pub struct ProcData {
 impl ProcData {
     pub const fn new() -> Self {
         Self {
-            state: Procstate::UNUSED,
+            state: ProcState::UNUSED,
             channel: 0,
             killed: false,
             xstate: 0,
@@ -59,7 +59,7 @@ impl ProcData {
         }
     }
 
-    pub fn set_state(&mut self, state: Procstate) {
+    pub fn set_state(&mut self, state: ProcState) {
         self.state = state;
     }
 }
@@ -163,7 +163,6 @@ impl ProcExtern {
         // at the highest user virtual address.
         // only the supervisor uses it, on the way
         // to/from user space, so not PTE_U. 
-        // let page_table = &mut *page_table;
         if !page_table.map(
             VirtualAddress::new(TRAMPOLINE),
             PhysicalAddress::new(trampoline as usize),
@@ -270,6 +269,30 @@ impl Process{
         pid
     }
 
+    pub fn set_state(&mut self, state: ProcState) {
+        let mut proc_data = self.data.acquire();
+        proc_data.set_state(state);
+        drop(proc_data);
+    }
+
+    pub fn set_killed(&mut self, killed: bool) {
+        let mut proc_data = self.data.acquire();
+        proc_data.killed = killed;
+        drop(proc_data);
+    }
+
+    pub fn state(&self) -> ProcState {
+        let proc_data = self.data.acquire();
+        let state = proc_data.state;
+        drop(proc_data);
+        state
+    }
+
+    pub fn name(&self) -> &str {
+        let extern_data = unsafe{ &*self.extern_data.get() };
+        extern_data.name
+    }
+
     pub fn modify_kill(&self, killed: bool) {
         let mut proc_data = self.data.acquire();
         proc_data.killed = killed;
@@ -348,7 +371,7 @@ impl Process{
             guard.channel = 0;
             guard.killed = false;
             guard.xstate = 0;
-            guard.set_state(Procstate::UNUSED);
+            guard.set_state(ProcState::UNUSED);
 
             drop(guard);
             
@@ -358,12 +381,12 @@ impl Process{
     
     /// Grow or shrink user memory by n bytes. 
     /// Return true on success, false on failure. 
-    pub fn grow_proc(&mut self, n: isize) -> Result<(), &'static str> {
+    pub fn grow_proc(&mut self, count: isize) -> Result<(), &'static str> {
         let mut extern_data = self.extern_data.get_mut();
         let mut size = extern_data.size; 
         let page_table = extern_data.pagetable.as_mut().unwrap();
-        if n > 0 {
-            match unsafe { page_table.uvm_alloc(size, size + n as usize) } {
+        if count > 0 {
+            match unsafe { page_table.uvm_alloc(size, size + count as usize) } {
                 Some(new_size) => {
                     size = new_size;
                 },
@@ -372,8 +395,8 @@ impl Process{
                     return Err("Fail to allocate virtual memory for user")
                 }
             }
-        }else if n < 0 {
-            let new_size = (size as isize + n) as usize;
+        } else if count < 0 {
+            let new_size = (size as isize + count) as usize;
             size = page_table.uvm_dealloc(size, new_size);
         }
 
@@ -388,7 +411,7 @@ impl Process{
     pub fn yielding(&mut self) {
         let mut guard = self.data.acquire();
         let ctx = self.extern_data.get_mut().get_context_mut();
-        guard.set_state(Procstate::RUNNABLE);
+        guard.set_state(ProcState::RUNNABLE);
 
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
@@ -413,7 +436,7 @@ impl Process{
         drop(lock);
         // Go to sleep.
         guard.channel = channel;
-        guard.set_state(Procstate::SLEEPING);
+        guard.set_state(ProcState::SLEEPING);
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
             let ctx = (&mut (*self.extern_data.get())).get_context_mut();      
@@ -422,7 +445,6 @@ impl Process{
                 guard, 
                 ctx
             );
-            println!("After sched");
             // Tide up
             guard.channel = 0;
             drop(guard);

@@ -52,80 +52,80 @@ impl Pipe {
     }
 
     pub fn read(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
-        // let my_proc = unsafe {
-        //     CPU_MANAGER.myproc().ok_or("Fail to get my process")?
-        // };
+        let my_proc = unsafe {
+            CPU_MANAGER.myproc().ok_or("Fail to get my process")?
+        };
 
-        // let pipe_guard = &mut self.guard.acquire();
-        // while pipe_guard.read_number == pipe_guard.write_number && pipe_guard.write_open {
-        //     // Pipe empty
-        //     if my_proc.killed() {
-        //         drop(pipe_guard);
-        //         return Err("pipe read: current process has been killed")
-        //     }
-        //     // pipe read sleep
-        //     my_proc.sleep(
-        //         &pipe_guard.read_number as *const _ as usize, 
-        //         pipe_guard
-        //     )
-        // }
+        let mut pipe_guard = self.guard.acquire();
+        while pipe_guard.read_number == pipe_guard.write_number && pipe_guard.write_open {
+            // Pipe empty
+            if my_proc.killed() {
+                drop(pipe_guard);
+                return Err("pipe read: current process has been killed")
+            }
+            // pipe read sleep
+            my_proc.sleep(
+                &pipe_guard.read_number as *const _ as usize, 
+                pipe_guard
+            );
+            pipe_guard = self.guard.acquire();
+        }
 
-        // let mut i = 0;
-        // for index in 0..len {
-        //     if pipe_guard.read_number == pipe_guard.write_number { break; }
-        //     let read_cursor = pipe_guard.read_number % PIPE_SIZE;
-        //     let ch = pipe_guard.data[read_cursor % PIPE_SIZE];
-        //     pipe_guard.read_number += 1;
-        //     let pgt = my_proc.page_table();
-        //     if pgt.copy_out(addr + index, &ch as *const u8, 1).is_err() {
-        //         break;
-        //     }
-        //     i = index;
-        // }
+        let mut i = 0;
+        for index in 0..len {
+            if pipe_guard.read_number == pipe_guard.write_number { break; }
+            let read_cursor = pipe_guard.read_number % PIPE_SIZE;
+            let ch = pipe_guard.data[read_cursor % PIPE_SIZE];
+            pipe_guard.read_number += 1;
+            let pgt = my_proc.page_table();
+            if pgt.copy_out(addr + index, &ch as *const u8, 1).is_err() {
+                break;
+            }
+            i = index;
+        }
 
-        // unsafe{ PROC_MANAGER.wakeup(&pipe_guard.write_number as *const _ as usize) };
-        // drop(pipe_guard);
-        // Ok(i)
-        Ok(0)
+        unsafe{ PROC_MANAGER.wake_up(&pipe_guard.write_number as *const _ as usize) };
+        drop(pipe_guard);
+        Ok(i)
     }
 
     pub fn write(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
-        // let my_proc = unsafe {
-        //     CPU_MANAGER.myproc().ok_or("Fail to get current process")?
-        // };
+        let my_proc = unsafe {
+            CPU_MANAGER.myproc().ok_or("Fail to get current process")?
+        };
 
-        // let pipe_guard = &mut self.guard.acquire();
-        // let mut i = 0;
-        // while i < len {
-        //     if !pipe_guard.read_open || my_proc.killed() {
-        //         drop(pipe_guard);
-        //         return Err("pipe write: pipe read close or current process has been killed")
-        //     }
+        let mut pipe_guard = self.guard.acquire();
+        let mut i = 0;
+        while i < len {
+            if !pipe_guard.read_open || my_proc.killed() {
+                drop(pipe_guard);
+                return Err("pipe write: pipe read close or current process has been killed")
+            }
 
-        //     if pipe_guard.write_number == pipe_guard.read_number + PIPE_SIZE {
-        //         unsafe {
-        //             PROC_MANAGER.wakeup(&pipe_guard.read_number as *const _ as usize);
-        //         }
-        //         my_proc.sleep(&pipe_guard.write_number as *const _ as usize, pipe_guard);
-        //     } else {
-        //         let mut char: u8 = 0;
-        //         let pgt = my_proc.page_table();
-        //         if pgt.copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
-        //             break;
-        //         }
-        //         let write_cursor = pipe_guard.write_number % PIPE_SIZE;
-        //         pipe_guard.data[write_cursor % PIPE_SIZE] = char;
-        //         i += 1;
-        //     }
-        // }
+            if pipe_guard.write_number == pipe_guard.read_number + PIPE_SIZE {
+                unsafe {
+                    PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
+                }
+                my_proc.sleep(&pipe_guard.write_number as *const _ as usize, pipe_guard);
+                pipe_guard = self.guard.acquire();
+            } else {
+                let mut char: u8 = 0;
+                let pgt = my_proc.page_table();
+                if pgt.copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
+                    break;
+                }
+                let write_cursor = pipe_guard.write_number % PIPE_SIZE;
+                pipe_guard.data[write_cursor % PIPE_SIZE] = char;
+                i += 1;
+            }
+        }
 
-        // unsafe {
-        //     PROC_MANAGER.wakeup(&pipe_guard.read_number as *const _ as usize);
-        // }
-        // drop(pipe_guard);
+        unsafe {
+            PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
+        }
+        drop(pipe_guard);
 
-        // Ok(i)
-        Ok(0)
+        Ok(i)
     }
 
     pub fn close(&self, writeable: bool) {
@@ -133,12 +133,12 @@ impl Pipe {
         if writeable {
             pipe_guard.write_open = false;
             unsafe {
-                PROC_MANAGER.wakeup(&pipe_guard.read_number as *const _ as usize);
+                PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
             }
         } else {
             pipe_guard.read_open = false;
             unsafe {
-                PROC_MANAGER.wakeup(&pipe_guard.write_number as *const _ as usize);
+                PROC_MANAGER.wake_up(&pipe_guard.write_number as *const _ as usize);
             }
         }
         
