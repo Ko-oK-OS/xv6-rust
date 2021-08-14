@@ -160,7 +160,8 @@ pub unsafe fn usertrap_ret() -> ! {
     sepc::write((*extern_data.trapframe).epc);
     
     // tell trampoline.S the user page table to switch to
-    let satp= extern_data.pagetable.as_ref().unwrap().as_satp();
+    let satp = extern_data.pagetable.as_ref().unwrap().as_satp();
+    // println!("satp: 0x{:x}", satp);
 
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,
