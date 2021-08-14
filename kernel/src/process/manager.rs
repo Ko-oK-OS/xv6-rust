@@ -60,17 +60,19 @@ impl ProcManager{
         }
     }
 
-    /// Allocate a page for each process's kernel stack.
+    /// Allocate 4 page for each process's kernel stack.
     /// Map it high in memory, followed by an invalid 
     /// group page
     pub unsafe fn proc_mapstacks(&mut self) {
         for (pos, _) in self.proc.iter_mut().enumerate() {
-            let pa = Stack::new_zeroed() as *mut u8;
+            let pa = Stack::new_zeroed();
             let va = kernel_stack(pos);
 
+            // map process stack into kernel, 
+            // which contain 5 page(stack for 4 page and 1 for guard page). 
             KERNEL_PAGETABLE.kernel_map(
                 VirtualAddress::new(va),
-                PhysicalAddress::new(pa as usize),
+                PhysicalAddress::new(pa),
                 PGSIZE * 4,
                 PteFlags::R | PteFlags::W
             );
@@ -95,7 +97,7 @@ impl ProcManager{
         // prepare for the very first "return" from kernel to user. 
         let tf =  &mut *extern_data.trapframe;
         tf.epc = 0; // user program counter
-        tf.sp = PGSIZE; // user stack pointer
+        tf.sp = 4 * PGSIZE; // user stack pointer
 
         let init_name = b"initname\0";
         extern_data.set_name(init_name);

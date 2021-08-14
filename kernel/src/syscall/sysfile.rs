@@ -351,7 +351,36 @@ pub fn sys_fstat() -> SysResult {
 }
 
 pub fn sys_chdir() -> SysResult {
-    Ok(0)
+    let mut path = [0u8; MAXPATH];
+    let my_proc = unsafe{ CPU_MANAGER.myproc().expect("Fail to get my process.") };
+    LOG.begin_op();
+    arg_str(0, &mut path, MAXPATH)?;
+    match ICACHE.namei(&path) {
+        Some(inode) => {
+            let inode_guard = inode.lock();
+            match inode_guard.dinode.itype {
+                InodeType::Directory => {
+                    drop(inode_guard);
+                    let old_cwd = my_proc.extern_data.get_mut().cwd.replace(inode);
+                    drop(old_cwd);
+                    LOG.end_op();
+                    return Ok(0)
+                },
+
+                _ => {
+                    LOG.end_op();
+                    drop(inode_guard);
+                    return Err(())
+                }
+            }
+        },
+
+        None => {
+            LOG.end_op();
+            return Err(())
+        }
+    }
+
 }
 
 pub fn sys_mkond() -> SysResult {
