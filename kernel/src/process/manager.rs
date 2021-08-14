@@ -55,7 +55,7 @@ impl ProcManager{
     pub unsafe fn init(&mut self){
         println!("process init......");
         for (pos, proc) in self.proc.iter_mut().enumerate() {
-            proc.init(kstack(pos));
+            proc.init(kernel_stack(pos));
         }
     }
 
@@ -64,13 +64,13 @@ impl ProcManager{
     /// group page
     pub unsafe fn proc_mapstacks(&mut self) {
         for (pos, _) in self.proc.iter_mut().enumerate() {
-            let pa = RawPage::new_zeroed() as *mut u8;
-            let va = kstack(pos);
+            let pa = Stack::new_zeroed() as *mut u8;
+            let va = kernel_stack(pos);
 
             KERNEL_PAGETABLE.kernel_map(
                 VirtualAddress::new(va),
                 PhysicalAddress::new(pa as usize),
-                PGSIZE,
+                PGSIZE * 4,
                 PteFlags::R | PteFlags::W
             );
             
@@ -325,6 +325,6 @@ pub fn proc_dump(&self) {
 }
 
 #[inline]
-fn kstack(pos: usize) -> usize {
+fn kernel_stack(pos: usize) -> usize {
     TRAMPOLINE - (pos + 1) * 5 * PGSIZE
 }

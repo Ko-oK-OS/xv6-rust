@@ -9,7 +9,8 @@ use crate::define::layout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc::KERNEL_HEAP,
-    RawPage
+    RawPage,
+    PageAllocator
 };
 use crate::misc::mem_copy;
 

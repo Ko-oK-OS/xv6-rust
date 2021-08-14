@@ -7,7 +7,7 @@ use core::cell::RefCell;
 
 use crate::define::layout::PGSIZE;
 use crate::define::param::MAXARG;
-use crate::memory::RawPage;
+use crate::memory::{ RawPage, PageAllocator };
 use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile, create}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use crate::fs::Pipe;
 use super::*;

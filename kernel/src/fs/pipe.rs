@@ -1,5 +1,5 @@
 use core::intrinsics::drop_in_place;
-use crate::{lock::spinlock::Spinlock, memory::RawPage, process::{CPU, CPU_MANAGER, PROC_MANAGER}};
+use crate::{lock::spinlock::Spinlock, memory::{ RawPage, PageAllocator }, process::{CPU, CPU_MANAGER, PROC_MANAGER}};
 
 use super::{FILE_TABLE, FileType, VFile};
 

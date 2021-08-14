@@ -108,7 +108,7 @@ unsafe fn kernel_map() {
     KERNEL_PAGETABLE.kernel_map(
         VirtualAddress::new(etext as usize), 
         PhysicalAddress::new(etext as usize), 
-        Into::<usize>::into(PHYSTOP) - etext as usize, 
+        PHYSTOP - etext as usize, 
         PteFlags::R | PteFlags::W
     );
 
