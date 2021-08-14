@@ -8,7 +8,7 @@ use core::cell::RefCell;
 use crate::define::layout::PGSIZE;
 use crate::define::param::MAXARG;
 use crate::memory::{ RawPage, PageAllocator };
-use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile, create}, lock::sleeplock::{SleepLock, SleepLockGuard}};
+use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use crate::fs::Pipe;
 use super::*;
 
@@ -100,7 +100,7 @@ pub fn sys_open() -> SysResult {
     LOG.begin_op();
     match OpenMode::mode(open_mode) {
         OpenMode::CREATE => {
-            match create(&path, crate::fs::InodeType::File, 0, 0) {
+            match ICACHE.create(&path, crate::fs::InodeType::File, 0, 0) {
                 Ok(cur_inode) => {
                     inode = cur_inode;
                     inode_guard = inode.lock();
@@ -363,7 +363,7 @@ pub fn sys_mkond() -> SysResult {
     arg_str(0, &mut path, MAXPATH)?;
     arg_int(1, &mut major)?;
     arg_int(2, &mut minor)?;
-    match create(&path, InodeType::Device, major as i16, minor as i16) {
+    match ICACHE.create(&path, InodeType::Device, major as i16, minor as i16) {
         Ok(inode) => {
             LOG.end_op();
             drop(inode);
@@ -391,7 +391,7 @@ pub fn sys_mkdir() -> SysResult {
     let mut path = [0u8; MAXPATH];
     LOG.begin_op();
     arg_str(0, &mut path, MAXPATH)?;
-    match create(&path, InodeType::Directory, 0, 0) {
+    match ICACHE.create(&path, InodeType::Directory, 0, 0) {
         Ok(inode) => {
             drop(inode);
             LOG.end_op();
