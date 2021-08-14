@@ -21,6 +21,8 @@ pub const NFILE: usize = 100;
 pub const NINODE: usize = 50;  
 /// device number of file system root disk
 pub const ROOTDEV: u32 = 1;
+/// root inode path name
+pub const ROOTIPATH: [u8; 2] = [b'/', 0];
 /// size of file system in blocks
 pub const FSSIZE: usize = 1000; 
 

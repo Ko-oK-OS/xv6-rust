@@ -11,7 +11,6 @@ mod inode;
 mod dinode;
 mod devices;
 mod file_table;
-mod ramdisk;
 mod stat;
 mod bitmap;
 

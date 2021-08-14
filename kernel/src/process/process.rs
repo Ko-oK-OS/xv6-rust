@@ -1,6 +1,7 @@
 use core::borrow::Borrow;
 use core::ptr::*;
 use core::cell::{ UnsafeCell, RefCell };
+use core::str::from_utf8;
 use alloc::vec::Vec;
 use alloc::vec;
 use alloc::sync::Arc;
@@ -71,7 +72,7 @@ pub struct ProcExtern {
     pub pagetable: Option<Box<PageTable>>, // User page table
     pub trapframe: *mut Trapframe, // data page for trampoline.S
     pub context: Context, // swtch() here to run processs
-    pub name: &'static str,   // Process name (debugging)
+    pub name: [u8; 16],   // Process name (debugging)
     // proc_tree_lock must be held when using this:
     pub parent: Option<*mut Process>,   
     pub ofile: Vec<Arc<RefCell<VFile>>>,
@@ -87,7 +88,7 @@ impl ProcExtern {
             pagetable: None,
             trapframe: null_mut(),
             context: Context::new(),
-            name: "process",
+            name: [0u8; 16],
             parent: None,
             ofile: vec![],
             cwd: None
@@ -98,8 +99,14 @@ impl ProcExtern {
         self.trapframe
     }
 
-    pub fn set_name(&mut self, name:&'static str) {
-        self.name = name;
+    pub fn set_name(&mut self, name: &[u8]) {
+        unsafe {
+            copy_nonoverlapping(
+                name.as_ptr(), 
+                self.name.as_mut_ptr(),
+                name.len()
+            );
+        }
     }
 
     pub fn set_parent(&mut self, parent: Option<*mut Process>) {
@@ -290,7 +297,7 @@ impl Process{
 
     pub fn name(&self) -> &str {
         let extern_data = unsafe{ &*self.extern_data.get() };
-        extern_data.name
+        from_utf8(&extern_data.name).unwrap()
     }
 
     pub fn modify_kill(&self, killed: bool) {

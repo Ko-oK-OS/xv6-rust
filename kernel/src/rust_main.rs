@@ -44,11 +44,11 @@ pub unsafe extern "C" fn rust_main() {
         sstatus::intr_on();
     } else {
         while !STARTED.load(Ordering::SeqCst){}
-        println!("hart {} starting\n", cpu::cpuid());
-        kvm_init_hart(); // turn on paging
-        trap_init_hart(); // install kernel trap vector
-        plic_init(); // set up interrupt controller
-        plic_init_hart(); // ask PLIC for device interrupts
+        // println!("hart {} starting\n", cpu::cpuid());
+        // kvm_init_hart(); // turn on paging
+        // trap_init_hart(); // install kernel trap vector
+        // plic_init(); // set up interrupt controller
+        // plic_init_hart(); // ask PLIC for device interrupts
         loop{}
     }
     CPU_MANAGER.scheduler();

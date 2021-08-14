@@ -46,7 +46,6 @@ impl InodeCache {
         guard[inode.index].refs += 1;
         Inode {
             dev: inode.dev,
-            blockno: inode.blockno,
             inum: inode.inum,
             index: inode.index
         }
@@ -138,7 +137,6 @@ impl InodeCache {
                 guard[i].refs += 1;
                 return Inode {
                     dev,
-                    blockno: guard[i].blockno,
                     inum,
                     index: i,
                 }
@@ -154,14 +152,11 @@ impl InodeCache {
             None => panic!("inode: not enough"),
         };
         guard[empty_i].dev = dev;
-        let blockno = unsafe{ SUPER_BLOCK.locate_inode(inum) };
-        guard[empty_i].blockno = blockno;
         guard[empty_i].inum = inum;
         guard[empty_i].refs = 1;
 
         Inode {
             dev,
-            blockno,
             inum,
             index: empty_i
         }
@@ -235,7 +230,11 @@ impl InodeCache {
 /// Skip the path starting at cur by b'/'s. 
 /// It will copy the skipped content to name. 
 /// Return the current offset after skiping. 
-fn skip_path(path: &[u8], mut cur: usize, name: &mut [u8; DIRSIZ]) -> usize {
+fn skip_path(
+    path: &[u8], 
+    mut cur: usize, 
+    name: &mut [u8; DIRSIZ]
+) -> usize {
     // skip preceding b'/'
     while path[cur] == b'/' {
         cur += 1;
@@ -349,7 +348,10 @@ impl InodeData {
     /// Update a modified in-memory inode to disk. 
     /// Typically called after changing the content of inode info. 
     pub fn update(&mut self, inode: &Inode) {
-        let mut buf = BCACHE.bread(inode.dev, inode.blockno);
+        let mut buf = BCACHE.bread(
+            inode.dev, 
+            unsafe { SUPER_BLOCK.locate_inode(self.inum)}
+        );
         let offset = locate_inode_offset(inode.inum) as isize;
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
         unsafe{ write(dinode, self.dinode) };
@@ -588,7 +590,6 @@ impl InodeData {
 /// It is actually a handle pointing to the cache. 
 pub struct Inode {
     pub dev: u32,
-    pub blockno: u32,
     pub inum: u32,
     pub index: usize
 }
@@ -606,7 +607,7 @@ impl Inode {
         let mut guard = ICACHE.data[self.index].lock();
         
         if !guard.valid {
-            let buf = BCACHE.bread(self.dev, self.blockno);
+            let buf = BCACHE.bread(self.dev, unsafe { SUPER_BLOCK.locate_inode(self.inum) });
             let offset = locate_inode_offset(self.inum) as isize;
             let dinode = unsafe{ (buf.raw_data() as *const DiskInode).offset(offset) };
             guard.dinode = unsafe{ core::ptr::read(dinode) };

@@ -4,6 +4,7 @@ use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
 use super::*;
+use crate::define::fs::ROOTIPATH;
 use crate::define::{
     param::NPROC,
     layout::{ PGSIZE, TRAMPOLINE }
@@ -96,14 +97,16 @@ impl ProcManager{
         tf.epc = 0; // user program counter
         tf.sp = PGSIZE; // user stack pointer
 
-        extern_data.set_name("initcode");
+        let init_name = b"initname\0";
+        extern_data.set_name(init_name);
+        // Set init process's directory
+        extern_data.cwd = Some(ICACHE.namei(&ROOTIPATH).expect("cannot find root inode"));
         
         let mut guard = p.data.acquire();
         guard.set_state(ProcState::RUNNABLE);
-
         drop(guard);
 
-        // set init process
+        // Set init process
         self.init_proc = p as *mut Process;
     }
 
