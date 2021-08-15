@@ -42,8 +42,6 @@ pub unsafe extern "C" fn rust_main() {
         PROC_MANAGER.user_init(); // first user process
         STARTED.store(true, Ordering::SeqCst);
         sstatus::intr_on();
-        // println!("device interrupt: {}", sstatus::intr_get());
-        // loop{}
     } else {
         while !STARTED.load(Ordering::SeqCst){}
         // println!("hart {} starting\n", cpu::cpuid());
@@ -51,7 +49,6 @@ pub unsafe extern "C" fn rust_main() {
         // trap_init_hart(); // install kernel trap vector
         // plic_init(); // set up interrupt controller
         // plic_init_hart(); // ask PLIC for device interrupts
-        // panic!("end of rust main, cpu id is {}", cpu::cpuid());
         loop{}
     }
     CPU_MANAGER.scheduler();

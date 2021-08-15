@@ -31,7 +31,6 @@ uservec:
 	# swap a0 and sscratch
     # so that a0 is TRAPFRAME
     csrrw a0, sscratch, a0
-
     # save the user registers in TRAPFRAME
     sd ra, 40(a0)
     sd sp, 48(a0)
@@ -78,7 +77,7 @@ uservec:
     # make tp hold the current hartid, from p->tf->kernel_hartid
     ld tp, 32(a0)
 
-    # load the address of user_trap(), p->tf->kernel_trap
+    # load the address of usertrap(), p->tf->kernel_trap
     ld t0, 16(a0)
 
     # restore kernel page table from p->tf->kernel_satp
@@ -89,7 +88,7 @@ uservec:
     # a0 is no longer valid, since the kernel page
     # table does not specially map p->tf.
 
-    # jump to user_trap(), which does not return
+    # jump to usertrap(), which does not return
     jr t0
 
 .align 4

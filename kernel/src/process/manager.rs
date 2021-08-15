@@ -4,6 +4,7 @@ use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
 use super::*;
+use crate::define::fs::ROOTIPATH;
 use crate::define::{
     param::NPROC,
     layout::{ PGSIZE, TRAMPOLINE }
@@ -55,22 +56,24 @@ impl ProcManager{
     pub unsafe fn init(&mut self){
         println!("process init......");
         for (pos, proc) in self.proc.iter_mut().enumerate() {
-            proc.init(kstack(pos));
+            proc.init(kernel_stack(pos));
         }
     }
 
-    /// Allocate a page for each process's kernel stack.
+    /// Allocate 4 page for each process's kernel stack.
     /// Map it high in memory, followed by an invalid 
     /// group page
     pub unsafe fn proc_mapstacks(&mut self) {
         for (pos, _) in self.proc.iter_mut().enumerate() {
-            let pa = RawPage::new_zeroed() as *mut u8;
-            let va = kstack(pos);
+            let pa = Stack::new_zeroed();
+            let va = kernel_stack(pos);
 
+            // map process stack into kernel, 
+            // which contain 5 page(stack for 4 page and 1 for guard page). 
             KERNEL_PAGETABLE.kernel_map(
                 VirtualAddress::new(va),
-                PhysicalAddress::new(pa as usize),
-                PGSIZE,
+                PhysicalAddress::new(pa),
+                PGSIZE * 4,
                 PteFlags::R | PteFlags::W
             );
             
@@ -94,16 +97,18 @@ impl ProcManager{
         // prepare for the very first "return" from kernel to user. 
         let tf =  &mut *extern_data.trapframe;
         tf.epc = 0; // user program counter
-        tf.sp = PGSIZE; // user stack pointer
+        tf.sp = 4 * PGSIZE; // user stack pointer
 
-        extern_data.set_name("initcode");
+        let init_name = b"initname\0";
+        extern_data.set_name(init_name);
+        // Set init process's directory
+        extern_data.cwd = Some(ICACHE.namei(&ROOTIPATH).expect("cannot find root inode"));
         
         let mut guard = p.data.acquire();
         guard.set_state(ProcState::RUNNABLE);
-
         drop(guard);
 
-        // set init process
+        // Set init process
         self.init_proc = p as *mut Process;
     }
 
@@ -325,6 +330,6 @@ pub fn proc_dump(&self) {
 }
 
 #[inline]
-fn kstack(pos: usize) -> usize {
+fn kernel_stack(pos: usize) -> usize {
     TRAMPOLINE - (pos + 1) * 5 * PGSIZE
 }

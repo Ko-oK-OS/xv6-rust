@@ -46,7 +46,6 @@ impl InodeCache {
         guard[inode.index].refs += 1;
         Inode {
             dev: inode.dev,
-            blockno: inode.blockno,
             inum: inode.inum,
             index: inode.index
         }
@@ -138,7 +137,6 @@ impl InodeCache {
                 guard[i].refs += 1;
                 return Inode {
                     dev,
-                    blockno: guard[i].blockno,
                     inum,
                     index: i,
                 }
@@ -154,14 +152,11 @@ impl InodeCache {
             None => panic!("inode: not enough"),
         };
         guard[empty_i].dev = dev;
-        let blockno = unsafe{ SUPER_BLOCK.locate_inode(inum) };
-        guard[empty_i].blockno = blockno;
         guard[empty_i].inum = inum;
         guard[empty_i].refs = 1;
 
         Inode {
             dev,
-            blockno,
             inum,
             index: empty_i
         }
@@ -230,12 +225,73 @@ impl InodeCache {
     pub fn namei_parent(&self, path: &[u8], name: &mut [u8;DIRSIZ]) -> Option<Inode> {
         self.namex(path, name, true)
     }
+
+    pub fn create(
+        &self,
+        path: &[u8],
+        itype: InodeType,
+        major: i16,
+        minor: i16
+    ) -> Result<Inode, &'static str> {
+        let mut name = [0;DIRSIZ];
+        let dirinode = self.namei_parent(path, &mut name).unwrap();
+        let mut dirinode_guard = dirinode.lock();
+        
+        match dirinode_guard.dir_lookup(&name) {
+            Some(inode) => {
+                drop(dirinode_guard);
+                let inode_guard = inode.lock();
+                match inode_guard.dinode.itype {
+                    InodeType::Device | InodeType::File => {
+                        if itype == InodeType::File {
+                            drop(inode_guard);
+                            return Ok(inode)
+                        }
+                        return Err("create: unmatched type.");
+                    },
+    
+                    _ => {
+                        return Err("create: unmatched type.")
+                    }
+                }
+            },
+    
+            None => {}
+        }
+        // Allocate a new inode to create file
+        let inode = ICACHE.alloc(dirinode.dev, itype).unwrap();
+        
+        let mut inode_guard = inode.lock();
+        // initialize new allocated inode
+        inode_guard.dinode.major = major;
+        inode_guard.dinode.minor = minor;
+        inode_guard.dinode.nlink = 1;
+        // Write back to disk
+        inode_guard.update(&inode);
+    
+        // Directory, create .. 
+        if itype == InodeType::Directory {
+            // Create . and .. entries. 
+            inode_guard.dinode.nlink += 1;
+            inode_guard.update(&inode);
+            // No nlink++ for . to avoid recycle ref count. 
+            inode_guard.dir_link(".".as_bytes(), inode.inum)?;
+            inode_guard.dir_link("..".as_bytes(), dirinode_guard.inum)?;
+        }
+        dirinode_guard.dir_link(&name, inode_guard.inum)?;
+        drop(inode_guard);
+        Ok(inode)
+    }
 }
 
 /// Skip the path starting at cur by b'/'s. 
 /// It will copy the skipped content to name. 
 /// Return the current offset after skiping. 
-fn skip_path(path: &[u8], mut cur: usize, name: &mut [u8; DIRSIZ]) -> usize {
+fn skip_path(
+    path: &[u8], 
+    mut cur: usize, 
+    name: &mut [u8; DIRSIZ]
+) -> usize {
     // skip preceding b'/'
     while path[cur] == b'/' {
         cur += 1;
@@ -349,7 +405,10 @@ impl InodeData {
     /// Update a modified in-memory inode to disk. 
     /// Typically called after changing the content of inode info. 
     pub fn update(&mut self, inode: &Inode) {
-        let mut buf = BCACHE.bread(inode.dev, inode.blockno);
+        let mut buf = BCACHE.bread(
+            inode.dev, 
+            unsafe { SUPER_BLOCK.locate_inode(self.inum)}
+        );
         let offset = locate_inode_offset(inode.inum) as isize;
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
         unsafe{ write(dinode, self.dinode) };
@@ -588,7 +647,6 @@ impl InodeData {
 /// It is actually a handle pointing to the cache. 
 pub struct Inode {
     pub dev: u32,
-    pub blockno: u32,
     pub inum: u32,
     pub index: usize
 }
@@ -606,7 +664,7 @@ impl Inode {
         let mut guard = ICACHE.data[self.index].lock();
         
         if !guard.valid {
-            let buf = BCACHE.bread(self.dev, self.blockno);
+            let buf = BCACHE.bread(self.dev, unsafe { SUPER_BLOCK.locate_inode(self.inum) });
             let offset = locate_inode_offset(self.inum) as isize;
             let dinode = unsafe{ (buf.raw_data() as *const DiskInode).offset(offset) };
             guard.dinode = unsafe{ core::ptr::read(dinode) };

@@ -12,6 +12,7 @@ use crate::fs::VFile;
 use core::borrow::BorrowMut;
 use core::mem::size_of;
 use core::ops::IndexMut;
+use core::str::from_utf8;
 
 type SyscallFn = fn() -> SysResult;
 
@@ -197,7 +198,7 @@ pub unsafe fn syscall() {
         let guard = my_proc.data.acquire();
         let pid = guard.pid;
         drop(guard);
-        println!("{} {}: Unknown syscall {}", pid, extern_data.name, id);
+        println!("{} {}: Unknown syscall {}", pid, from_utf8(&extern_data.name).unwrap(), id);
         // use max usize mean syscall failure
         tf.a0 = 2^64-1;
     }

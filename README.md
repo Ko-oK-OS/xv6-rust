@@ -98,7 +98,7 @@ And then you can debug this programe step by step.
     - [x] Process
     - [x] Scheduing
     - [x] Muti-Core Support
-    - [ ] Syscall
+    - [x] Syscall
 - File System
     - [x] Mkfs
     - [x] Buffer Layer
@@ -109,8 +109,7 @@ And then you can debug this programe step by step.
     - [x] File Descriptor Layer
     - [x] File Path
     - [x] Pipe 
-    - [ ] RamDisk
-    - [ ] Syscall
+    - [x] Syscall
 - NetWork
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers

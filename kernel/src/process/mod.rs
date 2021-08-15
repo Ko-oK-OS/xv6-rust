@@ -73,7 +73,7 @@ pub unsafe fn fork() -> SysResult {
             other_extern_data.ofile.push(other_f);
         }
 
-        other_extern_data.set_name(extern_data.name);
+        other_extern_data.set_name(&extern_data.name);
 
         let pid = guard.pid;
         drop(guard);

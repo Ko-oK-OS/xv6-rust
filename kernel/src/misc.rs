@@ -41,3 +41,21 @@ pub fn mem_set(dst: *mut u8, value: u8, len: usize) -> *mut u8 {
     };
     dst
 }
+
+/// Compare str
+pub fn str_cmp(a: &[u8], b: &[u8], max_len: usize) -> bool {
+    if a.len() != b.len() {
+        return false
+    }
+
+    if a.len() > max_len {
+        return false
+    }
+
+    for i in 0..a.len() {
+        if a[i] != b[i] {
+            return false
+        }
+    }
+    true
+}

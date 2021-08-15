@@ -13,19 +13,28 @@ use crate::misc::mem_copy;
 
 use alloc::boxed::Box;
 
-#[repr(C, align(4096))]
-pub struct RawPage{
-    data: [u8; PGSIZE]
-}
-
-impl RawPage {
-    pub unsafe fn new_zeroed() -> usize {
+pub trait PageAllocator: Sized {
+    unsafe fn new_zeroed() -> usize {
         let boxed_page = Box::<Self>::new_zeroed().assume_init();
         let ptr = Box::into_raw(boxed_page) as usize;
         println!("RawPage addr: 0x{:x}", ptr);
         ptr
     }
 }
+
+#[repr(C, align(4096))]
+pub struct RawPage {
+    data: [u8; PGSIZE]
+}
+
+impl PageAllocator for RawPage{}
+
+#[repr(C, align(4096))]
+pub struct Stack {
+    data: [u8; PGSIZE * 4]
+}
+
+impl PageAllocator for Stack{}
 
 
 /// Copy from either a user address, or kernel address,
