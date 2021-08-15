@@ -5,9 +5,11 @@ use core::{ptr::NonNull, slice::from_raw_parts_mut};
 use core::slice::from_raw_parts;
 use core::cell::RefCell;
 
+use crate::define::fs::DIRSIZ;
 use crate::define::layout::PGSIZE;
 use crate::define::param::MAXARG;
 use crate::memory::{ RawPage, PageAllocator };
+use crate::misc::str_cmp;
 use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use crate::fs::Pipe;
 use super::*;
@@ -347,7 +349,22 @@ pub fn sys_pipe() -> SysResult {
 }
 
 pub fn sys_fstat() -> SysResult {
-    Ok(0)
+    let mut file: VFile = VFile::init();
+    let mut stat: usize = 0;
+
+    arg_fd(0, &mut 0, &mut file)?;
+    arg_addr(1, &mut stat)?;
+
+    match file.stat(stat) {
+        Ok(()) => {
+            return Ok(0)
+        },
+
+        Err(err) => {
+            println!("err: {}", err);
+            return Err(())
+        }
+    }
 }
 
 pub fn sys_chdir() -> SysResult {
@@ -409,11 +426,125 @@ pub fn sys_mkond() -> SysResult {
 }
 
 pub fn sys_unlink() -> SysResult {
+    let mut path = [0u8; MAXPATH];
+    let mut name = [0u8; DIRSIZ];
+    let mut parent: Inode;
+    let mut inode: Inode;
+
+    arg_str(0, &mut path, MAXPATH)?;
+
+    LOG.begin_op();
+    match ICACHE.namei_parent(&path, &mut name) {
+        Some(cur) => {
+            parent = cur;
+        },
+        None => {
+            LOG.end_op();
+            return Err(())
+        }
+    }
+    let mut parent_guard = parent.lock();
+    if str_cmp(&name, ".".as_bytes(), DIRSIZ) &&
+        str_cmp(&name, "..".as_bytes(), DIRSIZ) {
+            drop(parent_guard);
+            LOG.end_op();
+            return Err(())
+    }
+    match parent_guard.dir_lookup(&name) {
+        Some(cur) => {
+            inode = cur;
+        },
+        _ => {
+            drop(parent_guard);
+            LOG.end_op();
+            return Err(())
+        }
+    }
+
+    let mut inode_guard = inode.lock();
+    if inode_guard.dinode.nlink < 1 {
+        panic!("sys_unlink: inods's nlink must be larger than 1.");
+    }
+
+    if inode_guard.dinode.itype == InodeType::Directory && 
+        !inode_guard.is_dir_empty() {
+            drop(inode_guard);
+            drop(parent_guard);
+            LOG.end_op();
+            return Err(())
+        }
+
+    if inode_guard.dinode.itype == InodeType::Directory {
+        parent_guard.dinode.nlink -= 1;
+        parent_guard.update(&parent);
+    }
+    drop(parent_guard);
+
+    inode_guard.dinode.nlink -= 1;
+    inode_guard.update(&inode);
+    drop(inode_guard);
+
+    LOG.end_op();
     Ok(0)
 }
 
+/// Create the path new as a link to the same inode as old.
 pub fn sys_link() -> SysResult {
-    Ok(0)
+    let mut new_path = [0u8; MAXPATH];
+    let mut old_path = [0u8; MAXPATH];
+    let mut name = [0u8; DIRSIZ];
+    let mut inode: Inode;
+    let mut parent: Inode;
+
+    arg_str(0, &mut old_path, MAXPATH)?;
+    arg_str(1, &mut new_path, MAXPATH)?;
+
+    LOG.begin_op();
+    match ICACHE.namei(&old_path) {
+        Some(cur) => {
+            inode = cur;
+        },
+
+        None => {
+            LOG.end_op();
+            return Err(())
+        }
+    }
+    let mut inode_guard = inode.lock();
+    if inode_guard.dinode.itype == InodeType::Directory {
+        drop(inode_guard);
+        LOG.end_op();
+        return Err(())
+    }
+
+    inode_guard.dinode.nlink += 1;
+
+    match ICACHE.namei_parent(&new_path, &mut name) {
+        Some(cur) => {
+            parent = cur;
+        },
+
+        _ => {
+            inode_guard.dinode.nlink -= 1;
+            drop(inode_guard);
+            LOG.end_op();
+            return Err(())
+        }
+    }
+    let mut parent_guard = parent.lock();
+    if parent_guard.dinode.itype != InodeType::Directory || 
+        parent_guard.dir_link(&name, inode.inum).is_ok() {
+            drop(parent_guard);
+            inode_guard.dinode.nlink -= 1;
+            drop(inode_guard);
+            LOG.end_op();
+            return Err(())
+        }
+    
+    inode_guard.update(&inode);
+    drop(inode_guard);
+    LOG.end_op();
+    return Ok(0)
 }
 
 pub fn sys_mkdir() -> SysResult {
