@@ -25,9 +25,9 @@ make -j$(nproc)
 sudo make install  
 ```
 If you find some errors when building, you can slove by following hints:  
-`ERROR: pkg-config binary 'pkg-config' not found` : `sudo apt-get install pkg-config`           
-`ERROR: glib-2.48 gthread-2.0 is required to compile QEMU`: `sudo apt-get install libglib2.0-dev`       
-`ERROR: pixman >= 0.21.8 not present`: `sudo apt-get install libpixman-1-dev` 
+- `ERROR: pkg-config binary 'pkg-config' not found` : `sudo apt-get install pkg-config`           
+- `ERROR: glib-2.48 gthread-2.0 is required to compile QEMU`: `sudo apt-get install libglib2.0-dev`       
+- `ERROR: pixman >= 0.21.8 not present`: `sudo apt-get install libpixman-1-dev` 
 
 ### Rust
 You need download rust to start our environment. We suggest you to use official shell:  
