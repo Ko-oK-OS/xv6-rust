@@ -122,7 +122,7 @@ And then you can debug this programe step by step.
 
 ## DOCS
 
-[项目设计文档](docs/项目设计文档.pdf)
+[项目设计文档](docs/项目设计文档.md)
 
 ## Some Useful Links
 
