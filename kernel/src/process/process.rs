@@ -208,7 +208,7 @@ impl ProcExtern {
         }
         let tf = unsafe{ &mut *self.trapframe };
         // kernel page table
-        tf.kernel_trap = unsafe{ satp::read() };
+        tf.kernel_satp = unsafe{ satp::read() };
         // process's kernel stack 
         tf.kernel_sp = self.kstack + PGSIZE * 4;
         // kernel user trap address
