@@ -1,10 +1,10 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
-use crate::memory::RawPage;
+use crate::memory::{PageAllocator, RawPage};
 use crate::define::layout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
     PLIC_BASE, KERNEL_BASE, PHYSTOP, TRAMPOLINE,
-    E1000_REGS, ECAM, VIRT_TEST, CLINT
+    E1000_REGS, ECAM, VIRT_TEST, CLINT, TRAPFRAME
 };
 use crate::register::{satp, sfence_vma};
 use crate::process::*;
@@ -121,7 +121,7 @@ unsafe fn kernel_map() {
         PteFlags::R | PteFlags::X
     );
 
-    // map kernel stacks
+    // 映射不同进程的内核栈
     PROC_MANAGER.proc_mapstacks();
 }
 

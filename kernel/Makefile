@@ -2,7 +2,7 @@ TARGET      := riscv64gc-unknown-none-elf
 MODE        := debug
 KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
-CPUS		:= 3
+CPUS		:= 1
 
 FS_IMG		:= ../fs.img
 KERNEL_ASM	:= kernel.S
@@ -22,6 +22,8 @@ QEMUOPTS 	+= -device e1000,netdev=net0,bus=pcie.0
 
 
 QEMUGDB 	:= -gdb tcp::26000
+
+GDB         := ~/riscv/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gdb
 
 .PHONY: doc kernel build clean qemu run test
 
@@ -68,5 +70,5 @@ test: build
 debug: build
 	@tmux new-session -d \
 		"$(QEMU) $(QEMUOPTS) -s -S" && \
-		tmux split-window -h "riscv64-unknown-elf-gdb -ex 'file $(KERNEL_FILE)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
+		tmux split-window -h "$(GDB) -ex 'file $(KERNEL_FILE)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
 		tmux -2 attach-session -d

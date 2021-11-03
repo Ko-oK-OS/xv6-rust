@@ -78,6 +78,7 @@ pub fn sys_mknod(path: &str, mode: usize, dev: usize) -> SysRet {
 
 pub fn sys_exec(path: &str, args: &[*const u8]) -> SysRet {
     syscall(SYS_EXEC, [path.as_ptr() as usize, args.as_ptr() as usize, 0])
+    // syscall(SYS_EXEC, [0, 0, 0])
 }
 
 pub fn sys_sbrk(bytes: usize) -> SysRet {

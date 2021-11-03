@@ -32,6 +32,7 @@ uservec:
     # so that a0 is TRAPFRAME
     csrrw a0, sscratch, a0
     # save the user registers in TRAPFRAME
+
     sd ra, 40(a0)
     sd sp, 48(a0)
     sd gp, 56(a0)

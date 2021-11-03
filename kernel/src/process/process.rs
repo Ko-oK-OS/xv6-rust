@@ -184,7 +184,7 @@ impl ProcExtern {
             VirtualAddress::new(TRAPFRAME), 
             PhysicalAddress::new(self.trapframe as usize),
             PGSIZE,
-            PteFlags::R | PteFlags::X
+            PteFlags::R | PteFlags::W
         ) {
             page_table.uvm_free(0);
         }
