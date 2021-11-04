@@ -30,7 +30,7 @@ extern crate fs_lib;
 global_asm!(include_str!("asm/entry.S"));
 global_asm!(include_str!("asm/kernelvec.S"));
 global_asm!(include_str!("asm/trampoline.S"));
-global_asm!(include_str!("asm/swtch.S"));
+global_asm!(include_str!("asm/switch.S"));
 
 
 #[macro_use]

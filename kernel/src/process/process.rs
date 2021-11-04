@@ -71,7 +71,7 @@ pub struct ProcExtern {
     pub size:usize, // size of process memory
     pub pagetable: Option<Box<PageTable>>, // User page table
     pub trapframe: *mut Trapframe, // data page for trampoline.S
-    pub context: Context, // swtch() here to run processs
+    pub context: Context, // switch() here to run processs
     pub name: [u8; 16],   // Process name (debugging)
     // proc_tree_lock must be held when using this:
     pub parent: Option<*mut Process>,   

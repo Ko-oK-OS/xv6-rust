@@ -61,13 +61,13 @@ impl CPUManager{
     /// Each CPU calls scheduler() after setting itself up.
     /// Scheduler never returns.  It loops, doing:
     ///  - choose a process to run.
-    ///  - swtch to start running that process.
+    ///  - switch to start running that process.
     ///  - eventually that process transfers control
-    ///    via swtch back to the scheduler.
+    ///    via switch back to the scheduler.
 
     pub unsafe fn scheduler(&mut self){
         extern "C" {
-            fn swtch(old: *mut Context, new: *mut Context);
+            fn switch(old: *mut Context, new: *mut Context);
         }
 
         let c = self.mycpu();
@@ -82,7 +82,7 @@ impl CPUManager{
                     c.set_proc(NonNull::new(p as *mut Process));
                     let mut guard = p.data.acquire();
                     guard.state = ProcState::RUNNING;
-                    swtch(
+                    switch(
                         c.get_context_mut(),
                         &mut p.extern_data.get_mut().context as *mut Context
                     );
@@ -153,7 +153,7 @@ impl CPU{
     -> SpinlockGuard<'a, ProcData>
     {
         extern "C" {
-            fn swtch(old: *mut Context, new: *mut Context);
+            fn switch(old: *mut Context, new: *mut Context);
         }
 
         if !guard.holding() {
@@ -176,7 +176,7 @@ impl CPU{
         }
 
         let intena = self.intena;
-        swtch(
+        switch(
             ctx, 
             &mut self.context as *mut Context
         );
