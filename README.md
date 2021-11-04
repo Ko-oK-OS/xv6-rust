@@ -142,9 +142,11 @@ And then you can debug this programe step by step.
 - [Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   
 - [buddy_system_allocator](https://github.com/rcore-os/buddy_system_allocator)  
 - [Write a OS in Rust](https://os.phil-opp.com)  
-- [rCore Tutorial](https://rcore-os.github.io/rCore-Tutorial-deploy/)  
+- [rCore-Tutorial-v3](https://rcore-os.github.io/rCore-Tutorial-Book-v3/index.html)
+- [rCore-Tutorial](https://rcore-os.github.io/rCore-Tutorial-deploy/)  
 - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
 - [xv6-riscv-rust](https://github.com/Jaic1/xv6-riscv-rust)
+- [rCore](https://github.com/rcore-os/rCore)
 
 ## License
 MIT License
