@@ -142,7 +142,7 @@ pub unsafe fn exit(status: i32) {
 }
 
 /// A fork child's very first scheduling by scheduler()
-/// will swtch to forkret.
+/// will switch to forkret.
 /// 
 /// Need to be handled carefully, because CPU use ra to jump here
 unsafe fn fork_ret() -> ! {

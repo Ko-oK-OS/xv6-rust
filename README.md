@@ -71,6 +71,13 @@ make run
 ```
 
 ## GDB Usage
+To use gdb to debug, we need to download `riscv64-unkonown-elf-gdb` and `tmux`.
+
+### GDB Download
+- [Ubuntu](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-ubuntu14.tar.gz)
+- [CentOS](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-centos6.tar.gz)
+- [macOS](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-apple-darwin.tar.gz)
+- [Windows](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-w64-mingw32.zip)
 
 We support gdb in OS kernel, you can exectue this command in `xv6-rust/kernel` directory:   
 ```shell
@@ -78,7 +85,7 @@ make debug
 ```
 And then you can debug this programe step by step. 
 
-## Functions
+## Schedule
 
 - Virtual Memory and Management   
     - [x] Virtulal Memory Map
@@ -113,18 +120,23 @@ And then you can debug this programe step by step.
 - NetWork
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers
-    - [ ] NetCardS
+    - [ ] NetCard
     - [ ] Syscall
 - Device Driver
     - [x] Virtio Disk
     - [x] Uart/Console
     - [x] PCI
 
-## DOCS
+## Future
+- [ ] SdCard
+- [ ] Netword Support
+- [ ] Async IO
+
+## Docs
 
 [项目设计文档](docs/项目设计文档.pdf)
 
-## Some Useful Links
+## References
 
 - [Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
 - [Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   
@@ -133,3 +145,6 @@ And then you can debug this programe step by step.
 - [rCore Tutorial](https://rcore-os.github.io/rCore-Tutorial-deploy/)  
 - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
 - [xv6-riscv-rust](https://github.com/Jaic1/xv6-riscv-rust)
+
+## License
+MIT License
