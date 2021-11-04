@@ -35,7 +35,6 @@ global_asm!(include_str!("asm/switch.S"));
 
 #[macro_use]
 mod printf;
-mod start;
 mod shutdown;
 
 mod logo;
