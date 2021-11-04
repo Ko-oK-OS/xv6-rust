@@ -3,7 +3,7 @@
 
 ![](run.jpg)
 
-This is a try to re-implement xv6 OS in Rust. 
+This is a try to implement xv6 OS in pure Rust. 
 
 What's more, we are desired to add something new features into our OS, like network and GUI.  
 
