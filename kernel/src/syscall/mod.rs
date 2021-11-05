@@ -24,22 +24,22 @@ pub static SYSCALL:[SyscallFn; SYSCALL_NUM] = [
     sys_wait,
     sys_pipe,
     sys_read,
-    sys_write,
-    sys_close,
     sys_kill,
     sys_exec,
-    sys_open,
-    sys_mkond,
-    sys_unlink,
     sys_fstat,
-    sys_link,
-    sys_mkdir,
     sys_chdir,
     sys_dup,
     sys_getpid,
     sys_sbrk,
     sys_sleep,
-    sys_uptime
+    sys_uptime,
+    sys_open,
+    sys_write, 
+    sys_mknod,
+    sys_unlink,
+    sys_link, 
+    sys_mkdir,
+    sys_close
 ];
 
 pub type SysResult = Result<usize, ()>;
@@ -193,7 +193,7 @@ pub unsafe fn syscall() {
     let id = tf.a7;
 
     if id > 0 && id < SYSCALL_NUM {
-        tf.a0 = SYSCALL[id]().expect("Fail to syscall");
+        tf.a0 = SYSCALL[id - 1]().expect("Fail to syscall");
     }else {
         let guard = my_proc.data.acquire();
         let pid = guard.pid;

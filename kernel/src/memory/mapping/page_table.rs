@@ -509,22 +509,27 @@ impl PageTable{
         src: usize,
         mut max: usize
     ) -> Result<(),&'static str> {
+        // 将 src 作为虚拟地址
         let mut va = VirtualAddress::new(src as usize);
+        // 将虚拟地址进行页对齐
         va.pg_round_down();
         loop {
+            // 将用户态的虚拟地址转成物理地址
             let pa = self.unmap_pgt(va).unwrap();
+            // 计算该页所要读取的字节数
             let count = PGSIZE - (src - va.as_usize());
             let s = (pa.as_usize() + (src - va.as_usize())) as *const u8;
             if max < count {
+                // 所能读取的最大的字符数小于该页剩余字节
                 for i in 0..max {
                     unsafe{
+                        // 获取所要读取的指针
                         let src_ptr = s.offset(i as isize);
-                        let src_val = read(src_ptr); 
-                        if src_val == 0 {
-                            return Err("copy_in_str: string end.")
-                        }
+                        // 获取所要读取的值
+                        let val = read(src_ptr); 
+                        if val == 0 { return Ok(()) }
                         let dst_ptr = dst.offset(i as isize);
-                        write(dst_ptr, src_val);
+                        write(dst_ptr, val);
                     }
                 }
                 return Ok(())
@@ -534,9 +539,7 @@ impl PageTable{
                 unsafe {
                     let src_ptr = s.offset(i as isize);
                     let src_val = read(src_ptr); 
-                    if src_val == 0 {
-                        return Err("copy_in_str: string end.")
-                    }
+                    if src_val == 0 { return Ok(()) }
                     let dst_ptr = dst.offset(i as isize);
                     write(dst_ptr, src_val);
                 }

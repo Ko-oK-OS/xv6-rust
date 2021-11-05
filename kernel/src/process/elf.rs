@@ -133,6 +133,7 @@ pub unsafe fn exec(
     LOG.begin_op();
 
     // Get current inode by path
+    println!("[Debug] path: {}", path);
     inode = ICACHE.namei(path.as_bytes()).unwrap();
 
     // Get inode data by sleeplock

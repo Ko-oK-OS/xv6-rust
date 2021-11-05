@@ -133,7 +133,7 @@ impl InodeCache {
         // lookup in the cache 
         let mut empty_i: Option<usize> = None;
         for i in 0..NINODE {
-            if guard[i].inum == inum && guard[i].refs > 0 && guard[i].dev ==dev {
+            if guard[i].inum == inum && guard[i].refs > 0 && guard[i].dev == dev {
                 guard[i].refs += 1;
                 return Inode {
                     dev,
