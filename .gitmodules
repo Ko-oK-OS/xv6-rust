@@ -2,3 +2,9 @@
 [submodule "allocator"]
 	path = allocator
 	url = https://github.com/Ko-oK-OS/allocator.git
+[submodule "xv6-mkfs"]
+	path = xv6-mkfs
+	url = git@github.com:Ko-oK-OS/xv6-mkfs.git
+[submodule "xv6-user"]
+	path = xv6-user
+	url = git@github.com:Ko-oK-OS/xv6-user.git

@@ -152,7 +152,6 @@ impl BlockDevice {
     
 
     fn append_inode(&self, inum: u32, mut data: *const u8, mut count: usize) {
-        println!("Enter append inode");
         let mut dinode: DiskInode = DiskInode::new();
         let mut indirect = vec![0u8;BSIZE];
         let mut buf = vec![0;BSIZE]; 
@@ -241,13 +240,13 @@ impl BlockDevice {
             count -= size;
             offset += size as u32;
             data = unsafe{ data.offset(size as isize) };
-            println!("size: {}", size);
-            println!("count: {}", count);
+            // println!("size: {}", size);
+            // println!("count: {}", count);
         }
         dinode.size = bytes_order_u32(offset);
         // write back the inode
         self.write_inode(inum, &dinode);
-        println!("Write back inode.");
+        // println!("Write back inode.");
     }
 }
 
@@ -365,7 +364,7 @@ pub fn main() {
     let data = (&dir_entry) as *const DirEntry as *const u8;
     block_device.append_inode(root_inode, data, size_of::<DirEntry>());
 
-    // Initialize use programe
+    // 初始化用户程序
     for prog in USER_PROGRAMS.iter() {
         let short_str: &str = "null";
         let path = format!("{}{}", USERPROG_DIR, prog);
@@ -394,8 +393,6 @@ pub fn main() {
 
     block_device.alloc(unsafe{ FREE_BLOCKS });
     drop(block_device);
-
-    
 }
 
 #[test]
