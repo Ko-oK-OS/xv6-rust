@@ -217,12 +217,12 @@ impl PageTable{
         size:usize, 
         perm:PteFlags
     ) {
-        println!(
-            "kvm_map: va={:#x}, pa={:#x}, size={:#x}",
-            va.as_usize(),
-            pa.as_usize(),
-            size
-        );
+        // println!(
+        //     "kvm_map: va={:#x}, pa={:#x}, size={:#x}",
+        //     va.as_usize(),
+        //     pa.as_usize(),
+        //     size
+        // );
         if !self.map(va, pa, size, perm){
             panic!("kvmmap");
         }
