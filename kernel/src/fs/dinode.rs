@@ -4,8 +4,8 @@ use crate::define::fs::{ NDIRECT, DIRSIZ };
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum InodeType {
     Empty = 0,
-    File = 1,
-    Directory = 2,
+    Directory = 1,
+    File = 2,
     Device = 3
 }
 
