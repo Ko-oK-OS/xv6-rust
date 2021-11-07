@@ -1,7 +1,7 @@
 use super::{ NDIRECT, DIRSIZ };
 
 #[repr(u16)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum InodeType {
     Empty = 0,
     File = 1,

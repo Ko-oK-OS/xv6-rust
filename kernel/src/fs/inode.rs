@@ -135,6 +135,7 @@ impl InodeCache {
         for i in 0..NINODE {
             if guard[i].inum == inum && guard[i].refs > 0 && guard[i].dev == dev {
                 guard[i].refs += 1;
+                println!("[Debug] 获取Inode");
                 return Inode {
                     dev,
                     inum,
@@ -154,7 +155,6 @@ impl InodeCache {
         guard[empty_i].dev = dev;
         guard[empty_i].inum = inum;
         guard[empty_i].refs = 1;
-
         Inode {
             dev,
             inum,
@@ -171,6 +171,7 @@ impl InodeCache {
     ) -> Option<Inode> {
         let mut inode: Inode;
         if path[0] == b'/' {
+            println!("[Debug] 当前在根目录");
             inode = self.get(ROOTDEV, ROOTINUM);
         } else {
             let p = unsafe { CPU_MANAGER.myproc().unwrap() };
@@ -183,6 +184,8 @@ impl InodeCache {
 
             let mut data_guard = inode.lock();
             if data_guard.dinode.itype != InodeType::Directory {
+                println!("[Debug] Disk Inode: {:?}", data_guard.dinode);
+                println!("[Debug] 该文件不是目录");
                 drop(data_guard);
                 return None
             }
@@ -645,6 +648,7 @@ impl InodeData {
 
 /// Inode handed out by inode cache. 
 /// It is actually a handle pointing to the cache. 
+#[derive(Debug)]
 pub struct Inode {
     pub dev: u32,
     pub inum: u32,

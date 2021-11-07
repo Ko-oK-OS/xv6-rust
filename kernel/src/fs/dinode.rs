@@ -1,7 +1,7 @@
 use crate::define::fs::{ NDIRECT, DIRSIZ };
 
 #[repr(u16)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum InodeType {
     Empty = 0,
     File = 1,
@@ -11,7 +11,7 @@ pub enum InodeType {
 
 /// On-disk inode structure
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct DiskInode {
     pub itype: InodeType, // File type
     pub major: i16, // Major device number (T_REVICE only)

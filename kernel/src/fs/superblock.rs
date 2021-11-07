@@ -96,8 +96,9 @@ impl SuperBlock {
         if inum >= sb.ninodes {
             panic!("query inum {} larger than maximum inode nums {}", inum, sb.ninodes);
         }
-
+        // println!("[Debug] inum: {}", inum);
         let blockno = (inum / (IPB as u32)) + sb.inodestart;
+        // println!("[Debug] block number: {}", blockno);
         blockno
     }
 
