@@ -3,11 +3,10 @@ USER = xv6-user
 INCLUDE = xv6-user/include
 CPUS = 3
 
-DIR = ~/riscv/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-ubuntu14/bin/
-CC = $(DIR)riscv64-unknown-elf-gcc
-LD = $(DIR)riscv64-unknown-elf-ld
-OBJCOPY = $(DIR)riscv64-unknown-elf-objcopy
-OBJDUMP = $(DIR)riscv64-unknown-elf-objdump
+CC = riscv64-unknown-elf-gcc
+LD = riscv64-unknown-elf-ld
+OBJCOPY = riscv64-unknown-elf-objcopy
+OBJDUMP = riscv64-unknown-elf-objdump
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
@@ -26,14 +25,8 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
-QEMU = qemu-system-riscv64
-QEMUOPTS = -machine virt -bios none -kernel $(KERNEL) -m 3G -smp $(CPUS) -nographic
-QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-QEMUGDB = -gdb tcp::26000
-
-qemu-gdb: $(KERNEL) fs.img
-	@echo "*** Now run 'gdb' in another window." 1>&2
-	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
+run: fs.img $(UPROGS)
+	make -C kernel run
 
 $(KERNEL):
 	make -C kernel
@@ -46,7 +39,7 @@ clean:
 	make -C kernel clean
 	rm -f $(USER)/*.o $(USER)/*.d $(USER)/*.asm $(USER)/*.sym \
 	$(USER)/initcode $(USER)/initcode.out fs.img \
-	mkfs/mkfs $(USER)/usys.S \
+	xv6-mkfs/mkfs $(USER)/usys.S \
 	$(UPROGS)
 
 $(USER)/initcode: $(USER)/initcode.S
@@ -74,8 +67,8 @@ $(USER)/_forktest: $(USER)/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $(USER)/_forktest $(USER)/forktest.o $(USER)/ulib.o $(USER)/usys.o
 	$(OBJDUMP) -S $(USER)/_forktest > $(USER)/forktest.asm
 
-mkfs/mkfs: mkfs/mkfs.c $(INCLUDE)/fs.h $(INCLUDE)/param.h
-	gcc -Werror -Wall -I./xv6-user -o mkfs/mkfs mkfs/mkfs.c
+xv6-mkfs/mkfs: xv6-mkfs/mkfs.c $(INCLUDE)/fs.h $(INCLUDE)/param.h
+	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
@@ -84,22 +77,8 @@ mkfs/mkfs: mkfs/mkfs.c $(INCLUDE)/fs.h $(INCLUDE)/param.h
 .PRECIOUS: %.o
 
 UPROGS=\
-	$(USER)/_cat\
-	$(USER)/_echo\
-	$(USER)/_forktest\
-	$(USER)/_grep\
-	$(USER)/_init\
-	$(USER)/_kill\
-	$(USER)/_ln\
-	$(USER)/_ls\
-	$(USER)/_mkdir\
-	$(USER)/_rm\
-	$(USER)/_sh\
-	$(USER)/_stressfs\
-	$(USER)/_usertests\
-	$(USER)/_grind\
-	$(USER)/_wc\
-	$(USER)/_zombie\
+	$(USER)/_init \
+	$(USER)/_sh
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
