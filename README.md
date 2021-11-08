@@ -128,8 +128,10 @@ And then you can debug this programe step by step.
     - [x] PCI
 
 ## Future
+- [ ] Refactor memory model
+- [ ] Better scheduler
 - [ ] SdCard
-- [ ] Netword Support
+- [ ] Network Support
 - [ ] Async IO
 
 ## Docs

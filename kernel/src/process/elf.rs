@@ -117,9 +117,6 @@ pub unsafe fn exec(
     path: &str, 
     argv: &[*const u8]
 ) -> Result<usize, &'static str> {
-    // assert!(size_of::<ProgHeader>() == 64*7, "Wrong size of PrgoHeader.");
-    // assert!(size_of::<ElfHeader>() == 64*9, "Wrong size of ElfHeader");
-
     let elf = Box::<ElfHeader>::new_zeroed().assume_init();
     let ph = Box::<ProgHeader>::new_zeroed().assume_init();
     let mut page_table: Box<PageTable>;
@@ -139,6 +136,7 @@ pub unsafe fn exec(
     // Get inode data by sleeplock
     let mut inode_guard = inode.lock();
            
+    println!("[Debug] 读取ELF Header");
     // Check ELF header
     if inode_guard.read(
         false, 

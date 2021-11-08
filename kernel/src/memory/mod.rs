@@ -78,6 +78,7 @@ pub fn copy_out(
         if !is_user {
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
+            println!("[Debug] dst: 0x{:x}, src: 0x{:x}", dst, src as usize);
             page_table
                 .copy_out(
                     dst,

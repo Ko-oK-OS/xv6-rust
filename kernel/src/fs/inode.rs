@@ -564,7 +564,8 @@ impl InodeData {
     /// Panics if this is not a directory. 
     pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
         assert!(name.len() == DIRSIZ);
-        debug_assert!(self.dev != 0);
+        // println!("device: {}", self.dev);
+        // debug_assert!(self.dev != 0);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
         }
