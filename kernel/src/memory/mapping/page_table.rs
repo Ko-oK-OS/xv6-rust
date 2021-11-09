@@ -441,10 +441,15 @@ impl PageTable{
         mut src: *const u8,
         mut len: usize 
     ) -> Result<(), &'static str> {
+        // 从内核空间向用户空间拷贝数据
         let mut va = VirtualAddress::new(dst);
         va.pg_round_down();
 
         loop {
+            // 由于在 syscall 的时候将用户页表切换成了内核页表，
+            // 因此在拷贝的时候需要将用户态的虚拟地址转换成物理地址，
+            // 由于在内核中数据区是直接映射，因此在访问物理地址的时候
+            // 经过 MMU 不会报错
             let pa = self.unmap_pgt(va).unwrap();
             let count = PGSIZE - (dst - va.as_usize());
             if len < count {
