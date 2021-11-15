@@ -1,6 +1,6 @@
 use core::num::Wrapping;
 
-use crate::{lock::spinlock::Spinlock, memory::{copy_in, copy_from_kernel}, process::{CPU_MANAGER, PROC_MANAGER}};
+use crate::{lock::spinlock::Spinlock, memory::{copy_to_kernel, copy_from_kernel}, process::{CPU_MANAGER, PROC_MANAGER}};
 use super::{UART, putc_sync, uart_get, uart_put};
 
 static CONSOLE: Spinlock<Console> = Spinlock::new(Console::new(), "console");
@@ -122,7 +122,7 @@ pub(super) fn console_write(
 ) -> Option<usize> {
     for i in 0..size {
         let mut c = 0u8;
-        if copy_in(&mut c as *mut u8, is_user, src, 1).is_err() {
+        if copy_to_kernel(&mut c as *mut u8, is_user, src, 1).is_err() {
             return Some(i)
         }
         UART.putc(c);
