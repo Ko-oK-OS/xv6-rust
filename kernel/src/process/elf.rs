@@ -15,7 +15,7 @@ use super::Process;
 
 use alloc::boxed::Box;
 
-const ELF_MAGIC: usize = 0x464C457F; // elf magic number
+const ELF_MAGIC: u32 = 0x464C457F; // elf magic number
 
 // Values for Proghdr type
 const ELF_PROG_LOAD: u32 = 1;
@@ -28,7 +28,7 @@ const ELF_PROG_FLAG_READ: usize = 4;
 // File header
 #[repr(C)]
 pub struct ElfHeader {
-    pub magic: usize, // must equal ELF_MAGIC,
+    pub magic: u32, // must equal ELF_MAGIC,
     pub elf: [u8; 12],
     pub f_type: u16,
     pub machine: u16,
@@ -150,7 +150,7 @@ pub unsafe fn exec(
     }
 
     if elf.magic != ELF_MAGIC {
-        println!("[Debug] 魔数错误, 为{}, 应为{}", elf.magic, ELF_MAGIC);
+        println!("[Debug] 魔数错误, 为0x{:x}, 应为0x{:x}", elf.magic, ELF_MAGIC);
         drop(inode_guard);
         LOG.end_op();
         return Err("exec: Elf magic number is wrong.")
