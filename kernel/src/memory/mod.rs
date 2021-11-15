@@ -2,7 +2,7 @@ pub mod kalloc;
 pub mod mapping;
 pub mod address;
 
-use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
+use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, self};
 
 pub use kalloc::*;
 pub use mapping::*;
@@ -40,7 +40,8 @@ impl PageAllocator for Stack{}
 /// Copy from either a user address, or kernel address,
 /// depending on is_user. 
 /// Returns Result<(), &'static str>
-pub fn copy_in(
+/// 从用户或者内核地址拷贝到内核中
+pub fn copy_to_kernel(
     dst: *mut u8, 
     is_user: bool, 
     src: usize, 
@@ -67,7 +68,8 @@ pub fn copy_in(
 /// Copy to either a user address, or kernel address,
 /// depending on usr_dst. 
 /// Returns 0 on success, -1 on error. 
-pub fn copy_out(
+/// 如果is_user是true的话，表明dst是用户的虚拟地址，否则是内核的虚拟地址
+pub fn copy_from_kernel(
     is_user: bool,
     dst: usize,
     src: *const u8,
@@ -75,7 +77,7 @@ pub fn copy_out(
 ) -> Result<(), &'static str> {
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
-        if !is_user {
+        if is_user {
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
             println!("[Debug] dst: 0x{:x}, src: 0x{:x}", dst, src as usize);
@@ -86,7 +88,8 @@ pub fn copy_out(
                     len
                 )
         } else {
-            mem_copy(dst, src as usize, len);
+            println!("[Debug] 从内核拷贝到内核");
+            ptr::copy(src as *const u8, dst as *mut u8, len);
             Ok(())
         }
     }

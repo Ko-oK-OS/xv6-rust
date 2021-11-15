@@ -1,6 +1,6 @@
 use core::num::Wrapping;
 
-use crate::{lock::spinlock::Spinlock, memory::{copy_in, copy_out}, process::{CPU_MANAGER, PROC_MANAGER}};
+use crate::{lock::spinlock::Spinlock, memory::{copy_in, copy_from_kernel}, process::{CPU_MANAGER, PROC_MANAGER}};
 use super::{UART, putc_sync, uart_get, uart_put};
 
 static CONSOLE: Spinlock<Console> = Spinlock::new(Console::new(), "console");
@@ -98,7 +98,7 @@ pub(super) fn console_read(
         }
 
         // copy to user/kernel space memory
-        if copy_out(is_user, dst, &c as *const u8, 1).is_err() {
+        if copy_from_kernel(is_user, dst, &c as *const u8, 1).is_err() {
             break;
         }
 

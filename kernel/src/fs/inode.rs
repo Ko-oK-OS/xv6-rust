@@ -2,7 +2,7 @@ use crate::define::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE,
 use crate::fs::LOG;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
-use crate::memory::{copy_in, copy_out};
+use crate::memory::{copy_from_kernel, copy_to_kernel};
 use crate::misc::{ min, mem_set };
 use crate::process::CPU_MANAGER;
 
@@ -466,6 +466,7 @@ impl InodeData {
     /// Caller must hold inode's sleeplock. 
     /// If is_user is true, then dst is a user virtual address;
     /// otherwise, dst is a kernel address. 
+    /// is_user 为 true 表示 dst 为用户虚拟地址，否则表示内核虚拟地址
     pub fn read(
         &mut self, 
         is_user: bool, 
@@ -489,7 +490,7 @@ impl InodeData {
             let block_no = self.bmap(block_basic as u32)?;
             let buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, BSIZE - block_offset);
-            if copy_out(
+            if copy_from_kernel(
                 is_user, 
                 dst, 
                 unsafe{ (buf.raw_data() as *mut u8).offset((offset % BSIZE) as isize) },
@@ -536,7 +537,7 @@ impl InodeData {
             let block_no = self.bmap(block_basic as u32)?;
             let mut buf = BCACHE.bread(self.dev, block_no);
             let write_len = min(surplus_len, block_offset % BSIZE);
-            if copy_in(
+            if copy_to_kernel(
                 unsafe{ (buf.raw_data_mut() as *mut u8).offset((offset % BSIZE) as isize ) }, 
                 is_user, 
                 src, 
@@ -564,7 +565,6 @@ impl InodeData {
     /// Panics if this is not a directory. 
     pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
         assert!(name.len() == DIRSIZ);
-        // println!("device: {}", self.dev);
         // debug_assert!(self.dev != 0);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
@@ -574,7 +574,12 @@ impl InodeData {
         let mut dir_entry = DirEntry::new();
         let dir_entry_ptr = &mut dir_entry as *mut _ as *mut u8;
         for offset in (0..self.dinode.size).step_by(de_size) {
-            self.read(true, dir_entry_ptr as usize, offset, de_size as u32).expect("Cannot read entry in this dir");
+            self.read(
+                false, 
+                dir_entry_ptr as usize, 
+                offset, 
+                de_size as u32
+            ).expect("Cannot read entry in this dir");
             if dir_entry.inum == 0 {
                 continue;
             }

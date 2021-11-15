@@ -81,7 +81,7 @@ fn load_seg(
     let mut i:usize = 0;
     while i < size {
         match page_table
-                .unmap_pgt(va) {
+                .pgt_translate(va) {
             Some(pa) => {
                 let n:usize;
                 if size - i < PGSIZE {
@@ -150,6 +150,7 @@ pub unsafe fn exec(
     }
 
     if elf.magic != ELF_MAGIC {
+        println!("[Debug] 魔数错误, 为{}, 应为{}", elf.magic, ELF_MAGIC);
         drop(inode_guard);
         LOG.end_op();
         return Err("exec: Elf magic number is wrong.")

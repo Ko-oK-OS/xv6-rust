@@ -94,7 +94,8 @@ impl PageTable{
     /// Look up a virtual address, return the physical address,
     /// or 0 if not mapped.
     /// Can only be used to look up user pages.
-    fn unmap(
+    /// 将虚拟地址翻译成物理地址，返回页表项
+    fn translate(
         &mut self,
         va: VirtualAddress
     ) -> Option<&mut PageTableEntry> {
@@ -115,7 +116,8 @@ impl PageTable{
         Some(pte)
     }
 
-    fn unmap_alloc(
+    /// 将虚拟地址翻译成物理地址或者直接映射
+    fn translate_or_alloc(
         &mut self,
         va: VirtualAddress
     ) -> Option<&mut PageTableEntry> {
@@ -143,7 +145,8 @@ impl PageTable{
     /// Look up a virtual address, return the physical address,
     /// or 0 if not mapped.
     /// Can only be used to look up user pages.
-    pub fn unmap_pgt(
+    /// 通过给定的页表，将对应的虚拟地址转换成物理地址
+    pub fn pgt_translate(
         &mut self, 
         va: VirtualAddress
     ) -> Option<PhysicalAddress> {
@@ -151,7 +154,7 @@ impl PageTable{
         if addr > MAXVA {
             return None
         }
-        match self.unmap(va){
+        match self.translate(va){
             Some(pte) => {
                 if !pte.is_valid(){
                     return None
@@ -164,7 +167,7 @@ impl PageTable{
                 Some(PhysicalAddress::new(pagetable_addr))
             }
 
-            None => None
+            None => { None }
         }
     }
 
@@ -173,6 +176,7 @@ impl PageTable{
     /// physical addresses starting at pa. va and size might not
     /// be page-aligned. Returns 0 on success, -1 if walk() couldn't
     /// allocate a needed page-table page.
+    /// 将虚拟地址与物理地址建立映射，并写入MMU中
     pub unsafe fn map(
         &mut self, 
         mut va: VirtualAddress, 
@@ -184,7 +188,7 @@ impl PageTable{
         va.pg_round_down();
         last.pg_round_up();
         while va != last{
-            match self.unmap_alloc(va){
+            match self.translate_or_alloc(va){
                 Some(pte) => {
                 // TODO - is_valid?
                 if pte.is_valid() {
@@ -224,7 +228,7 @@ impl PageTable{
         //     size
         // );
         if !self.map(va, pa, size, perm){
-            panic!("kvmmap");
+            panic!("内核虚拟地址映射失败");
         }
     }
 
@@ -347,7 +351,7 @@ impl PageTable{
         }
         
         for _ in 0..npages {
-            match self.unmap(va) {
+            match self.translate(va) {
                 Some(pte) => {
                     if pte.is_valid() {
                         panic!("uvm_unmap: not mapped");
@@ -383,7 +387,7 @@ impl PageTable{
     ) -> Result<(), &'static str> {
         let mut va = VirtualAddress::new(0);
         while va.as_usize() != size {
-            match self.unmap(va) {
+            match self.translate(va) {
                 Some(pte) => {
                     if !pte.is_valid() {
                         panic!("uvmcopy(): page not present");
@@ -425,7 +429,7 @@ impl PageTable{
     /// mark a PTE invalid for user access.
     /// used by exec for the user stack guard page.
     pub fn uvm_clear(&mut self, va: VirtualAddress) {
-        if let Some(pte) = self.unmap(va) {
+        if let Some(pte) = self.translate(va) {
             pte.rm_user_bit();
         }else {
             panic!("uvmclear(): Not found valid pte for virtualaddress");
@@ -450,7 +454,8 @@ impl PageTable{
             // 因此在拷贝的时候需要将用户态的虚拟地址转换成物理地址，
             // 由于在内核中数据区是直接映射，因此在访问物理地址的时候
             // 经过 MMU 不会报错
-            let pa = self.unmap_pgt(va).unwrap();
+            println!("va: 0x{:x}", va.as_usize());
+            let pa = self.pgt_translate(va).unwrap();
             let count = PGSIZE - (dst - va.as_usize());
             if len < count {
                 mem_copy(
@@ -470,7 +475,6 @@ impl PageTable{
     /// Copy from user to kernel.
     /// Copy len bytes to dst from virtual address srcva in a given page table.
     /// Return Result<(), Err>
-    
     pub fn copy_in(
         &mut self, 
         mut dst: *mut u8, 
@@ -481,7 +485,7 @@ impl PageTable{
         va.pg_round_down();
         loop {
             // Get physical address by virtual address
-            let pa = self.unmap_pgt(va).unwrap();
+            let pa = self.pgt_translate(va).unwrap();
             // Get copy bytes of current page.
             let count = PGSIZE - (src - va.as_usize());
             if len < count {
@@ -520,7 +524,7 @@ impl PageTable{
         va.pg_round_down();
         loop {
             // 将用户态的虚拟地址转成物理地址
-            let pa = self.unmap_pgt(va).unwrap();
+            let pa = self.pgt_translate(va).unwrap();
             // 计算该页所要读取的字节数
             let count = PGSIZE - (src - va.as_usize());
             let s = (pa.as_usize() + (src - va.as_usize())) as *const u8;
