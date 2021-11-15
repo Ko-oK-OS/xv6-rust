@@ -36,7 +36,7 @@ pub struct ElfHeader {
     pub entry: usize,
     pub phoff: usize,
     pub shoff: usize,
-    pub flags: usize,
+    pub flags: u32,
     pub ehsize: u16,
     pub phentsize: u16,
     pub phnum: u16,
@@ -59,11 +59,10 @@ pub struct ProgHeader {
     pub align: usize
 }
 
-// Load a program segment into pagetable at virtual address va.
-// va must be page-aligned
-// and the pages from va to va+sz must already be mapped.
-// Returns 0 on success, -1 on failure.
-
+/// Load a program segment into pagetable at virtual address va.
+/// va must be page-aligned
+/// and the pages from va to va+sz must already be mapped.
+/// Returns 0 on success, -1 on failure.
 #[allow(unused_variables)]
 #[allow(unused_assignments)]
 fn load_seg(
@@ -73,17 +72,19 @@ fn load_seg(
     offset: usize, 
     size: usize
 ) -> Result<(), &'static str> {
+    // 生成虚拟地址
     let mut va = VirtualAddress::new(va);
     if !va.is_page_aligned() {
         panic!("load_seg(): va must be page aligned.");
     }
 
-    let mut i:usize = 0;
+    let mut i: usize = 0;
     while i < size {
         match page_table
                 .pgt_translate(va) {
             Some(pa) => {
-                let n:usize;
+                // 将用户虚拟地址翻译成物理地址
+                let n: usize;
                 if size - i < PGSIZE {
                     n = size - i;
                 }else {
@@ -149,6 +150,7 @@ pub unsafe fn exec(
         return Err("exec: Fail to read elf header.")
     }
 
+    println!("[Debug] 检查魔数");
     if elf.magic != ELF_MAGIC {
         println!("[Debug] 魔数错误, 为0x{:x}, 应为0x{:x}", elf.magic, ELF_MAGIC);
         drop(inode_guard);
@@ -163,8 +165,8 @@ pub unsafe fn exec(
         
         let ph_size = size_of::<ProgHeader>() as u32;
         // Load program into memeory. 
+        let mut off = elf.phoff;
         for _ in 0..elf.phnum {
-            let mut off = elf.phoff;
             if inode_guard.read(
                 false, 
                 &*ph as *const ProgHeader as usize, 
@@ -175,7 +177,6 @@ pub unsafe fn exec(
                 // Check program header size
                 if ph.mem_size < ph.file_size {
                     page_table.proc_free_pagetable(size);
-                    // drop(page_table);
                     drop(inode_guard);
                     LOG.end_op();
                     return Err("exec: memory size is less than file size.")
@@ -187,7 +188,6 @@ pub unsafe fn exec(
                 .take() {
                     None => {
                         page_table.proc_free_pagetable(size);
-                        // drop(page_table);
                         drop(inode_guard);
                         LOG.end_op();
                         return Err("exec: Fail to uvmalloc.")
@@ -200,11 +200,11 @@ pub unsafe fn exec(
 
                 if ph.vaddr % PGSIZE != 0 {
                     page_table.proc_free_pagetable(size);
-                    // drop(page_table);
                     LOG.end_op();
                     return Err("exec: Programe Header must be integer multiple of PGSIZE. ")
                 }
 
+                println!("[Debug] 加载段信息");
                 // load segement information
                 if load_seg(
                     &mut page_table, 
@@ -214,7 +214,6 @@ pub unsafe fn exec(
                     ph.file_size
                 ).is_err() {
                     page_table.proc_free_pagetable(size);
-                    // drop(page_table);
                     drop(inode_guard);
                     LOG.end_op();
                     return Err("exec: Fail to load segment. ")
@@ -229,6 +228,7 @@ pub unsafe fn exec(
             }
             off += size_of::<ProgHeader>();
         }
+        println!("[Debug] 完成加载程序");
 
         drop(inode_guard);
         LOG.end_op();
@@ -237,12 +237,12 @@ pub unsafe fn exec(
         let old_size = (&*p.extern_data.get()).size;
 
         // Allocate two pages at the next page boundary
-        // Use the second as the user stack. 
+        // Use the second as the user stack.
+        println!("[Debug] 为用户程序分配两个页表作为边界"); 
         size = page_round_up(size);
         match page_table
                 .uvm_alloc(size, size + 2*PGSIZE) {
             None => {
-                // drop(page_table);
                 page_table.proc_free_pagetable(size);
                 return Err("exec: Fail to uvmalloc")
             }
@@ -252,16 +252,18 @@ pub unsafe fn exec(
             }
         }
 
-        page_table.uvm_clear(VirtualAddress::new(size - 2*PGSIZE));
+        println!("[Debug] 完成为用户程序分配页表");
+        page_table.uvm_clear(VirtualAddress::new(size - 2 * PGSIZE));
         // Get stack top address. 
         sp = size;
         // Get stack bottom address. 
         stack_base = sp - PGSIZE;
 
+        println!("[Debug] 向用户栈push参数");
         // Push argument strings, prepare rest of stack in ustack. 
         for argc in 0..argv.len() {
+            println!("argc: 0x{:x}", argc);
             if argc > MAXARG {
-                // drop(page_table);
                 page_table.proc_free_pagetable(size);
                 return Err("exec: argc is more than MAXARG. ")
             }
@@ -270,10 +272,11 @@ pub unsafe fn exec(
             sp = align_sp(sp);
             if sp < stack_base {
                 drop(page_table);
-                return Err("User stack bump. ")
+                return Err("User stack bump.")
             }
             
             // Copy arguments into stack top
+            println!("[Debug] 将参数放入栈帧顶部");
             if page_table
                 .copy_out(
                     sp, 
@@ -283,10 +286,10 @@ pub unsafe fn exec(
                     ).as_ptr(),
                     str_len(argv[argc]),
                 ).is_err() {
-                    // drop(page_table);
                     page_table.proc_free_pagetable(size);
                     return Err("exec: Fail to copy out.") 
                 }
+                println!("[Debug] 完成将参数放入栈帧顶部");
 
             user_stack[argc] = sp;
         }

@@ -78,6 +78,7 @@ pub fn copy_from_kernel(
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
         if is_user {
+            println!("[Debug] 从内核拷贝到用户");
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
             println!("[Debug] dst: 0x{:x}, src: 0x{:x}", dst, src as usize);

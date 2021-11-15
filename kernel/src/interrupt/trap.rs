@@ -3,7 +3,7 @@ use core::panic;
 use crate::{define::fs::DIRSIZ, driver::{plic::{plic_claim, plic_complete}, virtio_disk::DISK}, register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
     satp, tp
-}, syscall::syscall};
+}, start, syscall::syscall};
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::layout::*;
@@ -202,9 +202,13 @@ pub unsafe fn kerneltrap(
 
         Trap::Exception(Exception::LoadFault) => panic!("Load Fault!"),
 
-        Trap::Exception(Exception::LoadPageFault) => panic!("Load Page Fault!"),
+        Trap::Exception(Exception::LoadPageFault) => {
+            panic!("[Panic] Load Page Fault!\n stval: 0x{:x}\n sepc: 0x{:x}\n", stval, sepc);
+        },
 
-        Trap::Exception(Exception::StorePageFault) => panic!("Store Page Fault!"),
+        Trap::Exception(Exception::StorePageFault) => {
+            panic!("[Panic] Store Page Fault!\n stval: 0x{:x}\n sepc: 0x{:x}\n", stval, sepc);
+        },
 
         Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
 
