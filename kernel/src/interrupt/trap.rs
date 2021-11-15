@@ -109,7 +109,7 @@ pub unsafe fn usertrap() {
 
         _ => {
             println!("usertrap: unexpected scacuse: {:?}\n pid: {}", scause.cause(), my_proc.pid());
-            println!("sepc: {}, stval: {}", sepc, stval::read());
+            println!("sepc: 0x{:x}, stval: 0x{:x}", sepc, stval::read());
             my_proc.modify_kill(true);
         }
 

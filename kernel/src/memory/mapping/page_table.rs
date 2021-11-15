@@ -609,10 +609,10 @@ impl PageTable{
 
 }
 
-impl Drop for PageTable {
-    /// Recursively free non-first-level pagetables.
-    /// Physical memory should already be freed.
-    fn drop(&mut self) {
-        self.entries.iter_mut().for_each(|pte| pte.free());
-    }
-}
+// impl Drop for PageTable {
+//     /// Recursively free non-first-level pagetables.
+//     /// Physical memory should already be freed.
+//     fn drop(&mut self) {
+//         self.entries.iter_mut().for_each(|pte| pte.free());
+//     }
+// }
