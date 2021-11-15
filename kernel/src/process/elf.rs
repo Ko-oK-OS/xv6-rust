@@ -241,7 +241,7 @@ pub unsafe fn exec(
         println!("[Debug] 为用户程序分配两个页表作为边界"); 
         size = page_round_up(size);
         match page_table
-                .uvm_alloc(size, size + 2*PGSIZE) {
+                .uvm_alloc(size, size + 2 * PGSIZE) {
             None => {
                 page_table.proc_free_pagetable(size);
                 return Err("exec: Fail to uvmalloc")
@@ -322,23 +322,24 @@ pub unsafe fn exec(
     // arguments to user main(argc, argv)
     // argc is returned via the system call return
     // value, which goes in a0. 
-    let exten_data = p.extern_data.get_mut();
-    let trapframe = &mut *exten_data.trapframe;
+    let extern_data = p.extern_data.get_mut();
+    let trapframe = &mut *extern_data.trapframe;
     trapframe.a1 = sp;
 
     // Save program name for debugging
     
 
-    // Commit to use image. 
-    exten_data.pagetable.as_mut().unwrap().proc_free_pagetable(old_size);
-    exten_data.set_pagetable(Some(page_table));
-    exten_data.size = size;
+    // Commit to user image.
+    let old_pgt = extern_data.pagetable.as_mut().take().unwrap();
+    old_pgt.proc_free_pagetable(old_size);
+
+    extern_data.pagetable = Some(page_table);
+    extern_data.size = size;
     // initial program counter = main
     trapframe.epc = elf.entry;
     // initial stack pointer
     trapframe.sp = sp;
 
-    
     Ok(argc)
 }
 

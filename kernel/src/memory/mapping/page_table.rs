@@ -353,7 +353,7 @@ impl PageTable{
         for _ in 0..npages {
             match self.translate(va) {
                 Some(pte) => {
-                    if pte.is_valid() {
+                    if !pte.is_valid() {
                         panic!("uvm_unmap: not mapped");
                     }
                     if pte.as_flags() == PteFlags::V.bits() {
@@ -590,12 +590,14 @@ impl PageTable{
     /// Free a process's page table, and free the
     /// physical memory it refers to.
     pub fn proc_free_pagetable(&mut self, size: usize) {
+        println!("[Debug] Unmap TRAMPOLINE");
         self.uvm_unmap(
             VirtualAddress::new(TRAMPOLINE ), 
             1, 
-            true
+            false
         );
 
+        println!("[Debug] Unmap TRAPFRAME");
         self.uvm_unmap(
             VirtualAddress::new(TRAPFRAME),
             1,
