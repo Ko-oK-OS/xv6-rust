@@ -261,14 +261,17 @@ pub unsafe fn exec(
 
         println!("[Debug] 向用户栈push参数");
         // Push argument strings, prepare rest of stack in ustack. 
-        for argc in 0..argv.len() {
-            println!("argc: 0x{:x}", argc);
+        let mut argc = 0;
+        loop {
+            if argv[argc] as usize == 0x0 { break; }
+            println!("[Debug] argv[argc]: {:?}", argv[argc]);
             if argc > MAXARG {
                 page_table.proc_free_pagetable(size);
                 return Err("exec: argc is more than MAXARG. ")
             }
             sp -= str_len(argv[argc]);
             // riscv sp must be 16-byte aligned. 
+            println!("[Debug] 将栈顶指针16字节对齐");
             sp = align_sp(sp);
             if sp < stack_base {
                 drop(page_table);
@@ -289,11 +292,12 @@ pub unsafe fn exec(
                     page_table.proc_free_pagetable(size);
                     return Err("exec: Fail to copy out.") 
                 }
-                println!("[Debug] 完成将参数放入栈帧顶部");
-
+            println!("[Debug] 完成将参数放入栈帧顶部");
+            println!("[Debug] 放置栈顶指针");    
             user_stack[argc] = sp;
+            println!("[Debug] 完成放置栈顶指针");
+            argc += 1;
         }
-    let argc = argv.len();
     user_stack[argc] = 0;
 
     // Push the array of argv pointers. 
@@ -312,7 +316,6 @@ pub unsafe fn exec(
             (argc + 1)*size_of::<usize>()
     ).is_err() {
         page_table.proc_free_pagetable(size);
-        // drop(page_table);
         return Err("exec: Fail to copy out.")
     }
 
