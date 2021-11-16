@@ -185,6 +185,7 @@ pub fn arg_str(id: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
     Ok(())
 }
 
+#[no_mangle]
 pub unsafe fn syscall() {
     let my_proc = CPU_MANAGER.myproc().unwrap();
 

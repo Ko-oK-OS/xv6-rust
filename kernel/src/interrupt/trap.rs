@@ -26,7 +26,7 @@ pub unsafe fn trap_init_hart() {
 /// called from trampoline.S
 #[no_mangle]
 pub unsafe fn usertrap() {
-    println!("User Trap");
+    println!("[Debug] 用户态陷入内核");
     let sepc = sepc::read();
     let scause = Scause::new(scause::read());
 

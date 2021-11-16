@@ -78,24 +78,24 @@ fn load_seg(
         panic!("load_seg(): va must be page aligned.");
     }
 
-    let mut i: usize = 0;
-    while i < size {
+    let mut copy_size: usize = 0;
+    while copy_size < size {
         match page_table
                 .pgt_translate(va) {
             Some(pa) => {
                 // 将用户虚拟地址翻译成物理地址
-                let n: usize;
-                if size - i < PGSIZE {
-                    n = size - i;
+                let count: usize;
+                if size - copy_size < PGSIZE {
+                    count = size - copy_size;
                 }else {
-                    n = PGSIZE;
+                    count = PGSIZE;
                 }
 
                 if inode_data.read(
                     false, 
                     pa.as_usize(), 
-                    (offset + i) as u32, 
-                    n as u32
+                    (offset + copy_size) as u32, 
+                    count as u32
                 ).is_err() {
                     return Err("load_seg: Fail to read inode")
                 }
@@ -106,7 +106,7 @@ fn load_seg(
             }
         }
 
-        i += PGSIZE;
+        copy_size += PGSIZE;
         va.add_page();
     }
 
@@ -181,6 +181,13 @@ pub unsafe fn exec(
                     LOG.end_op();
                     return Err("exec: memory size is less than file size.")
                 }
+
+                if ph.vaddr + ph.mem_size < ph.vaddr {
+                    page_table.proc_free_pagetable(size);
+                    drop(inode_guard);
+                    LOG.end_op();
+                    return Err("exec: vaddr + mem_size < vaddr")
+                }
                 
                 // alloc memory for load program
                 match page_table
@@ -204,8 +211,8 @@ pub unsafe fn exec(
                     return Err("exec: Programe Header must be integer multiple of PGSIZE. ")
                 }
 
-                println!("[Debug] 加载段信息");
                 // load segement information
+                println!("[Debug] 偏移量: 0x{:x}, 文件大小: 0x{:x}", ph.off, ph.file_size);
                 if load_seg(
                     &mut page_table, 
                     ph.vaddr, 
@@ -237,8 +244,7 @@ pub unsafe fn exec(
         let old_size = (&*p.extern_data.get()).size;
 
         // Allocate two pages at the next page boundary
-        // Use the second as the user stack.
-        println!("[Debug] 为用户程序分配两个页表作为边界"); 
+        // Use the second as the user stack. 
         size = page_round_up(size);
         match page_table
                 .uvm_alloc(size, size + 2 * PGSIZE) {
@@ -252,34 +258,29 @@ pub unsafe fn exec(
             }
         }
 
-        println!("[Debug] 完成为用户程序分配页表");
         page_table.uvm_clear(VirtualAddress::new(size - 2 * PGSIZE));
         // Get stack top address. 
         sp = size;
         // Get stack bottom address. 
         stack_base = sp - PGSIZE;
 
-        println!("[Debug] 向用户栈push参数");
         // Push argument strings, prepare rest of stack in ustack. 
         let mut argc = 0;
         loop {
             if argv[argc] as usize == 0x0 { break; }
-            println!("[Debug] argv[argc]: {:?}", argv[argc]);
-            if argc > MAXARG {
+            if argc >= MAXARG {
                 page_table.proc_free_pagetable(size);
                 return Err("exec: argc is more than MAXARG. ")
             }
-            sp -= str_len(argv[argc]);
+            sp -= str_len(argv[argc]) + 1;
             // riscv sp must be 16-byte aligned. 
-            println!("[Debug] 将栈顶指针16字节对齐");
             sp = align_sp(sp);
             if sp < stack_base {
                 drop(page_table);
-                return Err("User stack bump.")
+                return Err("用户栈爆炸")
             }
             
             // Copy arguments into stack top
-            println!("[Debug] 将参数放入栈帧顶部");
             if page_table
                 .copy_out(
                     sp, 
@@ -287,15 +288,12 @@ pub unsafe fn exec(
                         argv[argc] as *mut u8, 
                         str_len(argv[argc])
                     ).as_ptr(),
-                    str_len(argv[argc]),
+                    str_len(argv[argc]) + 1,
                 ).is_err() {
                     page_table.proc_free_pagetable(size);
                     return Err("exec: Fail to copy out.") 
                 }
-            println!("[Debug] 完成将参数放入栈帧顶部");
-            println!("[Debug] 放置栈顶指针");    
             user_stack[argc] = sp;
-            println!("[Debug] 完成放置栈顶指针");
             argc += 1;
         }
     user_stack[argc] = 0;
@@ -304,7 +302,8 @@ pub unsafe fn exec(
     sp -= (argc + 1) * size_of::<usize>();
     sp = align_sp(sp);
     if sp < stack_base {
-        sp = align_sp(sp);
+        LOG.end_op();
+        page_table.proc_free_pagetable(size);
     }
 
     if page_table
@@ -312,7 +311,8 @@ pub unsafe fn exec(
         sp, 
         core::slice::from_raw_parts_mut(
             user_stack.as_mut_ptr() as *mut u8, 
-            (argc + 1)*size_of::<usize>()).as_ptr(),
+            (argc + 1)*size_of::<usize>()
+        ).as_ptr(),
             (argc + 1)*size_of::<usize>()
     ).is_err() {
         page_table.proc_free_pagetable(size);

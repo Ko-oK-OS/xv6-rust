@@ -17,7 +17,6 @@ pub trait PageAllocator: Sized {
     unsafe fn new_zeroed() -> usize {
         let boxed_page = Box::<Self>::new_zeroed().assume_init();
         let ptr = Box::into_raw(boxed_page) as usize;
-        // println!("RawPage addr: 0x{:x}", ptr);
         ptr
     }
 }
@@ -59,7 +58,11 @@ pub fn copy_to_kernel(
                 len
             )
         } else {
-            mem_copy(dst as usize, src, len);
+            ptr::copy(
+                src as *const u8, 
+                dst as *mut u8, 
+                len
+            );
             Ok(())
         }
     }
@@ -78,7 +81,7 @@ pub fn copy_from_kernel(
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
         if is_user {
-            println!("[Debug] 从内核拷贝到用户");
+            // println!("[Debug] 从内核拷贝到用户");
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
             println!("[Debug] dst: 0x{:x}, src: 0x{:x}", dst, src as usize);
@@ -89,7 +92,7 @@ pub fn copy_from_kernel(
                     len
                 )
         } else {
-            println!("[Debug] 从内核拷贝到内核");
+            // println!("[Debug] 从内核拷贝到内核");
             ptr::copy(src as *const u8, dst as *mut u8, len);
             Ok(())
         }
