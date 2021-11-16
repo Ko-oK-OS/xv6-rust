@@ -11,7 +11,7 @@ pub use address::*;
 use crate::{define::layout::PGSIZE, process::{ CPU_MANAGER }};
 use crate::misc::mem_copy;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec};
 
 pub trait PageAllocator: Sized {
     unsafe fn new_zeroed() -> usize {
@@ -84,7 +84,7 @@ pub fn copy_from_kernel(
             // println!("[Debug] 从内核拷贝到用户");
             let extern_data = p.extern_data.get_mut();
             let page_table = extern_data.pagetable.as_mut().unwrap();
-            println!("[Debug] dst: 0x{:x}, src: 0x{:x}", dst, src as usize);
+            // println!("[Debug] dst: 0x{:x}, src: 0x{:x}", dst, src as usize);
             page_table
                 .copy_out(
                     dst,
@@ -93,7 +93,15 @@ pub fn copy_from_kernel(
                 )
         } else {
             // println!("[Debug] 从内核拷贝到内核");
-            ptr::copy(src as *const u8, dst as *mut u8, len);
+            let mut buf = vec![0u8;len];
+            ptr::copy(src as *const u8, buf.as_mut_ptr(), len);
+            // println!("buf: {:?}", buf);
+            // println!("[Debug] len: 0x{:x}", len);
+            ptr::copy(
+                src as *const u8, 
+                dst as *mut u8, 
+                len
+            );
             Ok(())
         }
     }

@@ -483,12 +483,14 @@ impl InodeData {
         let mut total: usize = 0;
         let mut offset = offset as usize;
         let count = count as usize;
-        let block_basic = offset / BSIZE;
-        let block_offset = offset % BSIZE;
+        let mut block_basic = offset / BSIZE;
+        let mut block_offset = offset % BSIZE;
+        // println!("[Debug] count: 0x{:x}", count);
         while total < count as usize {
             let surplus_len = count - total;
             let block_no = self.bmap(block_basic as u32)?;
             let buf = BCACHE.bread(self.dev, block_no);
+            // println!("[Debug] surplus_len: 0x{:x}, BSIZE - block_offset: 0x{:x}", surplus_len, BSIZE - block_offset);
             let write_len = min(surplus_len, BSIZE - block_offset);
             if copy_from_kernel(
                 is_user, 
@@ -503,6 +505,9 @@ impl InodeData {
             total += write_len as usize;
             offset += write_len as usize;
             dst += write_len as usize;
+            // 块的初始值及块的偏移量
+            block_basic = offset / BSIZE;
+            block_offset = offset % BSIZE;
         }
         Ok(())
     }
