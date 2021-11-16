@@ -535,8 +535,8 @@ impl InodeData {
         let mut offset = offset as usize;
         let count = count as usize;
         let mut total = 0;
-        let block_basic = offset / BSIZE;
-        let block_offset = offset % BSIZE;
+        let mut block_basic = offset / BSIZE;
+        let mut block_offset = offset % BSIZE;
         while total < count {
             let surplus_len = count - total;
             let block_no = self.bmap(block_basic as u32)?;
@@ -555,8 +555,10 @@ impl InodeData {
             src += write_len;
             total += write_len;
 
+            block_basic = offset / BSIZE;
+            block_offset = offset % BSIZE;
+
             LOG.write(buf);
-            // drop(buf);
         }
 
         if self.dinode.size < offset as u32 {
