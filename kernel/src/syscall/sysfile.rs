@@ -410,6 +410,7 @@ pub fn sys_mknod() -> SysResult {
     arg_str(0, &mut path, MAXPATH)?;
     arg_int(1, &mut major)?;
     arg_int(2, &mut minor)?;
+    println!("major: {}, minor: {}", major, minor);
     match ICACHE.create(
         &path, 
         InodeType::Device, 

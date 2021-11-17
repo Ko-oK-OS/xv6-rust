@@ -413,6 +413,10 @@ impl InodeData {
             unsafe { SUPER_BLOCK.locate_inode(self.inum)}
         );
         let offset = locate_inode_offset(inode.inum) as isize;
+        println!("[Debug] block number: {}", unsafe{ SUPER_BLOCK.locate_inode(self.inum) });
+        println!("[Debug] dev: {}", inode.dev);
+        println!("[Debug] inum: {}", inode.inum);
+        println!("[Debug] offset: 0x{:?}", offset);
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
         unsafe{ write(dinode, self.dinode) };
         LOG.write(buf);
@@ -591,6 +595,10 @@ impl InodeData {
                 continue;
             }
             for i in 0..DIRSIZ {
+                // println!("[Debug] dir entry name: {}", dir_entry.name[i] as char);
+                for j in 0..DIRSIZ {
+                    println!("[Debug] dir entry name: {}", dir_entry.name[j] as char);
+                }
                 if dir_entry.name[i] != name[i] {
                     break;
                 }
