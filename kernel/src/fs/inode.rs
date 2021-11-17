@@ -112,6 +112,7 @@ impl InodeCache {
             // Find a empty inode
             if dinode.itype == InodeType::Empty {
                 dinode.itype = itype;
+                // println!("[Debug] dinode itype: {:?}", dinode.itype);
                 // Commit to change for dindoe
                 // Value move occurs here, block will write back when 
                 // log commit, so we don't have to drop block explicitly. 
@@ -271,6 +272,7 @@ impl InodeCache {
         inode_guard.dinode.nlink = 1;
         // Write back to disk
         inode_guard.update(&inode);
+        debug_assert_eq!(inode_guard.dinode.itype, itype);
     
         // Directory, create .. 
         if itype == InodeType::Directory {
@@ -580,7 +582,6 @@ impl InodeData {
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
         }
-
         let de_size = size_of::<DirEntry>();
         let mut dir_entry = DirEntry::new();
         let dir_entry_ptr = &mut dir_entry as *mut _ as *mut u8;
@@ -595,10 +596,6 @@ impl InodeData {
                 continue;
             }
             for i in 0..DIRSIZ {
-                // println!("[Debug] dir entry name: {}", dir_entry.name[i] as char);
-                for j in 0..DIRSIZ {
-                    println!("[Debug] dir entry name: {}", dir_entry.name[j] as char);
-                }
                 if dir_entry.name[i] != name[i] {
                     break;
                 }
