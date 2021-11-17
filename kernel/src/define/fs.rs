@@ -57,6 +57,7 @@ pub fn mkdev(m: usize, n: usize) -> usize {
 }
 
 #[repr(usize)]
+#[derive(Debug)]
 pub enum OpenMode {
    RDONLY = 0x000,
    WRONLY = 0x001,

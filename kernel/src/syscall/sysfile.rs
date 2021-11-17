@@ -100,6 +100,7 @@ pub fn sys_open() -> SysResult {
     arg_int(1, &mut open_mode)?;
     // Start write log
     LOG.begin_op();
+    // println!("open mode: {:?}", OpenMode::mode(open_mode));
     match OpenMode::mode(open_mode) {
         OpenMode::CREATE => {
             match ICACHE.create(&path, crate::fs::InodeType::File, 0, 0) {
@@ -409,7 +410,12 @@ pub fn sys_mknod() -> SysResult {
     arg_str(0, &mut path, MAXPATH)?;
     arg_int(1, &mut major)?;
     arg_int(2, &mut minor)?;
-    match ICACHE.create(&path, InodeType::Device, major as i16, minor as i16) {
+    match ICACHE.create(
+        &path, 
+        InodeType::Device, 
+        major as i16, 
+        minor as i16
+    ) {
         Ok(inode) => {
             LOG.end_op();
             drop(inode);

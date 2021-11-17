@@ -194,14 +194,22 @@ pub unsafe fn syscall() {
     let id = tf.a7;
 
     if id > 0 && id < SYSCALL_NUM {
-        tf.a0 = SYSCALL[id - 1]().expect("Fail to syscall");
+        // tf.a0 = SYSCALL[id - 1]().expect("Fail to syscall");
+        match SYSCALL[id - 1]()  {
+            Ok(res) => {
+                tf.a0 = res
+            }
+            Err(()) => {
+                tf.a0 = -1 as isize as usize
+            }
+        }
     }else {
         let guard = my_proc.data.acquire();
         let pid = guard.pid;
         drop(guard);
         println!("{} {}: Unknown syscall {}", pid, from_utf8(&extern_data.name).unwrap(), id);
         // use max usize mean syscall failure
-        tf.a0 = 2^64-1;
+        tf.a0 = -1 as isize as usize
     }
 }
 
