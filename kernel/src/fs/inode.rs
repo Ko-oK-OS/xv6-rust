@@ -102,21 +102,33 @@ impl InodeCache {
                 SUPER_BLOCK.locate_inode(inum)
             };
             // read block into buffer by device and block_id
-            let block = BCACHE.bread(dev, block_id);
+            let mut block = BCACHE.bread(dev, block_id);
         
             // Get inode offset in the block
-            let offset = (inum as usize % IPB) as isize;
-            let mut dinode = unsafe {
-                &mut *(block.raw_data().offset(offset) as *mut DiskInode)
-            };
+            let offset = locate_inode_offset(inum) as isize;
+            let dinode = unsafe { (block.raw_data_mut() as *mut DiskInode).offset(offset) };
+            let dinode = unsafe{ &mut *dinode };
             // Find a empty inode
             if dinode.itype == InodeType::Empty {
-                dinode.itype = itype;
-                // println!("[Debug] dinode itype: {:?}", dinode.itype);
                 // Commit to change for dindoe
                 // Value move occurs here, block will write back when 
-                // log commit, so we don't have to drop block explicitly. 
+                // log commit, so we don't have to drop block explicitly.
+                unsafe{
+                    ptr::write_bytes(dinode, 0, 1);
+                }
+                dinode.itype = itype;
+                println!("[Debug] dinode: {:?}", dinode); 
                 LOG.write(block);
+                // drop(dinode);
+                println!("[Debug] dev: {} inum: {}", dev, inum);
+                let inode = self.get(dev, inum);
+                println!("[Debug] inode dev: {}, inum: {}", inode.dev, inode.inum);
+                let idata = inode.lock();
+                // println!("[Debug] dinode type: {:?}", idata.dinode.itype);
+                // println!("[Debug] dev: {}, inum: {}", dev, inum);
+                // assert_eq!(dinode.itype, idata.dinode.itype);
+                println!("[Debug] dinode: {:?}", idata.dinode);
+                println!("[Debug] idata valid: {}, dev: {}, inum: {}", idata.valid, idata.dev, idata.inum);
                 return Some(self.get(dev, inum))
             }
             drop(block);
@@ -153,9 +165,13 @@ impl InodeCache {
             Some(i) => i,
             None => panic!("inode: not enough"),
         };
+        println!("[Debug] empty_i: {}", empty_i);
         guard[empty_i].dev = dev;
         guard[empty_i].inum = inum;
         guard[empty_i].refs = 1;
+        // 此时 Inode Cache 应当是无效的
+        let idata = self.data[empty_i].lock();
+        assert!(idata.valid == false, "此时 idata 应当无效");
         Inode {
             dev,
             inum,
@@ -172,9 +188,10 @@ impl InodeCache {
     ) -> Option<Inode> {
         let mut inode: Inode;
         if path[0] == b'/' {
-            println!("[Debug] 当前在根目录");
+            println!("[Debug] 根目录");
             inode = self.get(ROOTDEV, ROOTINUM);
         } else {
+            println!("[Debug] 当前目录");
             let p = unsafe { CPU_MANAGER.myproc().unwrap() };
             inode = self.dup(p.extern_data.get_mut().cwd.as_ref().unwrap());
         }
@@ -182,6 +199,7 @@ impl InodeCache {
         loop {
             cur = skip_path(path, cur, name);
             if cur == 0 { break; }
+            println!("[Debug] cur: {}", cur);
 
             let mut data_guard = inode.lock();
             if data_guard.dinode.itype != InodeType::Directory {
@@ -240,6 +258,7 @@ impl InodeCache {
         let mut name = [0;DIRSIZ];
         let dirinode = self.namei_parent(path, &mut name).unwrap();
         let mut dirinode_guard = dirinode.lock();
+        // println!("[Debug] name: {}", String::from_utf8(name.to_vec()).unwrap());
         
         match dirinode_guard.dir_lookup(&name) {
             Some(inode) => {
@@ -415,10 +434,10 @@ impl InodeData {
             unsafe { SUPER_BLOCK.locate_inode(self.inum)}
         );
         let offset = locate_inode_offset(inode.inum) as isize;
-        println!("[Debug] block number: {}", unsafe{ SUPER_BLOCK.locate_inode(self.inum) });
-        println!("[Debug] dev: {}", inode.dev);
-        println!("[Debug] inum: {}", inode.inum);
-        println!("[Debug] offset: 0x{:?}", offset);
+        // println!("[Debug] block number: {}", unsafe{ SUPER_BLOCK.locate_inode(self.inum) });
+        // println!("[Debug] dev: {}", inode.dev);
+        // println!("[Debug] inum: {}", inode.inum);
+        // println!("[Debug] offset: 0x{:?}", offset);
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
         unsafe{ write(dinode, self.dinode) };
         LOG.write(buf);
@@ -684,14 +703,21 @@ impl Inode {
     /// Load it from the disk if its content not cached yet. 
     pub fn lock<'a>(&'a self) -> SleepLockGuard<'a, InodeData> {
         let mut guard = ICACHE.data[self.index].lock();
+        println!("self.index: {}", self.index);
+        println!("[Debug] guard.valid: {}", guard.valid);
         
         if !guard.valid {
-            let buf = BCACHE.bread(self.dev, unsafe { SUPER_BLOCK.locate_inode(self.inum) });
+            println!("[Debug] 非有效，从磁盘中读取");
+            let blockno = unsafe{ SUPER_BLOCK.locate_inode(self.inum) };
+            let buf = BCACHE.bread(self.dev, blockno);
             let offset = locate_inode_offset(self.inum) as isize;
             let dinode = unsafe{ (buf.raw_data() as *const DiskInode).offset(offset) };
             guard.dinode = unsafe{ core::ptr::read(dinode) };
             drop(buf);
             guard.valid = true;
+            guard.dev = self.dev;
+            guard.inum = self.inum;
+            println!("[Debug] self.inum: {}", self.inum);
             if guard.dinode.itype == InodeType::Empty {
                 panic!("inode lock: trying to lock an inode whose type is empty.")
             }

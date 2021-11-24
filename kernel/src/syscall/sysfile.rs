@@ -14,6 +14,7 @@ use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, I
 use crate::fs::Pipe;
 use super::*;
 
+use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec;
 use bit_field::BitField;
@@ -410,7 +411,8 @@ pub fn sys_mknod() -> SysResult {
     arg_str(0, &mut path, MAXPATH)?;
     arg_int(1, &mut major)?;
     arg_int(2, &mut minor)?;
-    println!("major: {}, minor: {}", major, minor);
+    println!("[Debug] major: {}, minor: {}", major, minor);
+    println!("[Debug] path: {}", String::from_utf8(path.to_vec()).unwrap());
     match ICACHE.create(
         &path, 
         InodeType::Device, 
