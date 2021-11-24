@@ -64,6 +64,7 @@ impl InodeCache {
             // SAFETY: reference count is 1, so this lock will not block. 
             let mut idata = self.data[i].lock();
             if !idata.valid || idata.dinode.nlink > 0 {
+                idata.valid = false;
                 drop(idata);
                 imeta.refs -= 1;
                 drop(guard);
@@ -156,6 +157,7 @@ impl InodeCache {
                 }
             }
             if empty_i.is_none() && guard[i].refs == 0 {
+                // println!("inum: {}, dev: {}", guard[i].inum, guard[i].dev);
                 empty_i = Some(i);
             }
         }
