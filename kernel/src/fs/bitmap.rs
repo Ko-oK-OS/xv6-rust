@@ -3,8 +3,10 @@ use bit_field::BitField;
 use super::SUPER_BLOCK;
 use super::LOG;
 use super::BCACHE;
+use super::{ InodeType, DiskInode };
 
-use crate::define::fs::{ BPB, BSIZE };
+
+use crate::define::fs::{ BPB, BSIZE, IPB };
 
 use core::ptr;
 
@@ -14,6 +16,13 @@ use core::ptr;
 //     unsafe{ (&mut *buf.raw_data_mut()).zero() };
 //     LOG.write(buf);
 // }
+
+/// Given an inode number. 
+/// Calculate the offset index of this inode inside the block. 
+#[inline]
+fn locate_inode_offset(inum: u32) -> usize {
+    inum as usize % IPB
+}
 
 /// Free a block in the disk by setting the relevant bit in bitmap to 0.
 pub fn bfree(dev: u32, blockno: u32) {
@@ -57,4 +66,21 @@ pub fn balloc(dev: u32) -> u32 {
         b += BPB;
     }
     panic!("balloc: out of the block ranges.")
+}
+
+pub fn inode_alloc(dev: u32, itype: InodeType) -> u32 {
+    let size = unsafe { SUPER_BLOCK.ninodes() };
+    for inum in 1..size {
+        let blockno = unsafe { SUPER_BLOCK.locate_inode(inum) };
+        let offset = locate_inode_offset(inum) as isize;
+        let mut buf = BCACHE.bread(dev, blockno);
+        let dinode = unsafe { (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
+        let dinode = unsafe { &mut *dinode };
+        if dinode.try_alloc(itype).is_ok() {
+            LOG.write(buf);
+            return inum
+        }
+    }
+
+    panic!("not enough inode to alloc");
 }

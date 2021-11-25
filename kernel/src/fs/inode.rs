@@ -1,5 +1,6 @@
 use crate::define::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE, ROOTDEV, ROOTINUM};
 use crate::fs::LOG;
+use crate::fs::bitmap::inode_alloc;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
 use crate::memory::{copy_from_kernel, copy_to_kernel};
@@ -238,10 +239,9 @@ impl InodeCache {
         major: i16,
         minor: i16
     ) -> Result<Inode, &'static str> {
-        let mut name = [0;DIRSIZ];
+        let mut name: [u8; DIRSIZ] = [0; DIRSIZ];
         let dirinode = self.namei_parent(path, &mut name).unwrap();
         let mut dirinode_guard = dirinode.lock();
-        // println!("[Debug] name: {}", String::from_utf8(name.to_vec()).unwrap());
         
         match dirinode_guard.dir_lookup(&name) {
             Some(inode) => {
@@ -265,7 +265,10 @@ impl InodeCache {
             None => {}
         }
         // Allocate a new inode to create file
-        let inode = ICACHE.alloc(dirinode.dev, itype).unwrap();
+        let dev = dirinode_guard.dev;
+        // let inode = ICACHE.alloc(dev, itype).unwrap();
+        let inum = inode_alloc(dev, itype);
+        let inode = self.get(dev, inum);
         
         let mut inode_guard = inode.lock();
         // initialize new allocated inode
@@ -285,7 +288,10 @@ impl InodeCache {
             inode_guard.dir_link(".".as_bytes(), inode.inum)?;
             inode_guard.dir_link("..".as_bytes(), dirinode_guard.inum)?;
         }
-        dirinode_guard.dir_link(&name, inode_guard.inum)?;
+        dirinode_guard
+            .dir_link(&name, inode_guard.inum)
+            .expect("Parent inode fail to link");
+
         drop(inode_guard);
         drop(dirinode_guard);
         Ok(inode)
