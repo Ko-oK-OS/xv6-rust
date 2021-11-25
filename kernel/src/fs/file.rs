@@ -13,7 +13,7 @@ use core::mem::size_of;
 use core::ptr::NonNull;
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(u16)]
 pub enum FileType {
     None = 0,
@@ -25,7 +25,7 @@ pub enum FileType {
 
 /// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct VFile {
     pub(crate) index: usize,
     pub(crate) ftype: FileType,
@@ -54,7 +54,7 @@ impl VFile {
     }
 
     pub fn read(
-        &mut self, 
+        &self, 
         addr: usize, 
         len: usize
     ) -> Result<usize, &'static str> {
@@ -88,7 +88,8 @@ impl VFile {
                 let mut inode_guard = inode.lock();
                 match inode_guard.read(true, addr, self.offset, len as u32) {
                     Ok(_) => {
-                        self.offset += ret as u32;
+                        let offset = unsafe { &mut *(&self.offset as *const _ as *mut u32)};
+                        *offset += ret as u32;
                         drop(inode_guard);
                         Ok(ret)
                     },
@@ -107,7 +108,7 @@ impl VFile {
     /// Write to file f. 
     /// addr is a user virtual address.
     pub fn write(
-        &mut self, 
+        &self, 
         addr: usize, 
         len: usize
     ) -> Result<usize, &'static str> {
@@ -115,7 +116,7 @@ impl VFile {
         if !self.writeable() {
             panic!("file can't be written")
         }
-
+        
         match self.ftype {
             FileType::Pipe => {
                 let pipe = unsafe{ &*self.pipe.unwrap() };
@@ -127,7 +128,7 @@ impl VFile {
                 if self.major < 0 || 
                 self.major as usize >= NDEV || 
                 unsafe{ DEVICE_LIST.table[self.major as usize].write as usize == 0 } {
-                    return Err("vfs: fail to write")
+                    return Err("Fail to write to device")
                 }
 
                 // ret = unsafe{ DEVICES[self.major as usize].write.unwrap().call((1, addr, len)) as usize };
@@ -165,7 +166,9 @@ impl VFile {
                     LOG.end_op();
 
                     // update loop data
-                    self.offset += write_bytes as u32;
+                    // self.offset += write_bytes as u32;
+                    let offset = unsafe{ &mut *(&self.offset as *const _ as *mut u32) };
+                    *offset += write_bytes as u32;
                     count += write_bytes;
                     
                 }
@@ -174,7 +177,7 @@ impl VFile {
             },
 
             _ => {
-                panic!("Invalid file type!")
+                panic!("Invalid File Type!")
             }
         }
 
@@ -189,12 +192,13 @@ impl VFile {
     }
 
     /// Increment ref count for file f
-    pub fn dup(&mut self) {
+    pub fn dup(&self) {
         let guard = unsafe{ FILE_TABLE.lock.acquire() };
         if self.refs < 1 {
             panic!("vfile dup: no used file.")
         }
-        self.refs += 1;
+        let refs = unsafe{ &mut *(&self.refs as *const _ as *mut usize)};
+        *refs += 1;
         drop(guard);
     }
 

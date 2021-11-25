@@ -20,12 +20,15 @@ use alloc::vec;
 use bit_field::BitField;
 
 pub fn sys_dup() -> SysResult {
-    println!("[Debug] sys_dup");
-    let mut file: VFile = VFile::init();
-    let fd: usize;
-    arg_fd(0, &mut 0, &mut file)?;
+    // let mut file: VFile = VFile::init();
+    let mut fd: usize = 0;
+    arg_fd(0, &mut fd)?;
+    // println!("[Debug] sys_dup: 文件描述符: {}", fd);
+    let proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
+    let extern_data = proc.extern_data.get_mut();
+    let file = extern_data.open_files[fd].as_ref().unwrap();
     match unsafe {
-        CPU_MANAGER.alloc_fd(&mut file)
+        CPU_MANAGER.alloc_fd(&file)
     } {
         Ok(cur_fd) => {
             fd = cur_fd;
@@ -43,9 +46,13 @@ pub fn sys_dup() -> SysResult {
 /// read file data by special vfile. 
 pub fn sys_read() -> SysResult {
     let size: usize;
-    let mut file = VFile::init();
+    // let mut file = VFile::init();
+    let mut fd = 0;
     // Get file
-    arg_fd(0, &mut 0, &mut file)?;
+    arg_fd(0, &mut fd)?;
+    let proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
+    let extern_data = proc.extern_data.get_mut();
+    let file = extern_data.open_files[fd].as_ref().unwrap();
     // Get user read address
     let mut ptr: usize = 0;
     arg_addr(1, &mut ptr)?;
@@ -68,15 +75,22 @@ pub fn sys_read() -> SysResult {
 
 /// Write into file.
 pub fn sys_write() -> SysResult {
+    // println!("[Debug] 调用sys_write");
     let mut file = VFile::init();
     let mut ptr: usize = 0;
     let mut len: usize = 0;
+    let mut fd: usize = 0;
     let size;
 
-    arg_fd(0, &mut 0, &mut file)?;
+    arg_fd(0, &mut fd)?;
+    let proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
+    let extern_data = proc.extern_data.get_mut();
+    let file = extern_data.open_files[fd].as_ref().unwrap();
+    // println!("[Debug] 文件描述符: {}", fd);
     arg_addr(1, &mut ptr)?;
     arg_int(2, &mut len)?;
 
+    // println!("[Debug] sys_write: {:?}", file);
     match file.write(ptr, len) {
         Ok(cur_size) => {
             size = cur_size;
@@ -90,7 +104,6 @@ pub fn sys_write() -> SysResult {
 }
 
 pub fn sys_open() -> SysResult {
-    println!("sys_open");
     let mut path = [0;MAXPATH];
     let mut open_mode = 0;
     let mut fd = 0;
@@ -103,7 +116,6 @@ pub fn sys_open() -> SysResult {
     arg_int(1, &mut open_mode)?;
     // Start write log
     LOG.begin_op();
-    // println!("open mode: {:?}", OpenMode::mode(open_mode));
     match OpenMode::mode(open_mode) {
         OpenMode::CREATE => {
             match ICACHE.create(&path, crate::fs::InodeType::File, 0, 0) {
@@ -133,7 +145,7 @@ pub fn sys_open() -> SysResult {
                 },
                 None => {
                     LOG.end_op();
-                    println!("[Debug] sys_open: Fail to find file");
+                    // println!("[Debug] sys_open: Fail to find file");
                     return Err(())
                 }
             }
@@ -144,17 +156,6 @@ pub fn sys_open() -> SysResult {
     match unsafe{ FILE_TABLE.allocate() }  {
         Some(cur_file) => {
             file = cur_file;
-            match unsafe {
-                CPU_MANAGER.alloc_fd(file)
-            } {
-                Ok(cur_fd) => {
-                    fd = cur_fd;
-                }
-                Err(err) => {
-                    println!("{}", err);
-                    return Err(())
-                }
-            }
         }
 
         None => {
@@ -167,12 +168,17 @@ pub fn sys_open() -> SysResult {
 
     match inode_guard.dinode.itype {
         InodeType::Device => {
+            // println!("[Debug] sys_open: 文件类型为设备");
             file.ftype = FileType::Device;
             file.major = inode_guard.dinode.major;
+            file.readable = true;
+            file.writeable = true;
         },
         _ => {
             file.ftype = FileType::Inode;
             file.offset = 0;
+            file.readable = true;
+            file.writeable = true;
         }
     }
 
@@ -187,21 +193,35 @@ pub fn sys_open() -> SysResult {
     file.inode = Some((&mut inode) as *mut Inode);
     file.writeable = !open_mode.get_bit(0);
     file.readable = open_mode.get_bit(0) | open_mode.get_bit(1);
+    // println!("[Debug] sys_open: 打开的文件为 {:?}", file);
+
+    match unsafe {
+        CPU_MANAGER.alloc_fd(file)
+    } {
+        Ok(cur_fd) => {
+            fd = cur_fd;
+            // println!("[Debug] sys_open: 分配的文件描述符为:{}", fd)
+        }
+        Err(err) => {
+            println!("{}", err);
+            return Err(())
+        }
+    }
     Ok(fd)
 
 }
 
 pub fn sys_close() -> SysResult {
     let mut fd = 0;
-    let mut file = VFile::init();
-    arg_fd(0, &mut fd, &mut file)?;
-    let proc = unsafe {
-        CPU_MANAGER.myproc().unwrap()
-    };
+    // let mut file = VFile::init();
+    arg_fd(0, &mut fd)?;
+    let proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
+    let extern_data = proc.extern_data.get_mut();
+    // let file = extern_data.open_files[fd].as_ref().unwrap();
     unsafe {
         (&mut *proc.extern_data.get()).fd_close(fd)
     };
-    file.close();
+    // file.close();
     Ok(0)
 }
 
@@ -311,19 +331,11 @@ pub fn sys_pipe() -> SysResult {
     let extern_data = unsafe {
         &mut *p.extern_data.get()
     };
-    let open_files = &mut extern_data.ofile;
+    let open_files = &mut extern_data.open_files;
     if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
-        open_files[rfd] = Arc::new(
-            RefCell::new(
-                VFile::init()
-            )
-        );
+        open_files[rfd].take();
 
-        open_files[wfd] = Arc::new(
-            RefCell::new(
-                VFile::init()
-            )
-        );
+        open_files[wfd].take();
         rf.close();
         wf.close();
         return Err(())
@@ -334,17 +346,8 @@ pub fn sys_pipe() -> SysResult {
         wf as *const _ as *const u8, 
         size_of::<usize>()
     ).is_err() {
-        open_files[rfd] = Arc::new(
-            RefCell::new(
-                VFile::init()
-            )
-        );
-
-        open_files[wfd] = Arc::new(
-            RefCell::new(
-                VFile::init()
-            )
-        );
+        open_files[rfd].take();
+        open_files[wfd].take();
         rf.close();
         wf.close();
         return Err(())
@@ -353,12 +356,15 @@ pub fn sys_pipe() -> SysResult {
 }
 
 pub fn sys_fstat() -> SysResult {
-    let mut file: VFile = VFile::init();
+    // let mut file: VFile = VFile::init();
     let mut stat: usize = 0;
-
-    arg_fd(0, &mut 0, &mut file)?;
+    let mut fd = 0;
+    arg_fd(0, &mut fd)?;
     arg_addr(1, &mut stat)?;
 
+    let proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
+    let extern_data = proc.extern_data.get_mut();
+    let file = extern_data.open_files[fd].as_ref().unwrap();
     match file.stat(stat) {
         Ok(()) => {
             return Ok(0)
@@ -405,7 +411,6 @@ pub fn sys_chdir() -> SysResult {
 }
 
 pub fn sys_mknod() -> SysResult {
-    println!("[Debug] sys_mknod");
     let mut path: [u8; MAXPATH] = [0;MAXPATH];
     let mut major = 0;
     let mut minor = 0;
@@ -414,8 +419,8 @@ pub fn sys_mknod() -> SysResult {
     arg_str(0, &mut path, MAXPATH)?;
     arg_int(1, &mut major)?;
     arg_int(2, &mut minor)?;
-    println!("[Debug] major: {}, minor: {}", major, minor);
-    println!("[Debug] path: {}", String::from_utf8(path.to_vec()).unwrap());
+    // println!("[Debug] major: {}, minor: {}", major, minor);
+    // println!("[Debug] path: {}", String::from_utf8(path.to_vec()).unwrap());
     match ICACHE.create(
         &path, 
         InodeType::Device, 
@@ -425,14 +430,14 @@ pub fn sys_mknod() -> SysResult {
         Ok(inode) => {
             LOG.end_op();
             drop(inode);
-            println!("[Debug] create: 创建成功");
+            // println!("[Debug] create: 创建成功");
             Ok(0)
         },
 
         Err(err) => {
             println!("err: {}", err);
             LOG.end_op();
-            println!("[Debug] create: 创建失败");
+            // println!("[Debug] create: 创建失败");
             Err(())
         }
     }

@@ -13,6 +13,7 @@ use core::borrow::BorrowMut;
 use core::mem::size_of;
 use core::ops::IndexMut;
 use core::str::from_utf8;
+use alloc::sync::Arc;
 
 type SyscallFn = fn() -> SysResult;
 
@@ -153,23 +154,21 @@ pub fn arg_addr(id: usize, ptr: &mut usize) -> Result<(), ()> {
 
 /// Fetch the nth word-size system call argument as a file descriptor
 /// and return both the descriptor and the corresponding struct file. 
-pub fn arg_fd(id: usize, fd: &mut usize, file: &mut VFile) -> Result<(), ()> {
+pub fn arg_fd(id: usize, fd: &mut usize) -> Result<(), ()> {
     // Get file descriptor
     arg_int(id, fd)?;
     // Check the fd is valid
     let my_proc = unsafe {
         CPU_MANAGER.myproc().unwrap()
     };
-    let extern_data = unsafe{ &*my_proc.extern_data.get() };
-    let open_file = &extern_data.ofile;
-    if *fd >= NOFILE || *fd > open_file.len() {
+    let extern_data = unsafe{ &mut *my_proc.extern_data.get() };
+    let open_files = &mut extern_data.open_files;
+    if *fd >= NOFILE || *fd > open_files.len() {
         println!("arg_fd: file decsriptor is invalid");
         return Err(())
     } else {
         // Get file by file descriptor
-        *file = unsafe{ 
-            *open_file[*fd].as_ptr() 
-        };
+        // *file = *Arc::clone(&open_files[*fd].unwrap());
         Ok(())
     }
 }

@@ -618,7 +618,6 @@ impl InodeData {
         // look for an empty dir_entry
         let mut entry_offset = 0;
         for offset in (0..self.dinode.size).step_by(size_of::<DirEntry>()) {
-            println!("[Debug] 读取目录项");
             self.read(
                 false, 
                 (&mut dir_entry) as *mut DirEntry as usize, 
@@ -634,7 +633,6 @@ impl InodeData {
             ptr::copy(name.as_ptr(), dir_entry.name.as_mut_ptr(), name.len());
         }
         dir_entry.inum = inum as u16;
-        println!("[Debug] 写目录项");
         self.write(
             false, 
             (&dir_entry) as *const DirEntry as usize, 

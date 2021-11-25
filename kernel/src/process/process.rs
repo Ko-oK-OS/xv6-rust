@@ -5,8 +5,9 @@ use core::str::from_utf8;
 use alloc::vec::Vec;
 use alloc::vec;
 use alloc::sync::Arc;
+use array_macro::array;
 
-use crate::define::fs::NOFILE;
+use crate::define::fs::{NFILE, NOFILE};
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     kalloc::*,
@@ -75,7 +76,7 @@ pub struct ProcExtern {
     pub name: [u8; 16],   // Process name (debugging)
     // proc_tree_lock must be held when using this:
     pub parent: Option<*mut Process>,   
-    pub ofile: Vec<Arc<RefCell<VFile>>>,
+    pub open_files: [Option<Arc<VFile>>; NFILE],
     pub cwd: Option<Inode>
 
 }
@@ -90,7 +91,7 @@ impl ProcExtern {
             context: Context::new(),
             name: [0u8; 16],
             parent: None,
-            ofile: vec![],
+            open_files: array![_ => None; NFILE],
             cwd: None
         }
     }
@@ -143,16 +144,11 @@ impl ProcExtern {
 
     /// Find an unallocated file desprictor in proc
     pub fn find_unallocated_fd(&self) -> Result<usize, &'static str> {
-        for fd in 0..self.ofile.len() {
-            let file: &VFile = &(*self.ofile[fd]).borrow();
-            match file.ftype {
-                FileType::None => {
-                    return Ok(fd)
-                },
-
-                _ => {}
+        for fd in 0..self.open_files.len() {
+            if self.open_files[fd].is_none() {
+                return Ok(fd)
             }
-        } 
+        }
         Err("Fail to find unallocted fd")
     }
 
@@ -194,11 +190,7 @@ impl ProcExtern {
 
     /// Close a fd
     pub fn fd_close(&mut self, fd: usize) {
-        self.ofile[fd] = Arc::new(
-            RefCell::new(
-                VFile::init()
-            )
-        )
+        self.open_files[fd].take();
     }
 
     /// Initialize first user process
@@ -235,13 +227,7 @@ impl Process{
             &mut *self.extern_data.get()
         };
 
-        extern_data.ofile = vec![
-            Arc::new(
-                RefCell::new(
-                    VFile::init()
-                )
-            )
-        ;NOFILE];
+        extern_data.open_files = array![_ => None; NFILE];
 
         extern_data.set_kstack(kstack);
     }
@@ -459,16 +445,13 @@ impl Process{
     }
 
     /// Find a unallocated fd
-    pub fn fd_alloc(&mut self, file: &mut VFile) -> Result<usize, &'static str>{
+    pub fn fd_alloc(&mut self, file: &VFile) -> Result<usize, &'static str>{
         let extern_data = unsafe {
             &mut *self.extern_data.get()
         };
         let fd = extern_data.find_unallocated_fd()?;
-        extern_data.ofile[fd] = Arc::new(
-            RefCell::new(
-                *file
-            )
-        );
+        // println!("[Debug] fd_alloc: 当前文件为: {:?}", *file);
+        extern_data.open_files[fd] = Some(Arc::new(*file));
         Ok(fd)       
     } 
 }

@@ -131,13 +131,13 @@ pub unsafe fn exec(
     LOG.begin_op();
 
     // Get current inode by path
-    println!("[Debug] path: {}", path);
+    // println!("[Debug] path: {}", path);
     inode = ICACHE.namei(path.as_bytes()).unwrap();
 
     // Get inode data by sleeplock
     let mut inode_guard = inode.lock();
            
-    println!("[Debug] 读取ELF Header");
+    // println!("[Debug] 读取ELF Header");
     // Check ELF header
     if inode_guard.read(
         false, 
@@ -150,9 +150,9 @@ pub unsafe fn exec(
         return Err("exec: Fail to read elf header.")
     }
 
-    println!("[Debug] 检查魔数");
+    // println!("[Debug] 检查魔数");
     if elf.magic != ELF_MAGIC {
-        println!("[Debug] 魔数错误, 为0x{:x}, 应为0x{:x}", elf.magic, ELF_MAGIC);
+        // println!("[Debug] 魔数错误, 为0x{:x}, 应为0x{:x}", elf.magic, ELF_MAGIC);
         drop(inode_guard);
         LOG.end_op();
         return Err("exec: Elf magic number is wrong.")
@@ -212,7 +212,7 @@ pub unsafe fn exec(
                 }
 
                 // load segement information
-                println!("[Debug] 偏移量: 0x{:x}, 文件大小: 0x{:x}", ph.off, ph.file_size);
+                // println!("[Debug] 偏移量: 0x{:x}, 文件大小: 0x{:x}", ph.off, ph.file_size);
                 if load_seg(
                     &mut page_table, 
                     ph.vaddr, 
@@ -235,7 +235,7 @@ pub unsafe fn exec(
             }
             off += size_of::<ProgHeader>();
         }
-        println!("[Debug] 完成加载程序");
+        // println!("[Debug] 完成加载程序");
 
         drop(inode_guard);
         LOG.end_op();

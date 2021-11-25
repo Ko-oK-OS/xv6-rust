@@ -100,7 +100,7 @@ impl CPUManager{
         }
     }
 
-    pub fn alloc_fd(&mut self, file: &mut VFile) -> Result<usize, &'static str> {
+    pub fn alloc_fd(&mut self, file:&VFile) -> Result<usize, &'static str> {
         let proc = unsafe{ self.myproc().ok_or("Fail to find current process")? };
         proc.fd_alloc(file)
     }
@@ -110,11 +110,7 @@ impl CPUManager{
             self.myproc().unwrap()
         };
         let extern_data = unsafe{ &mut *proc.extern_data.get() };
-        extern_data.ofile[fd] = Arc::new(
-            RefCell::new(
-                VFile::init()
-            )
-        );
+        extern_data.open_files[fd].take();
     }
 }
 

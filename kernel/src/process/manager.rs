@@ -207,15 +207,14 @@ impl ProcManager{
         };
         // close all open files. 
         let extern_data = unsafe{ &mut *my_proc.extern_data.get() };
-        let open_files = &mut extern_data.ofile;
+        let open_files = &mut extern_data.open_files;
         for index in 0..open_files.len() {
-            let file = unsafe{ &mut *open_files[index].as_ptr() };
-            open_files[index] = Arc::new(
-                RefCell::new(
-                    VFile::init()
-                )
-            );
-            file.close();
+            // let file = Arc::clone(&open_files[index]);
+            // open_files[index] = Arc::new(
+            //     VFile::init()
+            // );
+            // file.close();
+            // open_files[index].take()
         }
 
         LOG.begin_op();

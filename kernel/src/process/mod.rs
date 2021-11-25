@@ -2,8 +2,9 @@ use core::ptr::{ copy_nonoverlapping, NonNull };
 use core::mem::size_of;
 use alloc::sync::Arc;
 use alloc::vec;
+use array_macro::array;
 
-use crate::define::fs::ROOTDEV;
+use crate::define::fs::{NFILE, ROOTDEV};
 use crate::interrupt::trap::usertrap_ret;
 use crate::fs::{ LOG, ICACHE, init };
 use crate::syscall::SysResult;
@@ -67,11 +68,8 @@ pub unsafe fn fork() -> SysResult {
         tf.a0 = 0;
 
         // increment reference counts on open file descriptions
-        for f in extern_data.ofile.iter_mut() {
-            f.borrow_mut().dup();
-            let other_f = f.clone();
-            other_extern_data.ofile.push(other_f);
-        }
+        other_extern_data.open_files.clone_from(&extern_data.open_files);
+        other_extern_data.cwd.clone_from(&extern_data.cwd);
 
         other_extern_data.set_name(&extern_data.name);
 
@@ -106,10 +104,10 @@ pub unsafe fn exit(status: i32) {
     let extern_data = my_proc.extern_data.get_mut();
 
     // Close all open files
-    for f in extern_data.ofile.iter_mut() {
-        f.borrow_mut().close();
+    for f in extern_data.open_files.iter_mut() {
+        f.take();
     }
-    extern_data.ofile = vec![];
+    extern_data.open_files = array![_ => None; NFILE];
 
     LOG.begin_op();
     // extern_data.cwd.as_ref().unwrap().put();
