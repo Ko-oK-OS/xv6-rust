@@ -420,7 +420,7 @@ impl InodeData {
         let offset = locate_inode_offset(self.inum) as isize;
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
         unsafe{ write(dinode, self.dinode) };
-        println!("self.dindoe: {:?}", self.dinode);
+        // println!("self.dindoe: {:?}", self.dinode);
         LOG.write(buf);
     }
 

@@ -48,7 +48,7 @@ pub unsafe fn fork() -> SysResult {
             extern_data.size
         ) {
             Ok(_) => {
-                println!("Success to copy data from user");
+                println!("[Debug] Success to copy data from user");
             }
 
             Err(err) => {
@@ -84,10 +84,12 @@ pub unsafe fn fork() -> SysResult {
         guard.set_state(ProcState::RUNNABLE);
         drop(guard);
 
+        println!("[Debug] fork: pid: {}", pid);
         return Ok(pid)
 
     }
 
+    // println!("[Debug] 进程分配失败");
     Err(())
 }
 

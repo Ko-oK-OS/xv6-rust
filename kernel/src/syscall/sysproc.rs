@@ -74,6 +74,7 @@ pub fn sys_sleep() -> SysResult {
 pub fn sys_wait() -> SysResult {
     let mut addr = 0;
     arg_addr(0, &mut addr)?;
+    println!("[Debug] addr: {}", addr);
     match unsafe {
         PROC_MANAGER.wait(addr)
     } {

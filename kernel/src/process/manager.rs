@@ -146,7 +146,7 @@ impl ProcManager{
 
                     return Some(p)
                 }
-                _ => { return None }
+                _ => {}
             }
         }
         None
@@ -248,19 +248,20 @@ impl ProcManager{
     /// Wait for a child process to exit and return its pid. 
     pub fn wait(&mut self, addr: usize) -> Option<usize> {
         let mut pid = 0;
-        let mut have_kids = false;
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Fail to get my process")
         };
         let mut wait_guard = self.wait_lock.acquire();
         loop {
+            let mut have_kids = false;
             // Scan through table looking for exited children. 
             for index in 0..self.proc.len() {
                 let p = &mut self.proc[index];
                 let extern_data = unsafe {
-                    &mut *p.extern_data.get()
+                    p.extern_data.get().as_mut().unwrap()
                 };
                 if let Some(parent) = extern_data.parent {
+                    println!("[Debug] wait: 获取父进程");
                     if parent as *const _ == my_proc as *const _ {
                         have_kids = true;
                         // make sure the child isn't still in exit or swtch. 
@@ -279,6 +280,7 @@ impl ProcManager{
                         drop(proc_data);
                         drop(wait_guard);
                         p.free_proc();
+                        println!("[Debug] wait: 返回pid: {}", pid);
                         return Some(pid);
                     }
                     
@@ -289,6 +291,7 @@ impl ProcManager{
             if !have_kids || my_proc_data.killed {
                 drop(wait_guard);
                 drop(my_proc_data);
+                println!("[Debug] wait: 返回空");
                 return None
             }
 
