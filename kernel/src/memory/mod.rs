@@ -49,7 +49,7 @@ pub fn copy_to_kernel(
     unsafe {
         let my_proc =  CPU_MANAGER.myproc().unwrap();
         
-        if !is_user {
+        if is_user {
             let extern_data = &mut *(my_proc.extern_data.get());
             let page_table = extern_data.pagetable.as_mut().unwrap();
             page_table.copy_in(

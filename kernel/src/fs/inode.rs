@@ -132,7 +132,7 @@ impl InodeCache {
         for i in 0..NINODE {
             if guard[i].inum == inum && guard[i].refs > 0 && guard[i].dev == dev {
                 guard[i].refs += 1;
-                println!("[Debug] 获取Inode");
+                // println!("[Debug] 获取Inode");
                 return Inode {
                     dev,
                     inum,
@@ -149,7 +149,6 @@ impl InodeCache {
             Some(i) => i,
             None => panic!("inode: not enough"),
         };
-        println!("[Debug] empty_i: {}", empty_i);
         guard[empty_i].dev = dev;
         guard[empty_i].inum = inum;
         guard[empty_i].refs = 1;
@@ -172,10 +171,8 @@ impl InodeCache {
     ) -> Option<Inode> {
         let mut inode: Inode;
         if path[0] == b'/' {
-            println!("[Debug] 根目录");
             inode = self.get(ROOTDEV, ROOTINUM);
         } else {
-            println!("[Debug] 当前目录");
             let p = unsafe { CPU_MANAGER.myproc().unwrap() };
             inode = self.dup(p.extern_data.get_mut().cwd.as_ref().unwrap());
         }
@@ -183,12 +180,9 @@ impl InodeCache {
         loop {
             cur = skip_path(path, cur, name);
             if cur == 0 { break; }
-            println!("[Debug] cur: {}", cur);
 
             let mut data_guard = inode.lock();
             if data_guard.dinode.itype != InodeType::Directory {
-                println!("[Debug] Disk Inode: {:?}", data_guard.dinode);
-                println!("[Debug] 该文件不是目录");
                 drop(data_guard);
                 return None
             }
@@ -602,7 +596,7 @@ impl InodeData {
                 continue;
             }
             for i in 0..DIRSIZ {
-                println!("dir entry: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap());
+                // println!("dir entry: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap());
                 if dir_entry.name[i] != name[i] {
                     break;
                 }
@@ -616,11 +610,15 @@ impl InodeData {
 
     /// Write s new directory entry (name, inum) into the directory
     pub fn dir_link(&mut self, name: &[u8], inum: u32) -> Result<(), &'static str>{
-        self.dir_lookup(name).ok_or("Fail to find inode")?;
+        // self.dir_lookup(name).ok_or("Fail to find inode")?;
+        if self.dir_lookup(name).is_some() {
+            return Err("It's incorrect to find entry in disk")
+        }
         let mut dir_entry = DirEntry::new();
         // look for an empty dir_entry
         let mut entry_offset = 0;
         for offset in (0..self.dinode.size).step_by(size_of::<DirEntry>()) {
+            println!("[Debug] 读取目录项");
             self.read(
                 false, 
                 (&mut dir_entry) as *mut DirEntry as usize, 
@@ -636,6 +634,7 @@ impl InodeData {
             ptr::copy(name.as_ptr(), dir_entry.name.as_mut_ptr(), name.len());
         }
         dir_entry.inum = inum as u16;
+        println!("[Debug] 写目录项");
         self.write(
             false, 
             (&dir_entry) as *const DirEntry as usize, 
@@ -691,11 +690,8 @@ impl Inode {
     /// Load it from the disk if its content not cached yet. 
     pub fn lock<'a>(&'a self) -> SleepLockGuard<'a, InodeData> {
         let mut guard = ICACHE.data[self.index].lock();
-        println!("self.index: {}", self.index);
-        println!("[Debug] guard.valid: {}", guard.valid);
         
         if !guard.valid {
-            println!("[Debug] 非有效，从磁盘中读取");
             let blockno = unsafe{ SUPER_BLOCK.locate_inode(self.inum) };
             let buf = BCACHE.bread(self.dev, blockno);
             let offset = locate_inode_offset(self.inum) as isize;
@@ -705,7 +701,6 @@ impl Inode {
             guard.valid = true;
             guard.dev = self.dev;
             guard.inum = self.inum;
-            println!("[Debug] self.inum: {}", self.inum);
             if guard.dinode.itype == InodeType::Empty {
                 panic!("inode lock: trying to lock an inode whose type is empty.")
             }

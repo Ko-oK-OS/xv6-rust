@@ -405,7 +405,7 @@ pub fn sys_chdir() -> SysResult {
 }
 
 pub fn sys_mknod() -> SysResult {
-    // println!("[Debug] sys_mknod");
+    println!("[Debug] sys_mknod");
     let mut path: [u8; MAXPATH] = [0;MAXPATH];
     let mut major = 0;
     let mut minor = 0;
