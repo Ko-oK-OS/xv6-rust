@@ -1,3 +1,5 @@
+use core::ptr;
+
 use crate::define::fs::{ NDIRECT, DIRSIZ };
 
 #[repr(u16)]
@@ -35,6 +37,16 @@ impl DiskInode {
             nlink: 0,
             size: 0,
             addrs: [0; NDIRECT+1]
+        }
+    }
+
+    pub fn try_alloc(&mut self, itype: InodeType) -> Result<(), ()> {
+        if self.itype == InodeType::Empty {
+            unsafe { ptr::write_bytes(self, 0, 1); }
+            self.itype = itype;
+            Ok(())
+        } else {
+            Err(())
         }
     }
 }

@@ -29,7 +29,6 @@ impl Bcache {
     /// Init the bcache.
     /// Should only be called once when the kernel inits itself.
     pub fn binit(&self) {
-        println!("binit......");
         let mut ctrl = self.ctrl.acquire();
         let len = ctrl.inner.len();
 
@@ -101,7 +100,7 @@ impl Bcache {
     }
 
     /// Move an unlocked buf to the head of the most-recently-used list.
-    pub fn brelse(&self, index: usize) {
+    fn brelse(&self, index: usize) {
         self.ctrl.acquire().move_if_no_ref(index);
     }
 }
@@ -269,8 +268,8 @@ struct BufInner {
     // valid is guarded by
     // the bcache spinlock and the relevant buf sleeplock
     // holding either of which can get access to them
-    pub(crate) valid: AtomicBool,
-    pub(crate) data: SleepLock<BufData>,
+    valid: AtomicBool,
+    data: SleepLock<BufData>,
 }
 
 impl BufInner {
@@ -287,14 +286,8 @@ impl BufInner {
 #[repr(C, align(8))]
 pub struct BufData([u8; BSIZE]);
 
-impl BufData {
+impl  BufData {
     const fn new() -> Self {
         Self([0; BSIZE])
-    }
-
-    pub fn zero(&mut self) {
-        for i in 0..BSIZE {
-            self.0[i] = 0;
-        }
     }
 }

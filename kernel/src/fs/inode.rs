@@ -110,29 +110,11 @@ impl InodeCache {
             let dinode = unsafe { (block.raw_data_mut() as *mut DiskInode).offset(offset) };
             let dinode = unsafe{ &mut *dinode };
             // Find a empty inode
-            if dinode.itype == InodeType::Empty {
-                // Commit to change for dindoe
-                // Value move occurs here, block will write back when 
-                // log commit, so we don't have to drop block explicitly.
-                unsafe{
-                    ptr::write_bytes(dinode, 0, 1);
-                }
-                dinode.itype = itype;
-                println!("[Debug] dinode: {:?}", dinode); 
+            if dinode.try_alloc(itype).is_ok() {
                 LOG.write(block);
-                // drop(dinode);
-                println!("[Debug] dev: {} inum: {}", dev, inum);
-                let inode = self.get(dev, inum);
-                println!("[Debug] inode dev: {}, inum: {}", inode.dev, inode.inum);
-                let idata = inode.lock();
-                // println!("[Debug] dinode type: {:?}", idata.dinode.itype);
-                // println!("[Debug] dev: {}, inum: {}", dev, inum);
-                // assert_eq!(dinode.itype, idata.dinode.itype);
-                println!("[Debug] dinode: {:?}", idata.dinode);
-                println!("[Debug] idata valid: {}, dev: {}, inum: {}", idata.valid, idata.dev, idata.inum);
                 return Some(self.get(dev, inum))
             }
-            drop(block);
+            // drop(block);
         }
         None
     }
@@ -157,7 +139,6 @@ impl InodeCache {
                 }
             }
             if empty_i.is_none() && guard[i].refs == 0 {
-                // println!("inum: {}, dev: {}", guard[i].inum, guard[i].dev);
                 empty_i = Some(i);
             }
         }
@@ -292,20 +273,21 @@ impl InodeCache {
         inode_guard.dinode.minor = minor;
         inode_guard.dinode.nlink = 1;
         // Write back to disk
-        inode_guard.update(&inode);
+        inode_guard.update();
         debug_assert_eq!(inode_guard.dinode.itype, itype);
     
         // Directory, create .. 
         if itype == InodeType::Directory {
             // Create . and .. entries. 
             inode_guard.dinode.nlink += 1;
-            inode_guard.update(&inode);
+            inode_guard.update();
             // No nlink++ for . to avoid recycle ref count. 
             inode_guard.dir_link(".".as_bytes(), inode.inum)?;
             inode_guard.dir_link("..".as_bytes(), dirinode_guard.inum)?;
         }
         dirinode_guard.dir_link(&name, inode_guard.inum)?;
         drop(inode_guard);
+        drop(dirinode_guard);
         Ok(inode)
     }
 }
@@ -425,23 +407,20 @@ impl InodeData {
         }
 
         self.dinode.size = 0;
-        self.update(inode);
+        self.update();
     }
 
     /// Update a modified in-memory inode to disk. 
     /// Typically called after changing the content of inode info. 
-    pub fn update(&mut self, inode: &Inode) {
+    pub fn update(&mut self) {
         let mut buf = BCACHE.bread(
-            inode.dev, 
+            self.dev, 
             unsafe { SUPER_BLOCK.locate_inode(self.inum)}
         );
-        let offset = locate_inode_offset(inode.inum) as isize;
-        // println!("[Debug] block number: {}", unsafe{ SUPER_BLOCK.locate_inode(self.inum) });
-        // println!("[Debug] dev: {}", inode.dev);
-        // println!("[Debug] inum: {}", inode.inum);
-        // println!("[Debug] offset: 0x{:?}", offset);
+        let offset = locate_inode_offset(self.inum) as isize;
         let dinode = unsafe{ (buf.raw_data_mut() as *mut DiskInode).offset(offset) };
         unsafe{ write(dinode, self.dinode) };
+        println!("self.dindoe: {:?}", self.dinode);
         LOG.write(buf);
     }
 
@@ -617,6 +596,7 @@ impl InodeData {
                 continue;
             }
             for i in 0..DIRSIZ {
+                println!("dir entry: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap());
                 if dir_entry.name[i] != name[i] {
                     break;
                 }

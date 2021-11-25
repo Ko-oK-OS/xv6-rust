@@ -8,13 +8,12 @@ use crate::define::fs::{ BPB, BSIZE };
 
 use core::ptr;
 
-/// Zero a block. 
-pub fn bzero(dev: u32, bno: u32) {
-    let mut buf = BCACHE.bread(dev, bno);
-    unsafe{ (&mut *buf.raw_data_mut()).zero() };
-    LOG.write(buf);
-    // drop(buf);
-}
+// / Zero a block. 
+// pub fn bzero(dev: u32, bno: u32) {
+//     let mut buf = BCACHE.bread(dev, bno);
+//     unsafe{ (&mut *buf.raw_data_mut()).zero() };
+//     LOG.write(buf);
+// }
 
 /// Free a block in the disk by setting the relevant bit in bitmap to 0.
 pub fn bfree(dev: u32, blockno: u32) {
@@ -50,7 +49,7 @@ pub fn balloc(dev: u32) -> u32 {
                 unsafe{ ptr::write(buf_ptr, m) };
                 LOG.write(buf);
                 // drop(buf);
-                bzero(dev, b + bi);
+                // bzero(dev, b + bi);
                 return b + bi
             }
         }

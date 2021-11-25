@@ -20,6 +20,7 @@ use alloc::vec;
 use bit_field::BitField;
 
 pub fn sys_dup() -> SysResult {
+    println!("[Debug] sys_dup");
     let mut file: VFile = VFile::init();
     let fd: usize;
     arg_fd(0, &mut 0, &mut file)?;
@@ -89,6 +90,7 @@ pub fn sys_write() -> SysResult {
 }
 
 pub fn sys_open() -> SysResult {
+    println!("sys_open");
     let mut path = [0;MAXPATH];
     let mut open_mode = 0;
     let mut fd = 0;
@@ -125,13 +127,13 @@ pub fn sys_open() -> SysResult {
                     if inode_guard.dinode.itype == InodeType::Directory && open_mode != OpenMode::RDONLY as usize{
                         drop(inode_guard);
                         LOG.end_op();
-                        println!("Fail to enter dir.");
+                        println!("[Debug] sys_open: Fail to enter dir.");
                         return Err(());
                     }
                 },
                 None => {
                     LOG.end_op();
-                    println!("Fail to find file");
+                    println!("[Debug] sys_open: Fail to find file");
                     return Err(())
                 }
             }
@@ -403,6 +405,7 @@ pub fn sys_chdir() -> SysResult {
 }
 
 pub fn sys_mknod() -> SysResult {
+    // println!("[Debug] sys_mknod");
     let mut path: [u8; MAXPATH] = [0;MAXPATH];
     let mut major = 0;
     let mut minor = 0;
@@ -422,12 +425,14 @@ pub fn sys_mknod() -> SysResult {
         Ok(inode) => {
             LOG.end_op();
             drop(inode);
+            println!("[Debug] create: 创建成功");
             Ok(0)
         },
 
         Err(err) => {
             println!("err: {}", err);
             LOG.end_op();
+            println!("[Debug] create: 创建失败");
             Err(())
         }
     }
@@ -485,12 +490,12 @@ pub fn sys_unlink() -> SysResult {
 
     if inode_guard.dinode.itype == InodeType::Directory {
         parent_guard.dinode.nlink -= 1;
-        parent_guard.update(&parent);
+        parent_guard.update();
     }
     drop(parent_guard);
 
     inode_guard.dinode.nlink -= 1;
-    inode_guard.update(&inode);
+    inode_guard.update();
     drop(inode_guard);
 
     LOG.end_op();
@@ -550,7 +555,7 @@ pub fn sys_link() -> SysResult {
             return Err(())
         }
     
-    inode_guard.update(&inode);
+    inode_guard.update();
     drop(inode_guard);
     LOG.end_op();
     return Ok(0)

@@ -60,7 +60,6 @@ impl Disk {
     /// Init the Disk.
     /// Only called once when the kernel boots.
     pub unsafe fn init(&mut self) {
-        println!("virtio init......");
         debug_assert_eq!((&self.desc as *const _ as usize) % PGSIZE, 0);
         debug_assert_eq!((&self.used as *const _ as usize) % PGSIZE, 0);
         debug_assert_eq!((&self.free as *const _ as usize) % PGSIZE, 0);
@@ -139,15 +138,14 @@ impl Disk {
 
     /// Allocate one descriptor.
     fn alloc_desc(&mut self) -> Option<usize> {
-        self.free.iter_mut()
-            .enumerate()
-            .filter(|(_, f)| **f)
-            .take(1)
-            .map(|(i, f)| {
-                *f = false;
-                i
-            })
-            .next()
+        debug_assert_eq!(self.free.len(), NUM);
+        for i in 0..NUM {
+            if self.free[i] {
+                self.free[i] = false;
+                return Some(i)
+            }
+        }
+        None
     }
 
     /// Mark a descriptor as free.
@@ -200,7 +198,7 @@ impl Disk {
             }
 
             let buf_raw_data = self.info[id].buf_channel.clone()
-                .expect("virtio disk intr handler not found pre-stored buf channel to wake up");
+                .expect("virtio disk intr handler not found pre-stored buf channel to wakeup");
             self.info[id].disk = false;
             unsafe { PROC_MANAGER.wake_up(buf_raw_data); }
 
@@ -399,6 +397,54 @@ impl VirtIOBlkReq {
         }
     }
 }
+
+// virtio mmio control registers' offset
+// from qemu's virtio_mmio.h
+const VIRTIO_MMIO_MAGIC_VALUE: usize = 0x000;
+const VIRTIO_MMIO_VERSION: usize = 0x004;
+const VIRTIO_MMIO_DEVICE_ID: usize = 0x008;
+const VIRTIO_MMIO_VENDOR_ID: usize = 0x00c;
+const VIRTIO_MMIO_DEVICE_FEATURES: usize = 0x010;
+const VIRTIO_MMIO_DRIVER_FEATURES: usize = 0x020;
+const VIRTIO_MMIO_GUEST_PAGE_SIZE: usize = 0x028;
+const VIRTIO_MMIO_QUEUE_SEL: usize = 0x030;
+const VIRTIO_MMIO_QUEUE_NUM_MAX: usize = 0x034;
+const VIRTIO_MMIO_QUEUE_NUM: usize = 0x038;
+const VIRTIO_MMIO_QUEUE_ALIGN: usize = 0x03c;
+const VIRTIO_MMIO_QUEUE_PFN: usize = 0x040;
+const VIRTIO_MMIO_QUEUE_READY: usize = 0x044; 
+const VIRTIO_MMIO_QUEUE_NOTIFY: usize = 0x050;
+const VIRTIO_MMIO_INTERRUPT_STATUS: usize = 0x060;
+const VIRTIO_MMIO_INTERRUPT_ACK: usize = 0x064;
+const VIRTIO_MMIO_STATUS: usize = 0x070;
+
+// virtio status register bits
+// from qemu's virtio_config.h
+const VIRTIO_CONFIG_S_ACKNOWLEDGE: u32 = 1;
+const VIRTIO_CONFIG_S_DRIVER: u32 = 2;
+const VIRTIO_CONFIG_S_DRIVER_OK: u32 = 4;
+const VIRTIO_CONFIG_S_FEATURES_OK: u32 = 8;
+
+// device feature bits
+const VIRTIO_BLK_F_RO: u8 = 5;
+const VIRTIO_BLK_F_SCSI: u8 = 7;
+const VIRTIO_BLK_F_CONFIG_WCE: u8 = 11;
+const VIRTIO_BLK_F_MQ: u8 = 12;
+const VIRTIO_F_ANY_LAYOUT: u8 = 27;
+const VIRTIO_RING_F_INDIRECT_DESC: u8 = 28;
+const VIRTIO_RING_F_EVENT_IDX: u8 = 29;
+
+// VRingDesc flags
+const VRING_DESC_F_NEXT: u16 = 1; // chained with another descriptor
+const VRING_DESC_F_WRITE: u16 = 2; // device writes (vs read)
+
+// for disk ops
+const VIRTIO_BLK_T_IN: u32 = 0; // read the disk
+const VIRTIO_BLK_T_OUT: u32 = 1; // write the disk
+
+// this many virtio descriptors
+// must be a power of 2
+const NUM: usize = 8;
 
 #[inline]
 unsafe fn read(offset: usize) -> u32 {
