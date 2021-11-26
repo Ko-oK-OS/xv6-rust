@@ -2,7 +2,7 @@ TARGET      := riscv64gc-unknown-none-elf
 MODE        := debug
 KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
-CPUS		:= 1
+CPUS		:= 3
 
 FS_IMG		:= ../fs.img
 KERNEL_ASM	:= kernel.S

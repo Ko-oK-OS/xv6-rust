@@ -3,7 +3,7 @@ use core::panic;
 use crate::{define::fs::DIRSIZ, driver::{plic::{plic_claim, plic_complete}, virtio_disk::DISK}, register::{
     sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
     satp, tp
-}, start, syscall::syscall};
+}, start, syscall::handle_syscall};
 use crate::lock::spinlock::Spinlock;
 use crate::process::{cpu};
 use crate::define::layout::*;
@@ -59,7 +59,7 @@ pub unsafe fn usertrap() {
             // An interrupt will change sstatus &c registers,
             // so don't enable until done with those registers. 
             sstatus::intr_on();
-            syscall();
+            handle_syscall();
         },
 
         // Device interrupt

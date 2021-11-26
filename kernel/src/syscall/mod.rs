@@ -1,9 +1,9 @@
-mod sysproc;
-mod sysnet;
-mod sysfile;
-pub use sysproc::*;
-pub use sysnet::*;
-pub use sysfile::*;
+mod proc;
+mod net;
+mod file;
+pub use proc::*;
+pub use net::*;
+pub use file::*;
 
 use crate::define::fs::NOFILE;
 use crate::{println, process::*};
@@ -16,38 +16,180 @@ use core::str::from_utf8;
 use alloc::sync::Arc;
 
 type SyscallFn = fn() -> SysResult;
-
-pub const SYSCALL_NUM:usize = 21;
-
-pub static SYSCALL:[SyscallFn; SYSCALL_NUM] = [
-    sys_fork,
-    sys_exit,
-    sys_wait,
-    sys_pipe,
-    sys_read,
-    sys_kill,
-    sys_exec,
-    sys_fstat,
-    sys_chdir,
-    sys_dup,
-    sys_getpid,
-    sys_sbrk,
-    sys_sleep,
-    sys_uptime,
-    sys_open,
-    sys_write, 
-    sys_mknod,
-    sys_unlink,
-    sys_link, 
-    sys_mkdir,
-    sys_close
-];
-
 pub type SysResult = Result<usize, ()>;
 
-
+pub const SYSCALL_NUM:usize = 21;
 pub const SHUTDOWN: usize = 8;
 pub const REBOOT: usize = 9;
+
+#[no_mangle]
+pub unsafe fn handle_syscall() {
+    let proc = CPU_MANAGER.myproc().unwrap();
+    let mut syscall = Syscall{ process: proc};
+    syscall.syscall().unwrap();
+}
+
+
+#[repr(usize)]
+#[derive(Debug)]
+pub enum SysCallID {
+    SysFork = 1,
+    SysExit = 2,
+    SysWait = 3,
+    SysPipe = 4,
+    SysRead = 5,
+    SysKill = 6,
+    SysExec = 7,
+    SysFstat = 8,
+    SysChdir = 9,
+    SysDup = 10,
+    SysGetPid = 11,
+    SysSbrk = 12,
+    SysSleep = 13,
+    SysUptime = 14,
+    SysOpen = 15,
+    SysWrite = 16,
+    SysMknod = 17,
+    SysUnlink = 18,
+    SysLink = 19,
+    SysMkdir = 20,
+    SysClose = 21,
+    Unknown
+}
+
+impl SysCallID {
+    pub fn new(id: usize) -> Self {
+        match id {
+            1 => { Self::SysFork },
+            2 => { Self::SysExit },
+            3 => { Self::SysWait },
+            4 => { Self::SysPipe },
+            5 => { Self::SysRead },
+            6 => { Self::SysKill },
+            7 => { Self::SysExec },
+            8 => { Self::SysFstat },
+            9 => { Self::SysChdir },
+            10 => { Self::SysDup },
+            11 => { Self::SysGetPid },
+            12 => { Self::SysSbrk },
+            13 => { Self::SysSleep },
+            14 => { Self::SysUptime },
+            15 => { Self::SysOpen },
+            16 => { Self::SysWrite },
+            17 => { Self::SysMknod },
+            18 => { Self::SysUnlink },
+            19 => { Self::SysLink },
+            20 => { Self::SysMkdir },
+            21 => { Self::SysClose }
+            _ => { Self::Unknown }
+        }
+    }
+}
+
+pub struct Syscall<'a>{
+    process: &'a mut Process
+}
+
+impl Syscall<'_> {
+    pub fn syscall(&mut self) -> SysResult {
+        let pdata = self.process.extern_data.get_mut();
+        // 获取进程的trapframe
+        let tf = unsafe{ &mut *pdata.trapframe };
+        // 获取系统调用 id 号
+        let sys_id = SysCallID::new(tf.a7);
+        
+        match sys_id {
+            SysCallID::SysFork => {
+                self.fork()
+            },
+            SysCallID::SysExit => {
+                self.sys_exit()
+            },
+            SysCallID::SysWait => {
+                self.sys_wait()
+            },
+            SysCallID::SysRead => {
+                self.sys_read()
+            },
+
+            SysCallID::SysWrite => {
+                self.sys_write()
+            },
+
+            SysCallID::SysOpen => {
+                self.sys_open()
+            },
+
+            SysCallID::SysExec => {
+                self.sys_exec()
+            },
+
+            SysCallID::SysMknod => {
+                self.sys_mknod()
+            },
+
+            SysCallID::SysClose => {
+                self.sys_close()
+            },
+
+            SysCallID::SysDup => {
+                self.sys_dup()
+            }
+
+            SysCallID::SysUptime => {
+                Ok(0)
+            }   
+            _ => {
+                panic!("无效的系统调用id: {:?}", sys_id);
+            }
+        }
+    }
+
+    /// 获取第n个位置的参数
+    pub fn arg(&self, id: usize) -> usize {
+        let pdata = unsafe{ &mut* self.process.extern_data.get() };
+        let tf = unsafe{ &*pdata.trapframe };
+        match id {
+            0 => tf.a0,
+            1 => tf.a1,
+            2 => tf.a2,
+            3 => tf.a3,
+            4 => tf.a4,
+            5 => tf.a5,
+            _ => panic!("不能获取参数")
+        }
+    }
+
+    /// 通过地址获取str并将其填入到缓冲区中
+    pub fn copy_from_str(&self, addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
+        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pgt = pdata.pagetable.as_mut().unwrap();
+        if pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
+            println!("Fail to copy in str");
+            return Err(())
+        }
+        Ok(())
+    }
+
+    pub fn copy_form_addr(&self, addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
+        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+    
+        if addr > pdata.size || addr + size_of::<usize>() > pdata.size {
+            println!("addr size is out of process!");
+            return Err(());
+        }
+    
+        let pg = pdata.pagetable.as_mut().unwrap();
+    
+        if pg.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
+            println!("Fail copy data from pagetable!");
+            return Err(())
+        }
+        
+        
+        Ok(())
+    }
+}
 
 #[inline]
 pub fn kernel_env_call(
@@ -66,152 +208,4 @@ pub fn kernel_env_call(
         );
     }
     ret
-}
-
-
-/// Fetch the uint64 at addr from the current process.
-pub fn fetch_addr(addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
-    let my_proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
-    let extern_data = my_proc.extern_data.get_mut(); 
-
-    if addr > extern_data.size || addr + size_of::<usize>() > extern_data.size {
-        println!("addr size is out of process!");
-        return Err(());
-    }
-
-    let pg = extern_data.pagetable.as_mut().unwrap();
-
-    if pg.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
-        println!("Fail copy data from pagetable!");
-        return Err(())
-    }
-    
-    
-    Ok(())
-}
-
-/// Fetch the null-terminated string at addr from the current process. 
-/// Returns lenght of string, not including null
-pub fn fetch_str(addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
-    let my_proc = unsafe {
-        CPU_MANAGER.myproc().unwrap()
-    };
-
-    let extern_data = unsafe{ 
-        &mut *my_proc.extern_data.get()
-    };
-    let pgt = extern_data.pagetable.as_mut().unwrap();
-    if pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
-        println!("Fail to copy in str");
-        return Err(())
-    }
-    Ok(())
-
-}
-
-/// Fetch the syscall arguments
-pub fn arg_raw(id: usize) -> Result<usize, ()> {
-    let tf = unsafe{
-        &mut *CPU_MANAGER.myproc().unwrap().
-        extern_data.get_mut().trapframe
-    };
-
-    match id {
-        0 => { Ok(tf.a0) }
-
-        1 => { Ok(tf.a1) }
-
-        2 => { Ok(tf.a2) }
-
-        3 => { Ok(tf.a3) }
-
-        4 => { Ok(tf.a4) }
-
-        5 => { Ok(tf.a5) }
-
-        _ => {
-            panic!("argraw(): cannot get arguments out of limit!");
-        }
-    }
-}
-
-/// Fetch the nth arguments in current syscall
-pub fn arg_int(id: usize, arg: &mut usize) -> Result<(), ()> {
-    // get arguments by call argraw
-    *arg = arg_raw(id)?;
-    Ok(())
-}
-
-
-
-/// Retrieve an argument as a pointer. 
-/// Doesn't check for legality, since
-/// copy_in / copy_out will do that. 
-pub fn arg_addr(id: usize, ptr: &mut usize) -> Result<(), ()> {
-    *ptr = arg_raw(id)?;
-    Ok(())
-}
-
-/// Fetch the nth word-size system call argument as a file descriptor
-/// and return both the descriptor and the corresponding struct file. 
-pub fn arg_fd(id: usize, fd: &mut usize) -> Result<(), ()> {
-    // Get file descriptor
-    arg_int(id, fd)?;
-    // Check the fd is valid
-    let my_proc = unsafe {
-        CPU_MANAGER.myproc().unwrap()
-    };
-    let extern_data = unsafe{ &mut *my_proc.extern_data.get() };
-    let open_files = &mut extern_data.open_files;
-    if *fd >= NOFILE || *fd > open_files.len() {
-        println!("arg_fd: file decsriptor is invalid");
-        return Err(())
-    } else {
-        // Get file by file descriptor
-        // *file = *Arc::clone(&open_files[*fd].unwrap());
-        Ok(())
-    }
-}
-
-
-/// Fetch the nth word-size system call argument as a null-terminated string. 
-/// Copies into buf, at most max. 
-/// Returns string length if OK (including null)
-pub fn arg_str(id: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
-    let mut addr = 0;
-    arg_addr(id, &mut addr)?;
-    fetch_str(addr, buf, max_len)?;
-    Ok(())
-}
-
-#[no_mangle]
-pub unsafe fn syscall() {
-    let my_proc = CPU_MANAGER.myproc().unwrap();
-
-    let extern_data = my_proc.extern_data.get_mut();
-    let tf = &mut *extern_data.trapframe;
-    let id = tf.a7;
-
-    if id > 0 && id < SYSCALL_NUM {
-        // tf.a0 = SYSCALL[id - 1]().expect("Fail to syscall");
-        match SYSCALL[id - 1]()  {
-            Ok(res) => {
-                tf.a0 = res
-            }
-            Err(()) => {
-                tf.a0 = -1 as isize as usize
-            }
-        }
-    }else {
-        let guard = my_proc.data.acquire();
-        let pid = guard.pid;
-        drop(guard);
-        println!("{} {}: Unknown syscall {}", pid, from_utf8(&extern_data.name).unwrap(), id);
-        // use max usize mean syscall failure
-        tf.a0 = -1 as isize as usize
-    }
-}
-
-pub fn sys_uptime() -> SysResult {
-    Ok(0)
 }

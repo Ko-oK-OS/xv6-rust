@@ -68,7 +68,7 @@ pub struct ProgHeader {
 fn load_seg(
     page_table: &mut Box<PageTable>, 
     va: usize, 
-    mut inode_data: &mut SleepLockGuard<InodeData>,
+    inode_data: &mut SleepLockGuard<InodeData>,
     offset: usize, 
     size: usize
 ) -> Result<(), &'static str> {

@@ -66,6 +66,7 @@ impl CPUManager{
     ///    via switch back to the scheduler.
 
     pub unsafe fn scheduler(&mut self){
+        println!("[Debug] 调度");
         extern "C" {
             fn switch(old: *mut Context, new: *mut Context);
         }

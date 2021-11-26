@@ -402,6 +402,7 @@ impl Process{
     /// Give up the CPU for one scheduling round.
     /// yield is a keyword in rust
     pub fn yielding(&mut self) {
+        // println!("[Debug] 让出 CPU");
         let mut guard = self.data.acquire();
         let ctx = self.extern_data.get_mut().get_context_mut();
         guard.set_state(ProcState::RUNNABLE);
@@ -450,7 +451,7 @@ impl Process{
             &mut *self.extern_data.get()
         };
         let fd = extern_data.find_unallocated_fd()?;
-        // println!("[Debug] fd_alloc: 当前文件为: {:?}", *file);
+        println!("[Debug] fd_alloc: 当前文件为: {:?}", *file);
         extern_data.open_files[fd] = Some(Arc::new(*file));
         Ok(fd)       
     } 
