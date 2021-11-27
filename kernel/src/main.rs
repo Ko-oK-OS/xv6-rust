@@ -39,17 +39,17 @@ mod shutdown;
 
 mod logo;
 mod console;
-mod register;
+mod arch;
 mod define;
 mod lock;
 mod process;
-mod interrupt;
 mod memory;
 mod syscall;
 mod fs;
 mod driver;
 mod net;
 mod misc;
+mod trap;
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 
@@ -57,7 +57,7 @@ use crate::driver::plic::{plic_init, plic_init_hart};
 use crate::process::cpu::cpuid;
 use crate::logo::LOGO;
 use crate::console::{UART, console_init};
-use crate::interrupt::trap::trap_init_hart;
+use crate::trap::trap_init_hart;
 use crate::memory::{
     RawPage,
     kalloc::*,
@@ -66,7 +66,7 @@ use crate::memory::{
 use crate::process::*;
 use crate::fs::*;
 use crate::driver::virtio_disk::DISK;
-use crate::register::{
+use crate::arch::riscv::{
     mstatus, mepc, satp, medeleg, mideleg, sie, mhartid, tp, clint, 
     mscratch, mtvec, mie, sstatus
 };

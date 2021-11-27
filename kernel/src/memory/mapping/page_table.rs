@@ -2,8 +2,8 @@ use core::ptr::{write, read, write_bytes, copy_nonoverlapping};
 use core::ptr::drop_in_place;
 use core::ptr::copy;
 
-use crate::interrupt::trap::kerneltrap;
-use crate::register::{ sfence_vma, satp };
+use crate::trap::kernel_trap;
+use crate::arch::riscv::{ sfence_vma, satp };
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
 use crate::define::layout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{

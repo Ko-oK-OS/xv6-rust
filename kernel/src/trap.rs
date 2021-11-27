@@ -1,14 +1,16 @@
 use core::panic;
 
-use crate::{define::fs::DIRSIZ, driver::{plic::{plic_claim, plic_complete}, virtio_disk::DISK}, register::{
-    sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt},
-    satp, tp
-}, start, syscall::handle_syscall};
+use crate::syscall::handle_syscall;
+use crate::driver::plic::{plic_claim, plic_complete};
+use crate::driver::virtio_disk::DISK;
+use crate::define::fs::DIRSIZ;
+use crate::arch::riscv::{sepc, sstatus, scause, stval, stvec, sip, scause::{Scause, Exception, Trap, Interrupt}};
 use crate::lock::spinlock::Spinlock;
-use crate::process::{cpu};
+use crate::process::cpu;
 use crate::define::layout::*;
 use crate::process::*;
 use crate::console::*;
+use crate::shutdown::*;
 use super::*;
 
 pub static mut TICKS_LOCK:Spinlock<usize> = Spinlock::new(0, "time");
@@ -25,12 +27,12 @@ pub unsafe fn trap_init_hart() {
 /// handle an interrupt, exception, or system call from user space.
 /// called from trampoline.S
 #[no_mangle]
-pub unsafe fn usertrap() {
+pub unsafe fn user_trap() {
     let sepc = sepc::read();
     let scause = Scause::new(scause::read());
 
     if !sstatus::is_from_user() {
-        panic!("usertrap(): not from user mode");
+        panic!("user_trap(): not from user mode");
     }
     // send interrupts and exceptions to kerneltrap(),
     // since we're now in the kernel.
@@ -113,13 +115,13 @@ pub unsafe fn usertrap() {
         exit(-1);
     }
     
-    usertrap_ret();
+    user_trap_ret();
 }
 
 
 /// return to user space
 #[no_mangle]
-pub unsafe fn usertrap_ret() -> ! {
+pub unsafe fn user_trap_ret() -> ! {
     extern "C" {
         fn uservec();
         fn trampoline();
@@ -168,7 +170,7 @@ pub unsafe fn usertrap_ret() -> ! {
 /// interrupts and exceptions from kernel code go here via kernelvec,
 /// on whatever the current kernel stack is.
 #[no_mangle]
-pub unsafe fn kerneltrap(
+pub unsafe fn kernel_trap(
    arg0: usize, arg1: usize, arg2: usize, _: usize,
    _: usize, _: usize, _: usize, which: usize
 ) {
@@ -204,9 +206,31 @@ pub unsafe fn kerneltrap(
             panic!("[Panic] Store Page Fault!\n stval: 0x{:x}\n sepc: 0x{:x}\n", stval, sepc);
         },
 
-        Trap::Exception(Exception::KernelEnvCall) => kernel_syscall(arg0, arg1, arg2, which),
+        Trap::Exception(Exception::KernelEnvCall) => {
+            match which  {
+                SHUTDOWN => {
+                    println!("\x1b[1;31mShutdown!\x1b[0m");
+                    system_reset(
+                        RESET_TYPE_SHUTDOWN,
+                        RESET_REASON_NO_REASON
+                    );
+                },
+        
+                REBOOT => {
+                    println!("\x1b[1;31mReboot!\x1b[0m");
+                    system_reset(
+                        RESET_TYPE_COLD_REBOOT,
+                        RESET_REASON_NO_REASON
+                    );
+                },
+        
+                _ => {
+                    panic!("Unresolved Kernel Syscall!");
+                }
+            }
+        },
 
-        Trap::Exception(Exception::InstructionFault) => instr_handler(sepc),
+        Trap::Exception(Exception::InstructionFault) => panic!("Instruction Fault, sepc: 0x{:x}", sepc),
 
         Trap::Exception(Exception::InstructionPageFault) => {
             println!("sepc: 0x{:x}", sepc);

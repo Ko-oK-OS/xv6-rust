@@ -5,7 +5,7 @@ use alloc::vec;
 use array_macro::array;
 
 use crate::define::fs::{NFILE, ROOTDEV};
-use crate::interrupt::trap::usertrap_ret;
+use crate::trap::user_trap_ret;
 use crate::fs::{ LOG, ICACHE, init };
 use crate::syscall::SysResult;
 
@@ -93,7 +93,7 @@ unsafe fn fork_ret() -> ! {
         init(ROOTDEV);
     }
     println!("user trap return");
-    usertrap_ret();
+    user_trap_ret();
 }
 
 

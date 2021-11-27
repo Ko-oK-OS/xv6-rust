@@ -1,4 +1,4 @@
-use crate::{interrupt::trap::TICKS_LOCK, process::*};
+use crate::trap::TICKS_LOCK;
 use super::*;
 
 impl Syscall<'_> {

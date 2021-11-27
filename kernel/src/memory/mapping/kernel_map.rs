@@ -6,7 +6,7 @@ use crate::define::layout::{
     PLIC_BASE, KERNEL_BASE, PHYSTOP, TRAMPOLINE,
     E1000_REGS, ECAM, VIRT_TEST, CLINT, TRAPFRAME
 };
-use crate::register::{satp, sfence_vma};
+use crate::arch::riscv::{ satp, sfence_vma };
 use crate::process::*;
 
 use core::mem::{ size_of, align_of };

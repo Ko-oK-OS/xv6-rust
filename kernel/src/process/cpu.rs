@@ -1,6 +1,6 @@
 use array_macro::array;
 use crate::fs::VFile;
-use crate::register::{ tp, sstatus };
+use crate::arch::riscv::{ tp, sstatus };
 use crate::define::param::NCPU;
 use crate::lock::spinlock::{SpinlockGuard, Spinlock};
 use core::cell::RefCell;

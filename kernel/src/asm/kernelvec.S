@@ -5,7 +5,7 @@
         # push all registers, call kerneltrap(), restore, return.
         #
 .section .text
-.globl kerneltrap
+.globl kernel_trap
 .globl kernelvec
 .align 4
 kernelvec:
@@ -46,7 +46,7 @@ kernelvec:
         sd t6, 240(sp)
 
 	// call the C trap handler in trap.rs
-        call kerneltrap
+        call kernel_trap
 
         // restore registers.
         ld ra, 0(sp)

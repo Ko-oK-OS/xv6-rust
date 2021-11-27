@@ -11,7 +11,7 @@ use crate::define::{
 };
 use crate::fs::VFile;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
-use crate::register::sstatus::intr_on;
+use crate::arch::riscv::register::sstatus::intr_on;
 use crate::memory::*;
 
 pub struct ProcManager {

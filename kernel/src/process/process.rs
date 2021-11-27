@@ -16,7 +16,7 @@ use crate::memory::{
     RawPage
 };
 use crate::define::layout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
-use crate::register::satp;
+use crate::arch::riscv::register::satp;
 use super::*;
 use crate::fs::{FileType, Inode, VFile};
 
@@ -196,7 +196,7 @@ impl ProcData {
     /// Initialize first user process
     pub fn user_init(&mut self) {
         extern "C" {
-            fn usertrap();
+            fn user_trap();
         }
         let tf = unsafe{ &mut *self.trapframe };
         // kernel page table
@@ -204,7 +204,7 @@ impl ProcData {
         // process's kernel stack 
         tf.kernel_sp = self.kstack + PGSIZE * 4;
         // kernel user trap address
-        tf.kernel_trap = usertrap as usize;
+        tf.kernel_trap = user_trap as usize;
         // current process's cpu id.
         tf.kernel_hartid = unsafe {
             cpu::cpuid()
