@@ -54,8 +54,8 @@ pub unsafe fn lazy_allocate(stval: usize) {
     // page alignment
     va.pg_round_down();
 
-    let extern_data = CPU_MANAGER.myproc().unwrap().extern_data.get_mut();
-    let page_table = extern_data.pagetable.as_mut().unwrap();
+    let pdata = CPU_MANAGER.myproc().unwrap().data.get_mut();
+    let page_table = pdata.pagetable.as_mut().unwrap();
 
     let mm = RawPage::new_zeroed() as *mut u8;
     write_bytes(mm, 0, PGSIZE);

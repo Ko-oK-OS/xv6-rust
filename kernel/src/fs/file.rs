@@ -246,8 +246,8 @@ impl VFile {
                 inode_guard.stat(&mut stat);
                 drop(inode_guard);
 
-                let extern_data = p.extern_data.get_mut();
-                let page_table = extern_data.pagetable.as_mut().unwrap();
+                let pdata = p.data.get_mut();
+                let page_table = pdata.pagetable.as_mut().unwrap();
                 page_table.copy_out(addr, (&stat) as *const Stat as *const u8, size_of::<Stat>())?;
                 Ok(())
             },  

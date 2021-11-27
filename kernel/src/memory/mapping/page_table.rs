@@ -382,7 +382,7 @@ impl PageTable{
     /// frees any allocated pages on failure.
     pub unsafe fn uvm_copy(
         &mut self, 
-        new: &mut Self, 
+        child_pgt: &mut Self, 
         size: usize
     ) -> Result<(), &'static str> {
         let mut va = VirtualAddress::new(0);
@@ -397,17 +397,17 @@ impl PageTable{
                     let flags = pte.as_flags();
                     let flags = PteFlags::new(flags);
 
-                    let new_page_table = &mut *(RawPage::new_zeroed() as *mut PageTable);
-                    new_page_table.write(& *page_table);
+                    let allocated_pgt = &mut *(RawPage::new_zeroed() as *mut PageTable);
+                    allocated_pgt.write(& *page_table);
 
-                    if !new.map(
+                    if !child_pgt.map(
                         va,
-                        PhysicalAddress::new(new_page_table.as_addr()),
+                        PhysicalAddress::new(allocated_pgt.as_addr()),
                         PGSIZE,
                         flags
                     ) {
-                        drop(new_page_table);
-                        new.uvm_unmap(
+                        drop(allocated_pgt);
+                        child_pgt.uvm_unmap(
                             VirtualAddress::new(0), 
                             va.as_usize() / PGSIZE, 
                             true

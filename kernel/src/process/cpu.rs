@@ -47,7 +47,7 @@ impl CPUManager{
 
     pub fn yield_proc(&mut self) {
         if let Some(my_proc) = unsafe{ self.myproc() } {
-            let guard = my_proc.data.acquire();
+            let guard = my_proc.meta.acquire();
             if guard.state == ProcState::RUNNING {
                 drop(guard);
                 my_proc.yielding();
@@ -64,9 +64,7 @@ impl CPUManager{
     ///  - switch to start running that process.
     ///  - eventually that process transfers control
     ///    via switch back to the scheduler.
-
     pub unsafe fn scheduler(&mut self){
-        println!("[Debug] 调度");
         extern "C" {
             fn switch(old: *mut Context, new: *mut Context);
         }
@@ -74,18 +72,19 @@ impl CPUManager{
         let c = self.mycpu();
         loop {
             // Avoid deadlock by ensuring that devices can interrupt.
-            // sstatus::intr_on();
+            sstatus::intr_on();
             match PROC_MANAGER.seek_runnable() {
-                Some(p) => {
+                Some(proc) => {
                     // Switch to chosen process. It is the process's job
                     // to release it's lock and then reacquire it 
                     // before jumping back to us.
-                    c.set_proc(NonNull::new(p as *mut Process));
-                    let mut guard = p.data.acquire();
-                    guard.state = ProcState::RUNNING;
+                    c.set_proc(NonNull::new(proc as *mut Process));
+                    let mut pmeta = proc.meta.acquire();
+                    pmeta.state = ProcState::RUNNING;
+                    // println!("[Debug] 进程id: {}", pmeta.pid);
                     switch(
                         c.get_context_mut(),
-                        &mut p.extern_data.get_mut().context as *mut Context
+                        &mut proc.data.get_mut().context as *mut Context
                     );
                     if c.get_context_mut().is_null() {
                         panic!("context switch back with no process reference.");
@@ -93,7 +92,7 @@ impl CPUManager{
                     // Process is done running for now. 
                     // It should have changed it's process state before coming back. 
                     c.set_proc(None);
-                    drop(guard);
+                    drop(pmeta);
                 }
 
                 None => {}
@@ -110,8 +109,8 @@ impl CPUManager{
         let proc = unsafe {
             self.myproc().unwrap()
         };
-        let extern_data = unsafe{ &mut *proc.extern_data.get() };
-        extern_data.open_files[fd].take();
+        let pdata = unsafe{ &mut *proc.data.get() };
+        pdata.open_files[fd].take();
     }
 }
 
@@ -144,10 +143,10 @@ impl CPU{
     pub unsafe fn sched<'a>
     (
         &mut self, 
-        guard: SpinlockGuard<'a, ProcData>, 
+        guard: SpinlockGuard<'a, ProcMeta>, 
         ctx: *mut Context
     ) 
-    -> SpinlockGuard<'a, ProcData>
+    -> SpinlockGuard<'a, ProcMeta>
     {
         extern "C" {
             fn switch(old: *mut Context, new: *mut Context);
@@ -188,7 +187,7 @@ impl CPU{
     pub fn try_yield_proc(&mut self) {
         if !self.process.is_none() {
             let guard = unsafe {
-                (&mut *self.process.unwrap().as_ptr()).data.acquire()
+                (&mut *self.process.unwrap().as_ptr()).meta.acquire()
             };
             if guard.state == ProcState::RUNNING {
                 drop(guard);

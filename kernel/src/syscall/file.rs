@@ -24,7 +24,7 @@ impl Syscall<'_> {
     pub fn sys_dup(&self) -> SysResult {
         let mut fd = self.arg(0);
         // let proc = self.process;
-        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pdata = unsafe{ &mut *self.process.data.get() };
         let file = pdata.open_files[fd].as_ref().unwrap();
         if let Ok(newfd) = unsafe{ CPU_MANAGER.alloc_fd(file) } {
             fd = newfd;
@@ -40,7 +40,7 @@ impl Syscall<'_> {
         let size: usize;
         // Get file
         let fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pdata = unsafe{ &mut *self.process.data.get() };
         let file = pdata.open_files[fd].as_ref().unwrap();
         // Get user read address
         let ptr = self.arg(1);
@@ -64,7 +64,7 @@ impl Syscall<'_> {
     pub fn sys_write(&self) -> SysResult {
         let size;
         let fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pdata = unsafe{ &mut *self.process.data.get() };
         let file = pdata.open_files[fd].as_ref().unwrap();
         let ptr = self.arg(1);
         let len = self.arg(2);
@@ -247,8 +247,8 @@ impl Syscall<'_> {
 
     pub fn sys_mknod(&self) -> SysResult {
         let mut path: [u8; MAXPATH] = [0;MAXPATH];
-        let mut major = self.arg(1);
-        let mut minor = self.arg(2);
+        let major = self.arg(1);
+        let minor = self.arg(2);
         LOG.begin_op();
         // Get file path
         let addr = self.arg(0);
@@ -279,7 +279,7 @@ impl Syscall<'_> {
     /// TODO: fix
     pub fn sys_close(&self) -> SysResult {
         let fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pdata = unsafe{ &mut *self.process.data.get() };
         pdata.fd_close(fd);
         // file.close();
         Ok(0)

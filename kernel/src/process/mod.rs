@@ -30,70 +30,6 @@ static INITCODE: [u8; 51] = [
     0x00, 0x00, 0x00,
 ];
 
-/// Create a new process, copying the parent.
-/// Sets up child kernel stack to return as if from fork() system call.
-pub unsafe fn fork() -> SysResult {
-    let my_proc = CPU_MANAGER.myproc().expect("Fail to get my cpu");
-
-    // ALLOCATE process
-    if let Some(other_proc) = PROC_MANAGER.alloc_proc() {
-        let guard = other_proc.data.acquire();
-        let extern_data = my_proc.extern_data.get_mut();
-        let other_extern_data = other_proc.extern_data.get_mut();
-
-        // Copy user memory from parent to child
-
-        match extern_data.pagetable.as_mut().unwrap().uvm_copy(
-            other_extern_data.pagetable.as_mut().unwrap(),
-            extern_data.size
-        ) {
-            Ok(_) => {
-                println!("[Debug] Success to copy data from user");
-            }
-
-            Err(err) => {
-                panic!("fork(): -> uvmcopy(): fail to copy data from user\nerr: {}", err);
-            }
-        }
-
-        // Copy saved user register;
-        copy_nonoverlapping(
-            extern_data.trapframe, 
-            other_extern_data.trapframe, 
-            1
-        );
-
-        // Cause fork to return 0 in the child
-        let tf = &mut *other_extern_data.trapframe;
-        tf.a0 = 0;
-
-        // increment reference counts on open file descriptions
-        other_extern_data.open_files.clone_from(&extern_data.open_files);
-        other_extern_data.cwd.clone_from(&extern_data.cwd);
-
-        other_extern_data.set_name(&extern_data.name);
-
-        let pid = guard.pid;
-        drop(guard);
-
-        let wait_guard = PROC_MANAGER.wait_lock.acquire();
-        other_extern_data.parent = Some(my_proc as *mut Process);
-        drop(wait_guard);
-
-        let mut guard = other_proc.data.acquire();
-        guard.set_state(ProcState::RUNNABLE);
-        drop(guard);
-
-        println!("[Debug] fork: pid: {}", pid);
-        return Ok(pid)
-
-    }
-
-    // println!("[Debug] 进程分配失败");
-    Err(())
-}
-
-
 /// Exit the current process. Does not return. 
 /// An exited process remains in the zombie state
 /// until its parent calls wait()
@@ -103,28 +39,28 @@ pub unsafe fn exit(status: i32) {
     // TODO: initproc
 
     // Get extern data in current process. 
-    let extern_data = my_proc.extern_data.get_mut();
+    let pdata = my_proc.data.get_mut();
 
     // Close all open files
-    for f in extern_data.open_files.iter_mut() {
+    for f in pdata.open_files.iter_mut() {
         f.take();
     }
-    extern_data.open_files = array![_ => None; NFILE];
+    pdata.open_files = array![_ => None; NFILE];
 
     LOG.begin_op();
     // extern_data.cwd.as_ref().unwrap().put();
     // ICACHE.put(extern_data.cwd.as_ref());
-    drop(extern_data.cwd.as_mut());
+    drop(pdata.cwd.as_mut());
     LOG.end_op();
-    extern_data.cwd = None;
+    pdata.cwd = None;
 
     let wait_guard = PROC_MANAGER.wait_lock.acquire();
     // TODO: Give any children to init
     
     // Parent might be sleeping in wait(). 
-    PROC_MANAGER.wake_up(extern_data.parent.unwrap() as usize);
+    PROC_MANAGER.wake_up(pdata.parent.unwrap() as usize);
 
-    let mut guard = my_proc.data.acquire();
+    let mut guard = my_proc.meta.acquire();
 
     guard.set_state(ProcState::ZOMBIE);
     guard.xstate = status as usize;
@@ -149,7 +85,7 @@ unsafe fn fork_ret() -> ! {
     static mut FIRST: bool = true;
     
     // Still holding p->lock from scheduler
-    CPU_MANAGER.myproc().unwrap().data.release();
+    CPU_MANAGER.myproc().unwrap().meta.release();
     
     if FIRST {
         // File system initialization

@@ -19,7 +19,7 @@ pub struct Bcache {
 }
 
 impl Bcache {
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             ctrl: Spinlock::new(BufLru::new(), "BufLru"),
             bufs: array![_ => BufInner::new(); NBUF],

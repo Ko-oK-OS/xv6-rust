@@ -241,7 +241,7 @@ pub unsafe fn exec(
         LOG.end_op();
 
         p = CPU_MANAGER.myproc().unwrap();
-        let old_size = (&*p.extern_data.get()).size;
+        let old_size = (&*p.data.get()).size;
 
         // Allocate two pages at the next page boundary
         // Use the second as the user stack. 
@@ -322,19 +322,19 @@ pub unsafe fn exec(
     // arguments to user main(argc, argv)
     // argc is returned via the system call return
     // value, which goes in a0. 
-    let extern_data = p.extern_data.get_mut();
-    let trapframe = &mut *extern_data.trapframe;
+    let pdata = p.data.get_mut();
+    let trapframe = &mut *pdata.trapframe;
     trapframe.a1 = sp;
 
     // Save program name for debugging
     
 
     // Commit to user image.
-    let old_pgt = extern_data.pagetable.as_mut().take().unwrap();
+    let old_pgt = pdata.pagetable.as_mut().take().unwrap();
     old_pgt.proc_free_pagetable(old_size);
 
-    extern_data.pagetable = Some(page_table);
-    extern_data.size = size;
+    pdata.pagetable = Some(page_table);
+    pdata.size = size;
     // initial program counter = main
     trapframe.epc = elf.entry;
     // initial stack pointer

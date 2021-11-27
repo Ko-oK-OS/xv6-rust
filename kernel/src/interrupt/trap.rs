@@ -41,9 +41,9 @@ pub unsafe fn usertrap() {
     stvec::write(kernelvec as usize);
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
-    let extern_data = my_proc.extern_data.get_mut();
+    let pdata = my_proc.data.get_mut();
 
-    let tf = &mut *extern_data.trapframe;
+    let tf = &mut *pdata.trapframe;
     tf.epc = sepc;
 
     match scause.cause() {
@@ -87,24 +87,19 @@ pub unsafe fn usertrap() {
 
         // Clock Interrupt
         Trap::Interrupt(Interrupt::SupervisorSoft) => {
-
             // software interrupt from a machine-mode timer interrupt,
             // forwarded by timervec in kernelvec.S.
-
             if cpu::cpuid() == 0{
                 clock_intr();
             }
-
             // acknowledge the software interrupt by clearing
             // the SSIP bit in sip.
             sip::clear_ssip();
-            
             if my_proc.killed() {
                 exit(-1);
             }
             // yield up the CPU if this is a timer interrupt
             my_proc.yielding();
-
         },
 
         _ => {
@@ -145,8 +140,8 @@ pub unsafe fn usertrap_ret() -> ! {
 
     // set up trapframe values that uservec will need when
     // the process next re-enters the kernel.
-    let extern_data = my_proc.extern_data.get_mut();
-    extern_data.user_init();
+    let pdata = my_proc.data.get_mut();
+    pdata.user_init();
 
     // set up the registers that trampoline.S's sret will use
     // to get to user space.
@@ -157,10 +152,10 @@ pub unsafe fn usertrap_ret() -> ! {
     sstatus::write(sstatus);
 
     // set S Exception Program Counter to the saved user pc. 
-    sepc::write((*extern_data.trapframe).epc);
+    sepc::write((*pdata.trapframe).epc);
     
     // tell trampoline.S the user page table to switch to
-    let satp = extern_data.pagetable.as_ref().unwrap().as_satp();
+    let satp = pdata.pagetable.as_ref().unwrap().as_satp();
 
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,

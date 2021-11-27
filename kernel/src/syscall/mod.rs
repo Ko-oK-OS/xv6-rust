@@ -1,8 +1,6 @@
 mod proc;
-mod net;
 mod file;
 pub use proc::*;
-pub use net::*;
 pub use file::*;
 
 use crate::define::fs::NOFILE;
@@ -25,8 +23,17 @@ pub const REBOOT: usize = 9;
 #[no_mangle]
 pub unsafe fn handle_syscall() {
     let proc = CPU_MANAGER.myproc().unwrap();
-    let mut syscall = Syscall{ process: proc};
-    syscall.syscall().unwrap();
+    let mut syscall = Syscall{ process: proc };
+    if let Ok(res) = syscall.syscall() {
+        let pdata = &mut *proc.data.get();
+        let tf = &mut *pdata.trapframe;
+        tf.a0 = res;
+    }else{
+        let pdata = &mut *proc.data.get();
+        let tf = &mut *pdata.trapframe;
+        tf.a0 = -1 as isize as usize
+    }
+    
 }
 
 
@@ -92,7 +99,7 @@ pub struct Syscall<'a>{
 
 impl Syscall<'_> {
     pub fn syscall(&mut self) -> SysResult {
-        let pdata = self.process.extern_data.get_mut();
+        let pdata = self.process.data.get_mut();
         // 获取进程的trapframe
         let tf = unsafe{ &mut *pdata.trapframe };
         // 获取系统调用 id 号
@@ -147,7 +154,7 @@ impl Syscall<'_> {
 
     /// 获取第n个位置的参数
     pub fn arg(&self, id: usize) -> usize {
-        let pdata = unsafe{ &mut* self.process.extern_data.get() };
+        let pdata = unsafe{ &mut* self.process.data.get() };
         let tf = unsafe{ &*pdata.trapframe };
         match id {
             0 => tf.a0,
@@ -162,7 +169,7 @@ impl Syscall<'_> {
 
     /// 通过地址获取str并将其填入到缓冲区中
     pub fn copy_from_str(&self, addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
-        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pdata = unsafe{ &mut *self.process.data.get() };
         let pgt = pdata.pagetable.as_mut().unwrap();
         if pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
             println!("Fail to copy in str");
@@ -172,7 +179,7 @@ impl Syscall<'_> {
     }
 
     pub fn copy_form_addr(&self, addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
-        let pdata = unsafe{ &mut *self.process.extern_data.get() };
+        let pdata = unsafe{ &mut *self.process.data.get() };
     
         if addr > pdata.size || addr + size_of::<usize>() > pdata.size {
             println!("addr size is out of process!");

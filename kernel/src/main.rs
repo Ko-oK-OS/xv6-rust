@@ -63,7 +63,6 @@ use crate::memory::{
     kalloc::*,
     mapping::kernel_map::{ kvm_init, kvm_init_hart }
 };
-use crate::driver::pci::pci_init;
 use crate::process::*;
 use crate::fs::*;
 use crate::driver::virtio_disk::DISK;
@@ -161,7 +160,6 @@ pub unsafe extern "C" fn rust_main() {
         plic_init_hart(); // ask PLIC for device interrupts
         BCACHE.binit(); // buffer cache
         DISK.acquire().init(); // emulated hard disk
-        pci_init(); // init pci
         PROC_MANAGER.user_init(); // first user process
         STARTED.store(true, Ordering::SeqCst);
         sstatus::intr_on();
@@ -172,7 +170,6 @@ pub unsafe extern "C" fn rust_main() {
         trap_init_hart(); // install kernel trap vector
         plic_init(); // set up interrupt controller
         plic_init_hart(); // ask PLIC for device interrupts
-        loop{}
     }
     CPU_MANAGER.scheduler();
     

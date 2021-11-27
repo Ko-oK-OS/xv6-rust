@@ -2,9 +2,13 @@ use crate::{interrupt::trap::TICKS_LOCK, process::*};
 use super::*;
 
 impl Syscall<'_> {
-    pub fn fork(&self) -> SysResult {
-        let ret = unsafe{ fork()? };
-        Ok(ret as usize)
+    pub fn fork(&mut self) -> SysResult {
+        let child_proc = self.process.fork().expect("Fail to fork process");
+        let pmeta = child_proc.meta.acquire();
+        let pid = pmeta.pid;
+        drop(pmeta);
+        println!("[Debug] 子进程id: {}", pid);
+        Ok(pid)
     }
 
     pub fn sys_exit(&self) -> SysResult {
@@ -30,7 +34,7 @@ impl Syscall<'_> {
     }
 
     pub fn sys_getpid(&self) -> SysResult {
-        let pmeta = self.process.data.acquire();
+        let pmeta = self.process.meta.acquire();
         let pid = pmeta.pid;
         drop(pmeta);
         Ok(pid)
@@ -39,7 +43,7 @@ impl Syscall<'_> {
     
     pub fn sys_sbrk(&mut self) -> SysResult {
         let size = self.arg(0);
-        let pdata = unsafe{ &*self.process.extern_data.get() };
+        let pdata = unsafe{ &*self.process.data.get() };
         let addr = pdata.size;
         drop(pdata);
         match self.process.grow_proc(size as isize) {

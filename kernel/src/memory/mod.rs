@@ -50,8 +50,8 @@ pub fn copy_to_kernel(
         let my_proc =  CPU_MANAGER.myproc().unwrap();
         
         if is_user {
-            let extern_data = &mut *(my_proc.extern_data.get());
-            let page_table = extern_data.pagetable.as_mut().unwrap();
+            let pdata = &mut *(my_proc.data.get());
+            let page_table = pdata.pagetable.as_mut().unwrap();
             page_table.copy_in(
                 dst,
                 src,
@@ -82,8 +82,8 @@ pub fn copy_from_kernel(
         let p = CPU_MANAGER.myproc().unwrap();
         if is_user {
             // println!("[Debug] 从内核拷贝到用户");
-            let extern_data = p.extern_data.get_mut();
-            let page_table = extern_data.pagetable.as_mut().unwrap();
+            let pdata = p.data.get_mut();
+            let page_table = pdata.pagetable.as_mut().unwrap();
             page_table
                 .copy_out(
                     dst,
