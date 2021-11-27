@@ -9,7 +9,7 @@ use crate::lock::spinlock::Spinlock;
 use crate::process::cpu;
 use crate::arch::riscv::qemu::layout::*;
 use crate::process::*;
-use crate::console::*;
+use crate::driver::console::*;
 use crate::shutdown::*;
 use super::*;
 

@@ -9,7 +9,7 @@ use crate::{arch::riscv::qemu::layout::UART0, println};
 use crate::lock::spinlock::*;
 
 use super::console::console_intr;
-use super::PANICKED;
+use super::console::PANICKED;
 
 /// receive holding register (for input bytes)
 const RHR: usize = 0;

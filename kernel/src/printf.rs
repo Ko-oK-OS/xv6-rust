@@ -2,19 +2,19 @@ use core::fmt::{self, Write};
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::panic::PanicInfo;
 
-use crate::console;
+use crate::driver::uart::UART;
 use crate::lock::spinlock::Spinlock;
 use crate::shutdown::*;
 
 pub fn _print(args: fmt::Arguments) {
     use fmt::Write;
-    let mut uart = console::UART.acquire();
+    let mut uart = UART.acquire();
     uart.write_fmt(args).unwrap();
     drop(uart);
 }
 
 pub fn console_ptr(c: u8) {
-    let mut uart = console::UART.acquire();
+    let mut uart = UART.acquire();
     uart.put(c);
     drop(uart);
 }

@@ -38,7 +38,6 @@ mod printf;
 mod shutdown;
 
 mod logo;
-mod console;
 mod arch;
 mod lock;
 mod process;
@@ -55,7 +54,8 @@ use core::sync::atomic::{ AtomicBool, Ordering };
 use crate::driver::plic::{plic_init, plic_init_hart};
 use crate::process::cpu::cpuid;
 use crate::logo::LOGO;
-use crate::console::{UART, console_init};
+use crate::driver::console::console_init;
+use crate::driver::uart::UART;
 use crate::trap::trap_init_hart;
 use crate::memory::{
     RawPage,

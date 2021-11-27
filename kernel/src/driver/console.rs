@@ -1,7 +1,7 @@
 use core::num::Wrapping;
 
 use crate::{lock::spinlock::Spinlock, memory::{copy_to_kernel, copy_from_kernel}, process::{CPU_MANAGER, PROC_MANAGER}};
-use super::{UART, putc_sync, uart_get, uart_put};
+use super::uart::{UART, putc_sync, uart_get, uart_put};
 
 static CONSOLE: Spinlock<Console> = Spinlock::new(Console::new(), "console");
 const INPUT_BUF: usize = 128;
@@ -180,4 +180,16 @@ pub(super) fn console_intr(c: u8) {
             }
         }
     }
+}
+
+use core::sync::atomic::AtomicBool;
+pub(crate) static PANICKED: AtomicBool = AtomicBool::new(false);
+
+/// must be called only once in rmain.rs:rust_main
+pub unsafe fn console_init() {
+    use crate::fs::DEVICE_LIST;
+    use crate::arch::riscv::qemu::devices::CONSOLE;
+    super::uart::uart_init();
+    // DEVICE_LIST.table[CONSOLE].read = console::console_read as *const u8;
+    DEVICE_LIST.table[CONSOLE].write = console_write as *const u8;
 }
