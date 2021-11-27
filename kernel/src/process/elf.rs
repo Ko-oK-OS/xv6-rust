@@ -1,7 +1,7 @@
 use crate::lock::sleeplock::SleepLockGuard;
 use crate::memory::{Addr, PageTable, VirtualAddress, page_round_up};
-use crate::define::layout::PGSIZE;
-use crate::define::param::MAXARG;
+use crate::arch::riscv::qemu::layout::PGSIZE;
+use crate::arch::riscv::qemu::param::MAXARG;
 use crate::fs::{ICACHE, Inode};
 use crate::fs::LOG;
 use crate::fs::InodeData;

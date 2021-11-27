@@ -29,7 +29,7 @@ use log::Log;
 use bio::BufData;
 
 
-use crate::define::fs::DIRSIZ;
+use crate::arch::riscv::qemu::fs::DIRSIZ;
 use crate::lock::sleeplock::SleepLockGuard;
 
 /// Init fs.

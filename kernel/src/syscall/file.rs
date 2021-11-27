@@ -6,12 +6,12 @@ use core::{ptr::NonNull, slice::from_raw_parts_mut};
 use core::slice::from_raw_parts;
 use core::cell::RefCell;
 
-use crate::define::fs::DIRSIZ;
-use crate::define::layout::PGSIZE;
-use crate::define::param::MAXARG;
+use crate::arch::riscv::qemu::fs::DIRSIZ;
+use crate::arch::riscv::qemu::layout::PGSIZE;
+use crate::arch::riscv::qemu::param::MAXARG;
 use crate::memory::{ RawPage, PageAllocator };
 use crate::misc::str_cmp;
-use crate::{define::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
+use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use crate::fs::Pipe;
 use super::*;
 

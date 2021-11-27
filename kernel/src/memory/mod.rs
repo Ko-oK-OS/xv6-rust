@@ -8,7 +8,7 @@ pub use kalloc::*;
 pub use mapping::*;
 pub use address::*;
 
-use crate::{define::layout::PGSIZE, process::{ CPU_MANAGER }};
+use crate::{arch::riscv::qemu::layout::PGSIZE, process::{ CPU_MANAGER }};
 use crate::misc::mem_copy;
 
 use alloc::{boxed::Box, vec};

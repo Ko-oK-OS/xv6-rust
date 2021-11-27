@@ -4,7 +4,7 @@ use alloc::sync::Arc;
 use alloc::vec;
 use array_macro::array;
 
-use crate::define::fs::{NFILE, ROOTDEV};
+use crate::arch::riscv::qemu::fs::{NFILE, ROOTDEV};
 use crate::trap::user_trap_ret;
 use crate::fs::{ LOG, ICACHE, init };
 use crate::syscall::SysResult;

@@ -5,7 +5,7 @@ use core::ptr::copy;
 use crate::trap::kernel_trap;
 use crate::arch::riscv::{ sfence_vma, satp };
 use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
-use crate::define::layout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
+use crate::arch::riscv::qemu::layout::{ PGSIZE, MAXVA, PGSHIFT, TRAMPOLINE, TRAPFRAME };
 use crate::memory::{
     address::{ VirtualAddress, PhysicalAddress, Addr }, 
     kalloc::KERNEL_HEAP,

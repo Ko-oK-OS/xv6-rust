@@ -40,7 +40,6 @@ mod shutdown;
 mod logo;
 mod console;
 mod arch;
-mod define;
 mod lock;
 mod process;
 mod memory;
@@ -70,7 +69,7 @@ use crate::arch::riscv::{
     mstatus, mepc, satp, medeleg, mideleg, sie, mhartid, tp, clint, 
     mscratch, mtvec, mie, sstatus
 };
-use crate::define::param::NCPU;
+use crate::arch::riscv::qemu::param::NCPU;
 
 static mut TIMER_SCRATCH:[[u64; 5]; NCPU] = [[0u64; 5]; NCPU];
 static STARTED:AtomicBool = AtomicBool::new(false);

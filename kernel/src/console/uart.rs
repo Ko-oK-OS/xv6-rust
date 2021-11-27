@@ -5,7 +5,7 @@ use core::fmt::{self, Write, Error};
 use core::sync::atomic::Ordering;
 
 use crate::process::{CPU_MANAGER, PROC_MANAGER, pop_off, push_off};
-use crate::{define::layout::UART0, println};
+use crate::{arch::riscv::qemu::layout::UART0, println};
 use crate::lock::spinlock::*;
 
 use super::console::console_intr;

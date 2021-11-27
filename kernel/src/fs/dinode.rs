@@ -1,6 +1,6 @@
 use core::ptr;
 
-use crate::define::fs::{ NDIRECT, DIRSIZ };
+use crate::arch::riscv::qemu::fs::{ NDIRECT, DIRSIZ };
 
 #[repr(u16)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

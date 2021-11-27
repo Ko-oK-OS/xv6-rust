@@ -15,9 +15,9 @@ use core::sync::atomic::{fence, Ordering};
 use core::ptr;
 use core::convert::TryInto;
 
-use crate::define::layout::{PGSHIFT, PGSIZE, VIRTIO0};
-use crate::define::fs::BSIZE;
-use crate::define::virtio::*;
+use crate::arch::riscv::qemu::layout::{PGSHIFT, PGSIZE, VIRTIO0};
+use crate::arch::riscv::qemu::fs::BSIZE;
+use crate::arch::riscv::qemu::virtio::*;
 use crate::fs::Buf;
 use crate::lock::spinlock::Spinlock;
 use crate::process::{PROC_MANAGER, CPU_MANAGER};

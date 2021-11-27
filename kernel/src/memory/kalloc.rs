@@ -1,6 +1,6 @@
 use crate::lock::spinlock::Spinlock;
-use crate::define::param::{ LEAF_SIZE, MAX_ALIGNMENT };
-use crate::define::layout::{PGSIZE, PHYSTOP};
+use crate::arch::riscv::qemu::param::{ LEAF_SIZE, MAX_ALIGNMENT };
+use crate::arch::riscv::qemu::layout::{PGSIZE, PHYSTOP};
 use super::address::{PhysicalAddress, Addr};
 use core::alloc::{ GlobalAlloc, Layout };
 

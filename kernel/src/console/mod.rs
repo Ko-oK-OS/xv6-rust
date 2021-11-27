@@ -8,7 +8,7 @@ pub use uart::{ UART, uart_intr };
 
 
 use crate::fs::DEVICE_LIST;
-use crate::define::devices::CONSOLE;
+use crate::arch::riscv::qemu::devices::CONSOLE;
 
 pub(crate) static PANICKED: AtomicBool = AtomicBool::new(false);
 

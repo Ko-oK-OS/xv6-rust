@@ -1,6 +1,6 @@
 use core::cell::UnsafeCell;
 use crate::lock::spinlock::Spinlock;
-use crate::define::fs::NFILE;
+use crate::arch::riscv::qemu::fs::NFILE;
 use super::VFile;
 
 use array_macro::array;

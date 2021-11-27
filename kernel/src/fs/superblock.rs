@@ -4,7 +4,7 @@ use core::ptr;
 use core::mem::{self, MaybeUninit};
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::define::fs::{ FSMAGIC, IPB, BPB };
+use crate::arch::riscv::qemu::fs::{ FSMAGIC, IPB, BPB };
 use super::{ BCACHE, BufData };
 
 pub static mut SUPER_BLOCK: SuperBlock = SuperBlock::uninit();

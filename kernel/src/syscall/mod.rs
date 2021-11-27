@@ -3,7 +3,7 @@ mod file;
 pub use proc::*;
 pub use file::*;
 
-use crate::define::fs::NOFILE;
+use crate::arch::riscv::qemu::fs::NOFILE;
 use crate::{println, process::*};
 use crate::fs::VFile;
 

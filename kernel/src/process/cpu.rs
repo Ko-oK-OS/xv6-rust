@@ -1,7 +1,7 @@
 use array_macro::array;
 use crate::fs::VFile;
 use crate::arch::riscv::{ tp, sstatus };
-use crate::define::param::NCPU;
+use crate::arch::riscv::qemu::param::NCPU;
 use crate::lock::spinlock::{SpinlockGuard, Spinlock};
 use core::cell::RefCell;
 use core::ops::IndexMut;

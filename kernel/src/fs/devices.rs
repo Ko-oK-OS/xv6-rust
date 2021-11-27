@@ -1,4 +1,4 @@
-use crate::define::param::NDEV;
+use crate::arch::riscv::qemu::param::NDEV;
 
 use core::mem::transmute;
 

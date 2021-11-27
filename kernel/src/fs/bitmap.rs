@@ -6,7 +6,7 @@ use super::BCACHE;
 use super::{ InodeType, DiskInode };
 
 
-use crate::define::fs::{ BPB, BSIZE, IPB };
+use crate::arch::riscv::qemu::fs::{ BPB, BSIZE, IPB };
 
 use core::ptr;
 

@@ -3,7 +3,7 @@
 use core::{ops::{Deref, DerefMut}, panic, ptr};
 use core::mem;
 
-use crate::define::fs::{MAXOPBLOCKS, LOGSIZE, BSIZE};
+use crate::arch::riscv::qemu::fs::{MAXOPBLOCKS, LOGSIZE, BSIZE};
 use crate::process::{CPU_MANAGER, PROC_MANAGER};
 use crate::lock::spinlock::Spinlock;
 use super::{BCACHE, Buf, SUPER_BLOCK, BufData};

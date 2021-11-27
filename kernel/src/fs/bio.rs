@@ -9,7 +9,7 @@ use core::sync::atomic::{Ordering, AtomicBool};
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};
 use crate::lock::spinlock::Spinlock;
 use crate::driver::virtio_disk::DISK;
-use crate::define::fs::{NBUF, BSIZE};
+use crate::arch::riscv::qemu::fs::{NBUF, BSIZE};
 
 pub static BCACHE: Bcache = Bcache::new();
 

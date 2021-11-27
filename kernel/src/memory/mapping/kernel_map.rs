@@ -1,7 +1,7 @@
 use super::{ page_table::PageTable, page_table_entry::PteFlags};
 use crate::memory::address::{VirtualAddress, PhysicalAddress, Addr};
 use crate::memory::{PageAllocator, RawPage};
-use crate::define::layout::{ 
+use crate::arch::riscv::qemu::layout::{ 
     PGSIZE, MAXVA, UART0, VIRTIO0,
     PLIC_BASE, KERNEL_BASE, PHYSTOP, TRAMPOLINE,
     E1000_REGS, ECAM, VIRT_TEST, CLINT, TRAPFRAME

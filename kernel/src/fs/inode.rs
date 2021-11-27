@@ -1,4 +1,4 @@
-use crate::define::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE, ROOTDEV, ROOTINUM};
+use crate::arch::riscv::qemu::fs::{BSIZE, DIRSIZ, IPB, MAXFILE, NDIRECT, NINDIRECT, NINODE, ROOTDEV, ROOTINUM};
 use crate::fs::LOG;
 use crate::fs::bitmap::inode_alloc;
 use crate::lock::sleeplock::{SleepLock, SleepLockGuard};

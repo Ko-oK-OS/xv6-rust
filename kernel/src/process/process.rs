@@ -7,7 +7,7 @@ use alloc::vec;
 use alloc::sync::Arc;
 use array_macro::array;
 
-use crate::define::fs::{NFILE, NOFILE};
+use crate::arch::riscv::qemu::fs::{NFILE, NOFILE};
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::memory::{
     kalloc::*,
@@ -15,7 +15,7 @@ use crate::memory::{
     mapping::{ page_table::PageTable, page_table_entry::PteFlags},
     RawPage
 };
-use crate::define::layout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
+use crate::arch::riscv::qemu::layout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use crate::arch::riscv::register::satp;
 use super::*;
 use crate::fs::{FileType, Inode, VFile};

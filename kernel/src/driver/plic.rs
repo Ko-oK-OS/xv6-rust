@@ -1,6 +1,6 @@
 use core::ptr;
 
-use crate::{define::layout::{PLIC_BASE, UART0_IRQ, VIRTIO0_IRQ}, process::{cpu, cpuid}};
+use crate::{arch::riscv::qemu::layout::{PLIC_BASE, UART0_IRQ, VIRTIO0_IRQ}, process::{cpu, cpuid}};
 
 const PLIC_PRIORITY: usize = PLIC_BASE;
 const PLIC_PENDING: usize = PLIC_BASE + 0x1000;

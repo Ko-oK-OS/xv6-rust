@@ -4,8 +4,8 @@ use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
 use super::*;
-use crate::define::fs::ROOTIPATH;
-use crate::define::{
+use crate::arch::riscv::qemu::fs::ROOTIPATH;
+use crate::arch::riscv::qemu::{
     param::NPROC,
     layout::{ PGSIZE, TRAMPOLINE }
 };

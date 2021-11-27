@@ -1,5 +1,5 @@
-use crate::define::fs::{ BSIZE, MAXOPBLOCKS };
-use crate::define::param::NDEV;
+use crate::arch::riscv::qemu::fs::{ BSIZE, MAXOPBLOCKS };
+use crate::arch::riscv::qemu::param::NDEV;
 use crate::lock::spinlock::Spinlock;
 use crate::lock::sleeplock::SleepLock;
 use crate::process::CPU_MANAGER;
