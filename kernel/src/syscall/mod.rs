@@ -182,13 +182,13 @@ impl Syscall<'_> {
         let pdata = unsafe{ &mut *self.process.data.get() };
     
         if addr > pdata.size || addr + size_of::<usize>() > pdata.size {
-            println!("addr size is out of process!");
-            return Err(());
+            println!("[Debug] addr: 0x{:x}", addr);
+            println!("[Debug] pdata size: 0x{:x}", pdata.size);
+            panic!("拷贝的地址值超出了进程")
         }
     
-        let pg = pdata.pagetable.as_mut().unwrap();
-    
-        if pg.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
+        let pgt = pdata.pagetable.as_mut().unwrap();
+        if pgt.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
             println!("Fail copy data from pagetable!");
             return Err(())
         }

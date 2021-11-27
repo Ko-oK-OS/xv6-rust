@@ -112,7 +112,7 @@ impl VFile {
         addr: usize, 
         len: usize
     ) -> Result<usize, &'static str> {
-        let mut ret = 0; 
+        let ret; 
         if !self.writeable() {
             panic!("file can't be written")
         }

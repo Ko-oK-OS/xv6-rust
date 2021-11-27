@@ -7,7 +7,6 @@ impl Syscall<'_> {
         let pmeta = child_proc.meta.acquire();
         let pid = pmeta.pid;
         drop(pmeta);
-        println!("[Debug] 子进程id: {}", pid);
         Ok(pid)
     }
 

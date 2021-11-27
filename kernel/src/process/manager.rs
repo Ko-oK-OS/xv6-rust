@@ -202,15 +202,15 @@ impl ProcManager{
         };
         // close all open files. 
         let pdata = unsafe{ &mut *my_proc.data.get() };
-        let open_files = &mut pdata.open_files;
-        for index in 0..open_files.len() {
-            // let file = Arc::clone(&open_files[index]);
-            // open_files[index] = Arc::new(
-            //     VFile::init()
-            // );
-            // file.close();
-            // open_files[index].take()
-        }
+        // let open_files = &mut pdata.open_files;
+        // for index in 0..open_files.len() {
+        //     let file = Arc::clone(&open_files[index]);
+        //     open_files[index] = Arc::new(
+        //         VFile::init()
+        //     );
+        //     file.close();
+        //     open_files[index].take()
+        // }
 
         LOG.begin_op();
         let cwd = pdata.cwd.as_mut().expect("Fail to get inode");

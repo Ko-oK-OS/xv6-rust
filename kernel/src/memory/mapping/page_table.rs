@@ -400,6 +400,7 @@ impl PageTable{
                     let allocated_pgt = &mut *(RawPage::new_zeroed() as *mut PageTable);
                     allocated_pgt.write(& *page_table);
 
+                    println!("uvm_copy: va: 0x{:x}", va.as_usize());
                     if !child_pgt.map(
                         va,
                         PhysicalAddress::new(allocated_pgt.as_addr()),
@@ -412,12 +413,12 @@ impl PageTable{
                             va.as_usize() / PGSIZE, 
                             true
                         );
-                        return Err("uvmcopy(): fail.")
+                        return Err("uvmcopy: Fail.")
                     }
                 },
 
                 None => {
-                    panic!("uvmcopy(): no exist pte(pte should exist)");
+                    panic!("uvmcopy: No exist pte(pte should exist)");
                 }
             }
             va.add_page();

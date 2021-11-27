@@ -451,15 +451,11 @@ impl Process{
             &mut *self.data.get()
         };
         let fd = pdata.find_unallocated_fd()?;
-        // println!("[Debug] fd_alloc: 当前文件为: {:?}", *file);
         pdata.open_files[fd] = Some(Arc::new(*file));
         Ok(fd)       
     } 
 
     pub fn fork(&mut self) -> Option<&mut Self> {
-        let pmeta = self.meta.acquire();
-        println!("[Debug] 父进程id: {}", pmeta.pid);
-        drop(pmeta);
         // 从表中获取未被分配的子进程
         if let Some(child_proc) = unsafe{ PROC_MANAGER.alloc_proc() } {
             // 从当前进程的页表拷贝到子进程中
@@ -474,7 +470,7 @@ impl Process{
             // 将当前进程的 trapframe 拷贝到子进程
             let ptf = pdata.trapframe as *const Trapframe;
             let child_tf = unsafe{ &mut *child_data.trapframe };
-            unsafe{ copy(ptf, child_tf, 1); }
+            unsafe{ copy_nonoverlapping(ptf, child_tf, 1); }
             // fork 后子进程应当返回0
             child_tf.a0 = 0;
 
@@ -483,6 +479,7 @@ impl Process{
             child_data.cwd.clone_from(&pdata.cwd);
 
             child_data.name = pdata.name;
+            child_data.size = pdata.size;
 
             let mut child_meta = child_proc.meta.acquire();
             child_meta.state = ProcState::RUNNABLE;

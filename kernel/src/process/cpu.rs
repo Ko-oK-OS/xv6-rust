@@ -81,7 +81,6 @@ impl CPUManager{
                     c.set_proc(NonNull::new(proc as *mut Process));
                     let mut pmeta = proc.meta.acquire();
                     pmeta.state = ProcState::RUNNING;
-                    // println!("[Debug] 进程id: {}", pmeta.pid);
                     switch(
                         c.get_context_mut(),
                         &mut proc.data.get_mut().context as *mut Context
