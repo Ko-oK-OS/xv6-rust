@@ -426,7 +426,9 @@ impl Process{
         // guaranteed that we won't miss any wakeup
         // (wakeup locks p->lock)
         // so it's okay to release lk;
+        println!("[Debug] sleep: try to acquire metadata lock");
         let mut guard = self.meta.acquire();
+        println!("[Debug] sleep: acquire metadata lock");
         drop(lock);
         // Go to sleep.
         guard.channel = channel;
@@ -487,8 +489,8 @@ impl Process{
 
             let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
             child_data.parent = Some(self as *mut Process);
+            println!("[Debug] fork: parent address: 0x{:x}", self as *mut Process as usize);
             drop(wait);
-
             Some(child_proc)
         }else {
             None

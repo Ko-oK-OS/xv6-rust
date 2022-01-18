@@ -250,47 +250,54 @@ impl ProcManager{
         loop {
             let mut have_kids = false;
             // Scan through table looking for exited children. 
+            // 遍历所有进程是否为其他进程的子进程
             for index in 0..self.proc.len() {
                 let p = &mut self.proc[index];
                 let pdata = unsafe {
                     p.data.get().as_mut().unwrap()
                 };
                 if let Some(parent) = pdata.parent {
-                    // println!("[Debug] wait: 获取父进程");
+                    println!("[Debug] wait: 获取父进程: 0x{:x}", parent as usize);
                     if parent as *const _ == my_proc as *const _ {
+                        // 确报子进程不会退出或者进行被调度出去
+                        let proc_meta = p.meta.acquire();
+                        println!("[Debug] wait: acquire lock");
                         have_kids = true;
                         // make sure the child isn't still in exit or swtch. 
-                        let proc_data = p.meta.acquire();
-                        if proc_data.state == ProcState::ZOMBIE {
+                        if proc_meta.state == ProcState::ZOMBIE {
                             // Found one 
-                            pid = proc_data.pid;
+                            println!("[Debug] Find a zombie process");
+                            pid = proc_meta.pid;
                             let page_table = pdata.pagetable.as_mut().expect("Fail to get pagetable");
-                            if page_table.copy_out(addr, proc_data.xstate as *const u8, size_of_val(&proc_data.xstate)).is_err() {
-                                drop(proc_data);
+                            if page_table.copy_out(addr, proc_meta.xstate as *const u8, size_of_val(&proc_meta.xstate)).is_err() {
+                                drop(proc_meta);
                                 drop(wait_guard);
                                 return None
                             }
+                            drop(proc_meta);
+                            drop(wait_guard);
+                            p.free_proc();
+                            println!("[Debug] pid: {}", pid);
+                            return Some(pid);
                         }
-
-                        drop(proc_data);
-                        drop(wait_guard);
-                        p.free_proc();
-                        // println!("[Debug] wait: 返回pid: {}", pid);
-                        return Some(pid);
+                        drop(proc_meta);
+                        println!("[Debug] wait: release lock");
                     }
-                    
                 }
             }
+            println!("[Debug] wait: try to acquire");
             let my_proc_data = my_proc.meta.acquire();
+            println!("[Debug] success to acquire");
             // No point waiting if we don't have any children. 
             if !have_kids || my_proc_data.killed {
                 drop(wait_guard);
                 drop(my_proc_data);
-                // println!("[Debug] wait: 返回空");
                 return None
             }
-
+            // 释放锁，否则会死锁
+            drop(my_proc_data);
             // Wait for a child to exit.
+            println!("[Debug] wait: Wait for a child to exit");
             my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
             wait_guard = self.wait_lock.acquire();
         }
