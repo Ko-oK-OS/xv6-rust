@@ -74,7 +74,6 @@ impl VFile {
                 if self.major < 0 || 
                 self.major as usize >= NDEV || 
                 unsafe{ DEVICE_LIST.table[self.major as usize].read as usize == 0 }{
-                    // println!("[Debug] vfs read: major: {}", self.major);
                     return Err("[Error] vfs: fail to read device")
                 }
                 let read = unsafe { 

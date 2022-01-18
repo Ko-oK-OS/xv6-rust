@@ -42,11 +42,13 @@ impl Syscall<'_> {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
         let file = pdata.open_files[fd].as_ref().unwrap();
+        // 两个参数分别是读取存储的地址和读取的最大字节数
         // Get user read address
         let ptr = self.arg(1);
         // Get read size
         let len = self.arg(2);
         // Read file data
+        // println!("[Debug] addr: 0x{:x}, len: {}", ptr, len);
         match file.read(ptr, len) {
             Ok(cur_size) => {
                 size = cur_size;
