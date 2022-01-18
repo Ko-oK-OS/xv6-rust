@@ -171,7 +171,7 @@ pub unsafe fn user_trap_ret() -> ! {
 /// on whatever the current kernel stack is.
 #[no_mangle]
 pub unsafe fn kernel_trap(
-   arg0: usize, arg1: usize, arg2: usize, _: usize,
+   _: usize, _: usize, _: usize, _: usize,
    _: usize, _: usize, _: usize, which: usize
 ) {
     let sepc = sepc::read();
