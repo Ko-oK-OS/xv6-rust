@@ -400,7 +400,7 @@ impl PageTable{
                     let allocated_pgt = &mut *(RawPage::new_zeroed() as *mut PageTable);
                     allocated_pgt.write(& *page_table);
 
-                    println!("uvm_copy: va: 0x{:x}", va.as_usize());
+                    // println!("uvm_copy: va: 0x{:x}", va.as_usize());
                     if !child_pgt.map(
                         va,
                         PhysicalAddress::new(allocated_pgt.as_addr()),
@@ -452,7 +452,7 @@ impl PageTable{
         let mut va = VirtualAddress::new(dst);
         va.pg_round_down();
 
-        println!("[Debug] va: 0x{:x}, dst: 0x{:x}", va.as_usize(), dst);
+        // println!("[Debug] va: 0x{:x}, dst: 0x{:x}", va.as_usize(), dst);
         // 计算第一次需要拷贝的字节数，需要进行页对齐
         let mut count = PGSIZE - (dst - va.as_usize());
         // 拷贝地址的偏移量，即已经拷贝了多少字节
@@ -468,7 +468,7 @@ impl PageTable{
             // 因此在拷贝的时候需要将用户态的虚拟地址转换成物理地址，
             // 由于在内核中数据区是直接映射，因此在访问物理地址的时候
             // 经过 MMU 不会报错
-            println!("[Debug] count: {}, len: {}", count, len);
+            // println!("[Debug] count: {}, len: {}", count, len);
             if count > len {
                 // 如果页内剩余的容量大于生于要拷贝的容量，则将count替换成len
                 count = len;

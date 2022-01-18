@@ -92,7 +92,7 @@ unsafe fn fork_ret() -> ! {
         FIRST = false;
         init(ROOTDEV);
     }
-    println!("user trap return");
+    // println!("user trap return");
     user_trap_ret();
 }
 

@@ -1,7 +1,7 @@
 # xv6-rust
 ## Introduction
 
-![](run.jpg)
+![](run.png)
 
 This is a try to implement xv6 OS in pure Rust. 
 

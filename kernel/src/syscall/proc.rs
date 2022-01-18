@@ -4,12 +4,12 @@ use super::*;
 impl Syscall<'_> {
     pub fn fork(&mut self) -> SysResult {
         let proc_meta = self.process.meta.acquire();
-        println!("[Debug] sys_fork: parent_pid: {}", proc_meta.pid);
+        // println!("[Debug] sys_fork: parent_pid: {}", proc_meta.pid);
         drop(proc_meta);
         let child_proc = self.process.fork().expect("Fail to fork process");
         let pmeta = child_proc.meta.acquire();
         let pid = pmeta.pid;
-        println!("[Debug] sys_fork: child_pid: {}", pid);
+        // println!("[Debug] sys_fork: child_pid: {}", pid);
         drop(pmeta);
         Ok(pid)
     }

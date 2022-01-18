@@ -192,4 +192,5 @@ pub unsafe fn console_init() {
     super::uart::uart_init();
     // DEVICE_LIST.table[CONSOLE].read = console::console_read as *const u8;
     DEVICE_LIST.table[CONSOLE].write = console_write as *const u8;
+    DEVICE_LIST.table[CONSOLE].read = console_read as *const u8;
 }

@@ -115,7 +115,7 @@ impl Syscall<'_> {
                         if inode_guard.dinode.itype == InodeType::Directory && open_mode != OpenMode::RDONLY as usize{
                             drop(inode_guard);
                             LOG.end_op();
-                            println!("[Debug] sys_open: Fail to enter dir.");
+                            // println!("[Debug] sys_open: Fail to enter dir.");
                             return Err(());
                         }
                     },
