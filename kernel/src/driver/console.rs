@@ -111,7 +111,9 @@ pub(super) fn console_read(
             break;
         }
     }
-    Some(0)
+    // 结果应该返回读取的字节数
+    let ret = size - left;
+    Some(ret)
 }
 
 /// User write to the console go here. 
@@ -190,7 +192,6 @@ pub unsafe fn console_init() {
     use crate::fs::DEVICE_LIST;
     use crate::arch::riscv::qemu::devices::CONSOLE;
     super::uart::uart_init();
-    // DEVICE_LIST.table[CONSOLE].read = console::console_read as *const u8;
     DEVICE_LIST.table[CONSOLE].write = console_write as *const u8;
     DEVICE_LIST.table[CONSOLE].read = console_read as *const u8;
 }

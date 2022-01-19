@@ -79,7 +79,6 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c $(INCLUDE)/fs.h $(INCLUDE)/param.h
 UPROGS=\
 	$(USER)/_init \
 	$(USER)/_sh \
-	$(USER)/_hello \
 	$(USER)/_echo
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)

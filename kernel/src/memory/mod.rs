@@ -81,7 +81,6 @@ pub fn copy_from_kernel(
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
         if is_user {
-            // println!("[Debug] 从内核拷贝到用户");
             let pdata = p.data.get_mut();
             let page_table = pdata.pagetable.as_mut().unwrap();
             page_table
@@ -91,11 +90,8 @@ pub fn copy_from_kernel(
                     len
                 )
         } else {
-            // println!("[Debug] 从内核拷贝到内核");
             let mut buf = vec![0u8;len];
             ptr::copy(src as *const u8, buf.as_mut_ptr(), len);
-            // println!("buf: {:?}", buf);
-            // println!("[Debug] len: 0x{:x}", len);
             ptr::copy(
                 src as *const u8, 
                 dst as *mut u8, 

@@ -48,14 +48,13 @@ impl Syscall<'_> {
         // Get read size
         let len = self.arg(2);
         // Read file data
-        // println!("[Debug] addr: 0x{:x}, len: {}", ptr, len);
         match file.read(ptr, len) {
             Ok(cur_size) => {
                 size = cur_size;
             },
 
             Err(err) => {
-                println!("{}", err);
+                println!("[Error] sys_read: {}", err);
                 return Err(())
             }
         }
