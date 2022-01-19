@@ -426,9 +426,7 @@ impl Process{
         // guaranteed that we won't miss any wakeup
         // (wakeup locks p->lock)
         // so it's okay to release lk;
-        // println!(" sleep: try to acquire metadata lock");
         let mut guard = self.meta.acquire();
-        // println!("[Debug] sleep: acquire metadata lock");
         drop(lock);
         // Go to sleep.
         guard.channel = channel;

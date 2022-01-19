@@ -14,6 +14,7 @@ use super::CPU_MANAGER;
 use super::Process;
 
 use alloc::boxed::Box;
+use alloc::string::String;
 
 const ELF_MAGIC: u32 = 0x464C457F; // elf magic number
 
@@ -277,7 +278,7 @@ pub unsafe fn exec(
             sp = align_sp(sp);
             if sp < stack_base {
                 drop(page_table);
-                return Err("用户栈爆炸")
+                return Err("User Stack Bomb!")
             }
             
             // Copy arguments into stack top
@@ -327,7 +328,14 @@ pub unsafe fn exec(
     trapframe.a1 = sp;
 
     // Save program name for debugging
-    
+    // core::ptr::copy(path.as_ptr(), &mut pdata.name as *mut u8, 16);
+    let mut exec_name: String = String::new();
+    for c in path.chars() {
+        if c != '/' {
+            exec_name.push(c);
+        }
+    }
+    core::ptr::copy(exec_name.as_ptr(), &mut pdata.name as *mut u8, 16);
 
     // Commit to user image.
     let old_pgt = pdata.pagetable.as_mut().take().unwrap();

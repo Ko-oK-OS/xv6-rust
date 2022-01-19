@@ -171,12 +171,13 @@ impl CPU{
         }
 
         let intena = self.intena;
+        // println!("[Kernel] switch");
+        // println!("[Kernel] old_context: 0x{:x}, new_context: 0x{:x}", ctx as usize, &mut self.context as *mut Context as usize);
         switch(
             ctx, 
             &mut self.context as *mut Context
         );
         self.intena = intena;
-
         guard
         
     }

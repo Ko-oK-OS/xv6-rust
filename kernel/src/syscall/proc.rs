@@ -2,7 +2,7 @@ use crate::trap::TICKS_LOCK;
 use super::*;
 
 impl Syscall<'_> {
-    pub fn fork(&mut self) -> SysResult {
+    pub fn sys_fork(&mut self) -> SysResult {
         let proc_meta = self.process.meta.acquire();
         drop(proc_meta);
         let child_proc = self.process.fork().expect("Fail to fork process");
@@ -25,12 +25,10 @@ impl Syscall<'_> {
             PROC_MANAGER.wait(addr)
         } {
             Some(pid) => {
-                // println!("[Debug] Wait return pid: {}", pid);
                 Ok(pid)
             },
     
             None => {
-                // println!("[Debug] Wait return None");
                 Err(())
             }
         }

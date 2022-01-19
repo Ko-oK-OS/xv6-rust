@@ -242,7 +242,7 @@ impl Syscall<'_> {
                 unsafe{ drop_in_place(argv[i] as *mut RawPage) };
             }
         }
-        
+        println!("[Debug] sys_exec return {}", ret);
         Ok(ret)
     }
 

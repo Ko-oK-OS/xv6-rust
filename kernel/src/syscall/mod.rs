@@ -107,7 +107,7 @@ impl Syscall<'_> {
         
         match sys_id {
             SysCallID::SysFork => {
-                self.fork()
+                self.sys_fork()
             },
             SysCallID::SysExit => {
                 self.sys_exit()
@@ -145,7 +145,11 @@ impl Syscall<'_> {
 
             SysCallID::SysUptime => {
                 Ok(0)
-            }   
+            },
+            
+            SysCallID::SysSbrk => {
+                self.sys_sbrk()
+            }
             _ => {
                 panic!("无效的系统调用id: {:?}", sys_id);
             }

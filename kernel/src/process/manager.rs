@@ -154,6 +154,7 @@ impl ProcManager{
         for p in self.proc.iter() {
             let mut guard = p.meta.acquire();
             if guard.state == ProcState::SLEEPING && guard.channel == channel {
+                println!("[Debug] Wake up process {}", guard.pid);
                 guard.state = ProcState::RUNNABLE;
             }
             drop(guard);
@@ -197,6 +198,8 @@ impl ProcManager{
     /// An exited process remains in the zombie state 
     /// until its parent calls wait. 
     pub fn exit(&mut self, status : usize) -> ! {
+        // println!("[Kernel] exit");
+        unsafe{ PROC_MANAGER.proc_dump(); }
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Current cpu's process is none.")
         };
@@ -222,6 +225,7 @@ impl ProcManager{
         // Give any children to init. 
         self.reparent(my_proc);
         // Parent might be sleeping in wait. 
+        // 唤醒父进程
         self.wake_up(pdata.parent.expect("Fail to find parent process") as usize);
 
         let mut proc_data = my_proc.meta.acquire();
@@ -234,13 +238,17 @@ impl ProcManager{
             CPU_MANAGER.mycpu()
         };
         unsafe {
-            my_cpu.sched(proc_data, &mut pdata.context as *mut Context);
+            my_cpu.sched(
+                proc_data, 
+                &mut pdata.context as *mut Context
+            );
         }
 
         panic!("zombie exit!");
     }
 
     /// Wait for a child process to exit and return its pid. 
+    /// 等待子进程退出并返回 pid
     pub fn wait(&mut self, addr: usize) -> Option<usize> {
         let mut pid = 0;
         let my_proc = unsafe {
@@ -257,16 +265,14 @@ impl ProcManager{
                     p.data.get().as_mut().unwrap()
                 };
                 if let Some(parent) = pdata.parent {
-                    // println!("[Debug] wait: 获取父进程: 0x{:x}", parent as usize);
                     if parent as *const _ == my_proc as *const _ {
                         // 确报子进程不会退出或者进行被调度出去
                         let proc_meta = p.meta.acquire();
-                        // println!("[Debug] wait: acquire lock");
                         have_kids = true;
                         // make sure the child isn't still in exit or swtch. 
                         if proc_meta.state == ProcState::ZOMBIE {
+                            println!("[Kernel] wait: Find Zombie child process");
                             // Found one 
-                            // println!("[Debug] Find a zombie process");
                             pid = proc_meta.pid;
                             let page_table = pdata.pagetable.as_mut().expect("Fail to get pagetable");
                             if page_table.copy_out(addr, proc_meta.xstate as *const u8, size_of_val(&proc_meta.xstate)).is_err() {
@@ -277,17 +283,13 @@ impl ProcManager{
                             drop(proc_meta);
                             drop(wait_guard);
                             p.free_proc();
-                            // println!("[Debug] pid: {}", pid);
                             return Some(pid);
                         }
                         drop(proc_meta);
-                        // println!("[Debug] wait: release lock");
                     }
                 }
             }
-            // println!("[Debug] wait: try to acquire");
             let my_proc_data = my_proc.meta.acquire();
-            // println!("[Debug] success to acquire");
             // No point waiting if we don't have any children. 
             if !have_kids || my_proc_data.killed {
                 drop(wait_guard);
@@ -297,8 +299,7 @@ impl ProcManager{
             // 释放锁，否则会死锁
             drop(my_proc_data);
             // Wait for a child to exit.
-            // println!("[Debug] wait: Wait for a child to exit");
-            my_proc.sleep(&wait_guard as *const _ as usize, wait_guard);
+            my_proc.sleep(my_proc as *const _ as usize, wait_guard);
             wait_guard = self.wait_lock.acquire();
         }
     }
