@@ -447,7 +447,6 @@ impl Process{
         };
         let fd = pdata.find_unallocated_fd()?;
         pdata.open_files[fd].replace(Arc::new(file.clone()));
-        // assert_eq!(none_file, None);
         Ok(fd)       
     } 
 

@@ -80,7 +80,8 @@ UPROGS=\
 	$(USER)/_init \
 	$(USER)/_sh \
 	$(USER)/_echo \
-	$(USER)/_ls
+	$(USER)/_ls \
+	$(USER)/_mkdir 
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)

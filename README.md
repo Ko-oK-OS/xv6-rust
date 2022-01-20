@@ -131,6 +131,7 @@ And then you can debug this programe step by step.
 ### Fs
 - [x] Remove `FILE_TABLE`
 - [x] Use `Arc` instead of `refs`, `Arc::clone()` will plat the same role of `refs++`
+- [ ] User `enum FileInner` to separate files of various file types
 
 ### Scheduler
 - [ ] Use `VecDeque` instead of raw array.

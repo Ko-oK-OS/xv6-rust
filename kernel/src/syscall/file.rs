@@ -148,11 +148,9 @@ impl Syscall<'_> {
         LOG.end_op();
     
         file.inode = Some(inode);
-        file.writeable = !open_mode.get_bit(0);
-        file.readable = open_mode.get_bit(0) | open_mode.get_bit(1);
+        file.writeable = open_mode.get_bit(0) | open_mode.get_bit(1);
+        file.readable = !open_mode.get_bit(0) | open_mode.get_bit(1);
         let fd;
-        // println!("[Kernel] sys_open: inode index: {}, dev:{}, inum: {}", inode.index, inode.dev, inode.inum);
-    
         match unsafe { CPU_MANAGER.alloc_fd(&file) } {
             Ok(new_fd) => {
                 fd = new_fd;
@@ -282,7 +280,6 @@ impl Syscall<'_> {
 
         match file.stat(stat) {
             Ok(()) => {
-                println!("[Kernel] sys_stat: success to get file info");
                 return Ok(0)
             },
 
