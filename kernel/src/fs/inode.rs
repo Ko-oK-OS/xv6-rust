@@ -172,6 +172,7 @@ impl InodeCache {
         let mut inode: Inode;
         if path[0] == b'/' {
             inode = self.get(ROOTDEV, ROOTINUM);
+            // println!("[Kernel] namex: root_inode index: {}", inode.index);
         } else {
             let p = unsafe { CPU_MANAGER.myproc().unwrap() };
             inode = self.dup(p.data.get_mut().cwd.as_ref().unwrap());
@@ -204,7 +205,7 @@ impl InodeCache {
         }
         if is_parent {
             // only when querying root inode's parent 
-            println!("Kernel warning: namex querying root inode's parent");
+            println!("[Kernel] Warning: namex querying root inode's parent");
             None 
         } else {
             Some(inode)
@@ -688,6 +689,7 @@ impl Inode {
     /// Load it from the disk if its content not cached yet. 
     pub fn lock<'a>(&'a self) -> SleepLockGuard<'a, InodeData> {
         assert!(self.index < NINODE, "index must less than NINODE");
+        // println!("[Kernel] inode.lock(): inode index: {}, dev: {}, inum: {}", self.index, self.dev, self.inum);
         let mut guard = ICACHE.data[self.index].lock();
         
         if !guard.valid {

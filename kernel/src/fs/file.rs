@@ -14,7 +14,7 @@ use core::mem::size_of;
 use core::ptr::NonNull;
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u16)]
 pub enum FileType {
     None = 0,
@@ -26,15 +26,13 @@ pub enum FileType {
 
 /// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct VFile {
-    // pub(crate) index: usize,
     pub(crate) ftype: FileType,
-    // pub(crate) refs: usize,
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
     pub(crate) pipe: Option<*mut Pipe>,
-    pub(crate) inode: Option<*mut Inode>,
+    pub(crate) inode: Option<Inode>,
     pub(crate) offset: u32,
     pub(crate) major: i16
 }
@@ -83,7 +81,7 @@ impl VFile {
             },
 
             FileType::Inode => {
-                let inode = unsafe{ &*self.inode.unwrap() };
+                let inode = self.inode.as_ref().unwrap();
                 let mut inode_guard = inode.lock();
                 match inode_guard.read(true, addr, self.offset, len as u32) {
                     Ok(_) => {
@@ -152,7 +150,7 @@ impl VFile {
 
                     // start log
                     LOG.begin_op();
-                    let inode = unsafe{ &mut *self.inode.unwrap() };
+                    let inode = self.inode.as_ref().unwrap();
                     let mut inode_guard = inode.lock();
 
                     // return err when failt to write
@@ -189,49 +187,6 @@ impl VFile {
         self.writeable
     }
 
-    // /// Increment ref count for file f
-    // pub fn dup(&self) {
-    //     let guard = unsafe{ FILE_TABLE.lock.acquire() };
-    //     if self.refs < 1 {
-    //         panic!("vfile dup: no used file.")
-    //     }
-    //     let refs = unsafe{ &mut *(&self.refs as *const _ as *mut usize)};
-    //     *refs += 1;
-    //     drop(guard);
-    // }
-
-    /// Close file f(Decrement ref count, close when reaches 0.)
-    // pub fn close(&mut self) {
-    //     let guard = unsafe{ FILE_TABLE.lock.acquire() };
-    //     if self.refs < 1 {
-    //         panic!("vfs close: no used file.")
-    //     }
-    //     self.refs -= 1;
-    //     if self.refs > 0 {
-    //         drop(guard);
-    //         return 
-    //     }
-
-    //     match self.ftype {
-    //         FileType::Pipe => {
-    //             let pipe = unsafe{ &mut *self.pipe.unwrap() };
-    //             pipe.close(self.writeable());
-    //         },
-
-    //         FileType::Inode => {
-    //             let inode = unsafe{ &*self.inode.unwrap() };
-    //             LOG.begin_op();
-    //             drop(inode);
-    //         },
-
-    //         _ => {}
-    //     }
-        
-    //     self.refs = 0;
-    //     self.ftype = FileType::None;
-    //     drop(guard);        
-    // }
-
     /// Get metadata about file f. 
     /// addr is a user virtual address, pointing to a struct stat. 
     pub fn stat(&self, addr: usize) -> Result<(), &'static str> {
@@ -239,7 +194,11 @@ impl VFile {
         let mut stat: Stat = Stat::new();
         match self.ftype {
             FileType::Device | FileType::Inode => {
-                let inode = unsafe{ &mut *self.inode.unwrap() };
+                let inode = self.inode.as_ref().unwrap();
+                
+                #[cfg(feature = "debug")]
+                println!("[Kernel] stat: inode index: {}, dev: {}, inum: {}", inode.index, inode.dev, inode.inum);
+
                 let inode_guard = inode.lock();
                 inode_guard.stat(&mut stat);
                 drop(inode_guard);

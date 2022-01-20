@@ -446,7 +446,8 @@ impl Process{
             &mut *self.data.get()
         };
         let fd = pdata.find_unallocated_fd()?;
-        pdata.open_files[fd] = Some(Arc::new(*file));
+        pdata.open_files[fd].replace(Arc::new(file.clone()));
+        // assert_eq!(none_file, None);
         Ok(fd)       
     } 
 

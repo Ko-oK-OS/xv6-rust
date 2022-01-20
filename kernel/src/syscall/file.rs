@@ -51,7 +51,7 @@ impl Syscall<'_> {
             },
 
             Err(err) => {
-                println!("[Error] sys_read: {}", err);
+                println!("[kernel] sys_read: err: {}", err);
                 return Err(())
             }
         }
@@ -71,7 +71,7 @@ impl Syscall<'_> {
                 size = cur_size;
             },
             Err(err) => {
-                println!("{}", err);
+                println!("[Kernel] sys_write: err: {}", err);
                 return Err(())
             }
         }
@@ -80,7 +80,7 @@ impl Syscall<'_> {
 
     pub fn sys_open(&self) -> SysResult {
         let mut path = [0;MAXPATH];
-        let mut inode: Inode;
+        let inode: Inode;
         let mut file: VFile;
         let mut inode_guard: SleepLockGuard<InodeData>;
         // Get file path
@@ -99,7 +99,7 @@ impl Syscall<'_> {
                     },
                     Err(err) => {
                         LOG.end_op();
-                        println!("{}", err);
+                        println!("[Kernel] syscall: sys_open: {}", err);
                         return Err(())
                     }
                 }
@@ -147,15 +147,18 @@ impl Syscall<'_> {
         drop(inode_guard);
         LOG.end_op();
     
-        file.inode = Some((&mut inode) as *mut Inode);
+        file.inode = Some(inode);
         file.writeable = !open_mode.get_bit(0);
         file.readable = open_mode.get_bit(0) | open_mode.get_bit(1);
         let fd;
+        // println!("[Kernel] sys_open: inode index: {}, dev:{}, inum: {}", inode.index, inode.dev, inode.inum);
     
         match unsafe { CPU_MANAGER.alloc_fd(&file) } {
-            Ok(cur_fd) => {
-                fd = cur_fd;
-
+            Ok(new_fd) => {
+                fd = new_fd;
+                // let pdata = unsafe{ &mut *self.process.data.get() };
+                // let file = Arc::new(file);
+                // pdata.open_files[fd].replace(file);
             }
             Err(err) => {
                 println!("[Kernel] sys_open: err: {}", err);
@@ -191,7 +194,7 @@ impl Syscall<'_> {
                 &mut buf, 
                 8
             )?;
-            // TODO: use little endian to create an native integer?
+
             user_arg = usize::from_le_bytes(buf);
             if user_arg == 0 {
                 argv[count] = 0 as *mut u8;
@@ -244,7 +247,6 @@ impl Syscall<'_> {
             Ok(inode) => {
                 LOG.end_op();
                 drop(inode);
-                // println!("[Debug] create: 创建成功");
                 Ok(0)
             },
     
@@ -268,18 +270,24 @@ impl Syscall<'_> {
     pub fn sys_fstat(&self) -> SysResult {
         let fd = self.arg(0);
         let stat = self.arg(1);
+
         #[cfg(feature = "kernel_debug")]
         println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
 
         let pdata = unsafe{ &mut *self.process.data.get() };
         let file = pdata.open_files[fd].as_ref().unwrap();
+
+        #[cfg(feature = "kernel_debug")]
+        println!("[Kernel] sys_fstat: File Type: {:?}", file.ftype);
+
         match file.stat(stat) {
             Ok(()) => {
+                println!("[Kernel] sys_stat: success to get file info");
                 return Ok(0)
             },
 
             Err(err) => {
-                println!("err: {}", err);
+                println!("[Kernel] sys_stat: err: {}", err);
                 return Err(())
             }
         }
