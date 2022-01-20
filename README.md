@@ -127,7 +127,15 @@ And then you can debug this programe step by step.
     - [x] Uart/Console
     - [x] PCI
 
-## Future
+## Differences
+### Fs
+- [x] Remove `FILE_TABLE`
+- [x] Use `Arc` instead of `refs`, `Arc::clone()` will plat the same role of `refs++`
+
+### Scheduler
+- [ ] Use `VecDeque` instead of raw array.
+
+## Expected Future
 - [ ] Refactor memory model
 - [ ] Better scheduler
 - [ ] SdCard

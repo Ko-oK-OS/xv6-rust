@@ -10,7 +10,7 @@ mod pipe;
 mod inode;
 mod dinode;
 mod devices;
-mod file_table;
+// mod file_table;
 mod stat;
 mod bitmap;
 
@@ -18,7 +18,6 @@ pub use bio::Buf;
 pub use bio::BCACHE;
 pub use log::LOG;
 pub use file::{ VFile, FileType };
-pub use file_table::FILE_TABLE;
 pub use inode::{ Inode, InodeData, ICACHE };
 pub use dinode::{ DiskInode, DirEntry, InodeType };
 pub use superblock::{ SUPER_BLOCK, SuperBlock };

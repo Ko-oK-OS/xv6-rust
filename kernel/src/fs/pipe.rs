@@ -1,7 +1,7 @@
 use core::ptr::drop_in_place;
 use crate::{lock::spinlock::Spinlock, memory::{ RawPage, PageAllocator }, process::{CPU, CPU_MANAGER, PROC_MANAGER}};
 
-use super::{FILE_TABLE, FileType, VFile};
+use super::{FileType, VFile};
 
 // use super::File;
 
@@ -32,13 +32,15 @@ impl Pipe {
             guard: Spinlock::new(pipe_guard, "pipe")
         };
 
-        *rf = unsafe {
-            FILE_TABLE.allocate().expect("Fail to allocate file")
-        };
+        // *rf = unsafe {
+        //     FILE_TABLE.allocate().expect("Fail to allocate file")
+        // };
 
-        *wf = unsafe {
-            FILE_TABLE.allocate().expect("Fail to allocate file")
-        };
+        // *wf = unsafe {
+        //     FILE_TABLE.allocate().expect("Fail to allocate file")
+        // };
+        **rf = VFile::init();
+        **wf = VFile::init();
         rf.ftype = FileType::Pipe;
         rf.readable = true;
         rf.writeable = false;

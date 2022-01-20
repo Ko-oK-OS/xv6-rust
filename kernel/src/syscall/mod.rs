@@ -149,6 +149,10 @@ impl Syscall<'_> {
             
             SysCallID::SysSbrk => {
                 self.sys_sbrk()
+            },
+
+            SysCallID::SysFstat => {
+                self.sys_fstat()
             }
             _ => {
                 panic!("无效的系统调用id: {:?}", sys_id);

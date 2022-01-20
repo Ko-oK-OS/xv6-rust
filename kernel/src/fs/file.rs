@@ -7,7 +7,8 @@ use super::pipe::Pipe;
 use super::inode::Inode;
 use super::devices::DEVICE_LIST;
 use super::stat::Stat;
-use super::{ FILE_TABLE, LOG };
+// use super::{ FILE_TABLE, LOG };
+use super::LOG;
 
 use core::mem::size_of;
 use core::ptr::NonNull;
@@ -29,7 +30,7 @@ pub enum FileType {
 pub struct VFile {
     pub(crate) index: usize,
     pub(crate) ftype: FileType,
-    pub(crate) refs: usize,
+    // pub(crate) refs: usize,
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
     pub(crate) pipe: Option<*mut Pipe>,
@@ -43,7 +44,6 @@ impl VFile {
         Self{
             index: 0,
             ftype: FileType::None,
-            refs: 0,
             readable: false,
             writeable: false,
             pipe: None,
@@ -191,48 +191,48 @@ impl VFile {
         self.writeable
     }
 
-    /// Increment ref count for file f
-    pub fn dup(&self) {
-        let guard = unsafe{ FILE_TABLE.lock.acquire() };
-        if self.refs < 1 {
-            panic!("vfile dup: no used file.")
-        }
-        let refs = unsafe{ &mut *(&self.refs as *const _ as *mut usize)};
-        *refs += 1;
-        drop(guard);
-    }
+    // /// Increment ref count for file f
+    // pub fn dup(&self) {
+    //     let guard = unsafe{ FILE_TABLE.lock.acquire() };
+    //     if self.refs < 1 {
+    //         panic!("vfile dup: no used file.")
+    //     }
+    //     let refs = unsafe{ &mut *(&self.refs as *const _ as *mut usize)};
+    //     *refs += 1;
+    //     drop(guard);
+    // }
 
     /// Close file f(Decrement ref count, close when reaches 0.)
-    pub fn close(&mut self) {
-        let guard = unsafe{ FILE_TABLE.lock.acquire() };
-        if self.refs < 1 {
-            panic!("vfs close: no used file.")
-        }
-        self.refs -= 1;
-        if self.refs > 0 {
-            drop(guard);
-            return 
-        }
+    // pub fn close(&mut self) {
+    //     let guard = unsafe{ FILE_TABLE.lock.acquire() };
+    //     if self.refs < 1 {
+    //         panic!("vfs close: no used file.")
+    //     }
+    //     self.refs -= 1;
+    //     if self.refs > 0 {
+    //         drop(guard);
+    //         return 
+    //     }
 
-        match self.ftype {
-            FileType::Pipe => {
-                let pipe = unsafe{ &mut *self.pipe.unwrap() };
-                pipe.close(self.writeable());
-            },
+    //     match self.ftype {
+    //         FileType::Pipe => {
+    //             let pipe = unsafe{ &mut *self.pipe.unwrap() };
+    //             pipe.close(self.writeable());
+    //         },
 
-            FileType::Inode => {
-                let inode = unsafe{ &*self.inode.unwrap() };
-                LOG.begin_op();
-                drop(inode);
-            },
+    //         FileType::Inode => {
+    //             let inode = unsafe{ &*self.inode.unwrap() };
+    //             LOG.begin_op();
+    //             drop(inode);
+    //         },
 
-            _ => {}
-        }
+    //         _ => {}
+    //     }
         
-        self.refs = 0;
-        self.ftype = FileType::None;
-        drop(guard);        
-    }
+    //     self.refs = 0;
+    //     self.ftype = FileType::None;
+    //     drop(guard);        
+    // }
 
     /// Get metadata about file f. 
     /// addr is a user virtual address, pointing to a struct stat. 

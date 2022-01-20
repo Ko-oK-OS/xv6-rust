@@ -687,6 +687,7 @@ impl Inode {
     /// Lock the inode. 
     /// Load it from the disk if its content not cached yet. 
     pub fn lock<'a>(&'a self) -> SleepLockGuard<'a, InodeData> {
+        assert!(self.index < NINODE, "index must less than NINODE");
         let mut guard = ICACHE.data[self.index].lock();
         
         if !guard.valid {

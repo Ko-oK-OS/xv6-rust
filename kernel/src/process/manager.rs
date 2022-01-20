@@ -227,7 +227,9 @@ impl ProcManager{
         self.wake_up(pdata.parent.expect("Fail to find parent process") as usize);
 
         let mut proc_data = my_proc.meta.acquire();
+        // 设置退出状态
         proc_data.xstate = status;
+        // 设置运行状态
         proc_data.set_state(ProcState::ZOMBIE);
 
         drop(wait_guard);
@@ -272,6 +274,8 @@ impl ProcManager{
                             // Found one 
                             pid = proc_meta.pid;
                             let page_table = pdata.pagetable.as_mut().expect("Fail to get pagetable");
+                            // 这里是要获取子进程退出的状态，当 addr 的值为 0 的时候为悬空指针，表示
+                            // 不需要获取子进程退出的状态
                             if addr != 0 && page_table.copy_out(addr, proc_meta.xstate as *const u8, size_of_val(&proc_meta.xstate)).is_err() {
                                 drop(proc_meta);
                                 drop(wait_guard);

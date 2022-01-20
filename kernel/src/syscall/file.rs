@@ -11,7 +11,7 @@ use crate::arch::riscv::qemu::layout::PGSIZE;
 use crate::arch::riscv::qemu::param::MAXARG;
 use crate::memory::{ RawPage, PageAllocator };
 use crate::misc::str_cmp;
-use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FILE_TABLE, FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
+use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use crate::fs::Pipe;
 use super::*;
 
@@ -31,7 +31,10 @@ impl Syscall<'_> {
         }else{
             panic!("sys_dup: 没有发现空闲的文件描述符")
         }
-        file.dup();
+        // file.dup();
+        // 使用 Arc 来代替 refs
+        let new_file = Arc::clone(&file);
+        pdata.open_files[fd].replace(new_file);
         Ok(fd)
     }
 
@@ -84,7 +87,7 @@ impl Syscall<'_> {
     pub fn sys_open(&self) -> SysResult {
         let mut path = [0;MAXPATH];
         let mut inode: Inode;
-        let mut file: &mut VFile;
+        let mut file: VFile;
         let mut inode_guard: SleepLockGuard<InodeData>;
         // Get file path
         let addr = self.arg(0);
@@ -116,7 +119,6 @@ impl Syscall<'_> {
                         if inode_guard.dinode.itype == InodeType::Directory && open_mode != OpenMode::RDONLY as usize{
                             drop(inode_guard);
                             LOG.end_op();
-                            // println!("[Debug] sys_open: Fail to enter dir.");
                             return Err(());
                         }
                     },
@@ -129,22 +131,22 @@ impl Syscall<'_> {
         }
         
         // Allocate file descriptor
-        match unsafe{ FILE_TABLE.allocate() }  {
-            Some(cur_file) => {
-                file = cur_file;
-            }
+        // match unsafe{ FILE_TABLE.allocate() }  {
+        //     Some(cur_file) => {
+        //         file = cur_file;
+        //     }
     
-            None => {
-                drop(inode_guard);
-                LOG.end_op();
-                println!("Fail to allocate file");
-                return Err(())
-            }
-        }
+        //     None => {
+        //         drop(inode_guard);
+        //         LOG.end_op();
+        //         println!("Fail to allocate file");
+        //         return Err(())
+        //     }
+        // }
+        file = VFile::init();
     
         match inode_guard.dinode.itype {
             InodeType::Device => {
-                // println!("[Debug] sys_open: 文件类型为设备");
                 file.ftype = FileType::Device;
                 file.major = inode_guard.dinode.major;
                 file.readable = true;
@@ -171,7 +173,7 @@ impl Syscall<'_> {
         file.readable = open_mode.get_bit(0) | open_mode.get_bit(1);
         let fd;
     
-        match unsafe { CPU_MANAGER.alloc_fd(file) } {
+        match unsafe { CPU_MANAGER.alloc_fd(&file) } {
             Ok(cur_fd) => {
                 fd = cur_fd;
 
@@ -286,6 +288,25 @@ impl Syscall<'_> {
         Ok(0)
     }
 
+    pub fn sys_fstat(&self) -> SysResult {
+        let fd = self.arg(0);
+        let stat = self.arg(1);
+        println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
+
+        let pdata = unsafe{ &mut *self.process.data.get() };
+        let file = pdata.open_files[fd].as_ref().unwrap();
+        match file.stat(stat) {
+            Ok(()) => {
+                return Ok(0)
+            },
+
+            Err(err) => {
+                println!("err: {}", err);
+                return Err(())
+            }
+        }
+    }
+
 }
 
 
@@ -359,27 +380,7 @@ impl Syscall<'_> {
 //     Ok(0)
 // }
 
-// pub fn sys_fstat() -> SysResult {
-//     // let mut file: VFile = VFile::init();
-//     let mut stat: usize = 0;
-//     let mut fd = 0;
-//     arg_fd(0, &mut fd)?;
-//     arg_addr(1, &mut stat)?;
 
-//     let proc = unsafe{ CPU_MANAGER.myproc().unwrap() };
-//     let extern_data = proc.extern_data.get_mut();
-//     let file = extern_data.open_files[fd].as_ref().unwrap();
-//     match file.stat(stat) {
-//         Ok(()) => {
-//             return Ok(0)
-//         },
-
-//         Err(err) => {
-//             println!("err: {}", err);
-//             return Err(())
-//         }
-//     }
-// }
 
 // pub fn sys_chdir() -> SysResult {
 //     let mut path = [0u8; MAXPATH];
