@@ -188,11 +188,6 @@ impl ProcData {
         self.pagetable = Some(page_table);
     }
 
-    /// Close a fd
-    pub fn fd_close(&mut self, fd: usize) {
-        self.open_files[fd].take();
-    }
-
     /// Initialize first user process
     pub fn user_init(&mut self) {
         extern "C" {

@@ -106,57 +106,25 @@ impl Syscall<'_> {
         let sys_id = SysCallID::new(tf.a7);
         
         match sys_id {
-            SysCallID::SysFork => {
-                self.sys_fork()
-            },
-            SysCallID::SysExit => {
-                self.sys_exit()
-            },
-            SysCallID::SysWait => {
-                self.sys_wait()
-            },
-            SysCallID::SysRead => {
-                self.sys_read()
-            },
-
-            SysCallID::SysWrite => {
-                self.sys_write()
-            },
-
-            SysCallID::SysOpen => {
-                self.sys_open()
-            },
-
-            SysCallID::SysExec => {
-                self.sys_exec()
-            },
-
-            SysCallID::SysMknod => {
-                self.sys_mknod()
-            },
-
-            SysCallID::SysClose => {
-                self.sys_close()
-            },
-
-            SysCallID::SysDup => {
-                self.sys_dup()
-            }
-
-            SysCallID::SysUptime => {
-                Ok(0)
-            },
-            
-            SysCallID::SysSbrk => {
-                self.sys_sbrk()
-            },
-
-            SysCallID::SysFstat => {
-                self.sys_fstat()
-            }
-            _ => {
-                panic!("无效的系统调用id: {:?}", sys_id);
-            }
+            SysCallID::SysFork => { self.sys_fork() },
+            SysCallID::SysExit => { self.sys_exit() },
+            SysCallID::SysWait => { self.sys_wait() },
+            SysCallID::SysRead => { self.sys_read() },
+            SysCallID::SysWrite => { self.sys_write() },
+            SysCallID::SysOpen => { self.sys_open() },
+            SysCallID::SysExec => { self.sys_exec() },
+            SysCallID::SysMknod => { self.sys_mknod() },
+            SysCallID::SysClose => { self.sys_close() },
+            SysCallID::SysDup => { self.sys_dup() },
+            SysCallID::SysUptime => { Ok(0) },
+            SysCallID::SysSbrk => { self.sys_sbrk() },
+            SysCallID::SysFstat => { self.sys_fstat() },
+            SysCallID::SysChdir => { self.sys_chdir()},
+            SysCallID::SysPipe => { self.sys_pipe() },
+            SysCallID::SysUnlink => { self.sys_unlink() },
+            SysCallID::SysLink => { self.sys_link() },
+            SysCallID::SysMkdir => { self.sys_mkdir() },
+            _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }
     }
 

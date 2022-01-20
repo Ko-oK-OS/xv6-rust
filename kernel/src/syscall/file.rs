@@ -22,20 +22,14 @@ use bit_field::BitField;
 
 impl Syscall<'_> {
     pub fn sys_dup(&self) -> SysResult {
-        let mut fd = self.arg(0);
-        // let proc = self.process;
+        let old_fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
-        if let Ok(newfd) = unsafe{ CPU_MANAGER.alloc_fd(file) } {
-            fd = newfd;
-        }else{
-            panic!("sys_dup: 没有发现空闲的文件描述符")
-        }
-        // file.dup();
+        let file = pdata.open_files[old_fd].as_ref().unwrap();
         // 使用 Arc 来代替 refs
+        let new_fd = unsafe{ CPU_MANAGER.alloc_fd(&file) }.unwrap();
         let new_file = Arc::clone(&file);
-        pdata.open_files[fd].replace(new_file);
-        Ok(fd)
+        pdata.open_files[new_fd].replace(new_file);
+        Ok(new_fd)
     }
 
     /// read file data by special vfile. 
@@ -129,22 +123,7 @@ impl Syscall<'_> {
                 }
             }
         }
-        
-        // Allocate file descriptor
-        // match unsafe{ FILE_TABLE.allocate() }  {
-        //     Some(cur_file) => {
-        //         file = cur_file;
-        //     }
-    
-        //     None => {
-        //         drop(inode_guard);
-        //         LOG.end_op();
-        //         println!("Fail to allocate file");
-        //         return Err(())
-        //     }
-        // }
         file = VFile::init();
-    
         match inode_guard.dinode.itype {
             InodeType::Device => {
                 file.ftype = FileType::Device;
@@ -179,7 +158,7 @@ impl Syscall<'_> {
 
             }
             Err(err) => {
-                println!("{}", err);
+                println!("[Kernel] sys_open: err: {}", err);
                 return Err(())
             }
         }
@@ -270,27 +249,26 @@ impl Syscall<'_> {
             },
     
             Err(err) => {
-                println!("err: {}", err);
+                println!("[Kernel] sys_mknod: err: {}", err);
                 LOG.end_op();
-                // println!("[Debug] create: 创建失败");
                 Err(())
             }
         }
     
     }
 
-    /// TODO: fix
     pub fn sys_close(&self) -> SysResult {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
-        pdata.fd_close(fd);
-        // file.close();
+        // 使用 take() 减去引用数
+        pdata.open_files[fd].take();
         Ok(0)
     }
 
     pub fn sys_fstat(&self) -> SysResult {
         let fd = self.arg(0);
         let stat = self.arg(1);
+        #[cfg(feature = "kernel_debug")]
         println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
 
         let pdata = unsafe{ &mut *self.process.data.get() };
@@ -307,252 +285,253 @@ impl Syscall<'_> {
         }
     }
 
+    pub fn sys_chdir(&self) -> SysResult {
+        let mut path = [0u8; MAXPATH];
+        LOG.begin_op();
+        let addr = self.arg(0);
+        self.copy_from_str(addr, &mut path, MAXPATH)?;
+        match ICACHE.namei(&path) {
+            Some(inode) => {
+                let inode_guard = inode.lock();
+                match inode_guard.dinode.itype {
+                    InodeType::Directory => {
+                        drop(inode_guard);
+                        let old_cwd = unsafe{ (&mut *self.process.data.get()).cwd.replace(inode) };
+                        drop(old_cwd);
+                        LOG.end_op();
+                        return Ok(0)
+                    },
+
+                    _ => {
+                        LOG.end_op();
+                        drop(inode_guard);
+                        return Err(())
+                    }
+                }
+            },
+
+            None => {
+                LOG.end_op();
+                return Err(())
+            }
+        }
+
+    }
+
+    pub fn sys_pipe(&self) -> SysResult {
+        // User use an array to represent two file. 
+        // let mut fd_array: usize = 0;
+        let mut rf: &mut VFile = &mut VFile::init();
+        let mut wf: &mut VFile = &mut VFile::init();
+        // arg_addr(0, &mut &mut fd_array)?;
+        let fd_array = self.arg(0);
+        Pipe::alloc(&mut rf, &mut wf);
+
+        let p = unsafe {
+            CPU_MANAGER.myproc().expect("Fail to get my process.")
+        };
+
+        // Allocate file descriptor for r/w file. 
+        let rfd: usize;
+        let wfd: usize;
+        match p.fd_alloc(rf) {
+            Ok(fd) => {
+                rfd = fd;
+            },
+
+            Err(err) => {
+                // rf.close();
+                println!("[Kernel] sys_pipe: err: {}", err);
+                return Err(())
+            }
+        }
+        
+        match p.fd_alloc(wf) {
+            Ok(fd) => {
+                wfd = fd;
+            },
+
+            Err(err) => {
+                // rf.close();
+                // wf.close();
+                println!("[Kernel] sys_pipe: err: {}", err);
+                return Err(())
+            }
+        }
+
+        let pgt = p.page_table();
+        let pdata = unsafe{ &mut *self.process.data.get() };
+        let open_files = &mut pdata.open_files;
+        if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
+            open_files[rfd].take();
+            open_files[wfd].take();
+            // rf.close();
+            // wf.close();
+            return Err(())
+        }
+
+        if pgt.copy_out(
+            fd_array + size_of::<usize>(), 
+            wf as *const _ as *const u8, 
+            size_of::<usize>()
+        ).is_err() {
+            open_files[rfd].take();
+            open_files[wfd].take();
+            // rf.close();
+            // wf.close();
+            return Err(())
+        }
+        Ok(0)
+    }
+
+    pub fn sys_unlink(&self) -> SysResult {
+        let mut path = [0u8; MAXPATH];
+        let mut name = [0u8; DIRSIZ];
+        let parent: Inode;
+        let inode: Inode;
+
+        let addr = self.arg(0);
+        self.copy_from_str(addr, &mut path, MAXPATH)?;
+
+        LOG.begin_op();
+        match ICACHE.namei_parent(&path, &mut name) {
+            Some(cur) => {
+                parent = cur;
+            },
+            None => {
+                LOG.end_op();
+                return Err(())
+            }
+        }
+        let mut parent_guard = parent.lock();
+        if str_cmp(&name, ".".as_bytes(), DIRSIZ) &&
+            str_cmp(&name, "..".as_bytes(), DIRSIZ) {
+                drop(parent_guard);
+                LOG.end_op();
+                return Err(())
+        }
+        match parent_guard.dir_lookup(&name) {
+            Some(cur) => {
+                inode = cur;
+            },
+            _ => {
+                drop(parent_guard);
+                LOG.end_op();
+                return Err(())
+            }
+        }
+
+        let mut inode_guard = inode.lock();
+        if inode_guard.dinode.nlink < 1 {
+            panic!("sys_unlink: inods's nlink must be larger than 1.");
+        }
+
+        if inode_guard.dinode.itype == InodeType::Directory && 
+            !inode_guard.is_dir_empty() {
+                drop(inode_guard);
+                drop(parent_guard);
+                LOG.end_op();
+                return Err(())
+            }
+
+        if inode_guard.dinode.itype == InodeType::Directory {
+            parent_guard.dinode.nlink -= 1;
+            parent_guard.update();
+        }
+        drop(parent_guard);
+
+        inode_guard.dinode.nlink -= 1;
+        inode_guard.update();
+        drop(inode_guard);
+
+        LOG.end_op();
+        Ok(0)
+    }
+
+    /// Create the path new as a link to the same inode as old.
+    pub fn sys_link(&self) -> SysResult {
+        let mut new_path = [0u8; MAXPATH];
+        let mut old_path = [0u8; MAXPATH];
+        let mut name = [0u8; DIRSIZ];
+        let inode: Inode;
+        let parent: Inode;
+
+        let old_path_addr = self.arg(0);
+        let new_path_addr = self.arg(1);
+        self.copy_from_str(old_path_addr, &mut old_path, MAXPATH)?;
+        self.copy_from_str(new_path_addr, &mut new_path, MAXPATH)?;
+
+        LOG.begin_op();
+        match ICACHE.namei(&old_path) {
+            Some(cur) => {
+                inode = cur;
+            },
+
+            None => {
+                LOG.end_op();
+                return Err(())
+            }
+        }
+        let mut inode_guard = inode.lock();
+        if inode_guard.dinode.itype == InodeType::Directory {
+            drop(inode_guard);
+            LOG.end_op();
+            return Err(())
+        }
+
+        inode_guard.dinode.nlink += 1;
+
+        match ICACHE.namei_parent(&new_path, &mut name) {
+            Some(cur) => {
+                parent = cur;
+            },
+
+            _ => {
+                inode_guard.dinode.nlink -= 1;
+                drop(inode_guard);
+                LOG.end_op();
+                return Err(())
+            }
+        }
+        let mut parent_guard = parent.lock();
+        if parent_guard.dinode.itype != InodeType::Directory || 
+            parent_guard.dir_link(&name, inode.inum).is_ok() {
+                drop(parent_guard);
+                inode_guard.dinode.nlink -= 1;
+                drop(inode_guard);
+                LOG.end_op();
+                return Err(())
+            }
+        
+        inode_guard.update();
+        drop(inode_guard);
+        LOG.end_op();
+        return Ok(0)
+    }
+
+    pub fn sys_mkdir(&self) -> SysResult {
+        let mut path = [0u8; MAXPATH];
+        LOG.begin_op();
+        let addr = self.arg(0);
+        self.copy_from_str(addr, &mut path, MAXPATH)?;
+        match ICACHE.create(&path, InodeType::Directory, 0, 0) {
+            Ok(inode) => {
+                drop(inode);
+                LOG.end_op();
+                Ok(0)
+            },
+
+            Err(err) => {
+                println!("[Kernel] sys_mkdir: err: {}", err);
+                Err(())
+            }
+        }
+    }
+
 }
 
 
 
 
-// pub fn sys_pipe() -> SysResult {
-//     // User use an array to represent two file. 
-//     let mut fd_array: usize = 0;
-//     let mut rf: &mut VFile = &mut VFile::init();
-//     let mut wf: &mut VFile = &mut VFile::init();
-//     arg_addr(0, &mut &mut fd_array)?;
-//     Pipe::alloc(&mut rf, &mut wf);
-
-//     let p = unsafe {
-//         CPU_MANAGER.myproc().expect("Fail to get my process.")
-//     };
-
-//     // Allocate file descriptor for r/w file. 
-//     let rfd: usize;
-//     let wfd: usize;
-//     match p.fd_alloc(rf) {
-//         Ok(fd) => {
-//             rfd = fd;
-//         },
-
-//         Err(err) => {
-//             rf.close();
-//             println!("err: {}", err);
-//             return Err(())
-//         }
-//     }
-    
-//     match p.fd_alloc(wf) {
-//         Ok(fd) => {
-//             wfd = fd;
-//         },
-
-//         Err(err) => {
-//             rf.close();
-//             wf.close();
-//             println!("err: {}", err);
-//             return Err(())
-//         }
-//     }
-
-//     let pgt = p.page_table();
-//     let extern_data = unsafe {
-//         &mut *p.extern_data.get()
-//     };
-//     let open_files = &mut extern_data.open_files;
-//     if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
-//         open_files[rfd].take();
-
-//         open_files[wfd].take();
-//         rf.close();
-//         wf.close();
-//         return Err(())
-//     }
-
-//     if pgt.copy_out(
-//         fd_array + size_of::<usize>(), 
-//         wf as *const _ as *const u8, 
-//         size_of::<usize>()
-//     ).is_err() {
-//         open_files[rfd].take();
-//         open_files[wfd].take();
-//         rf.close();
-//         wf.close();
-//         return Err(())
-//     }
-//     Ok(0)
-// }
 
 
-
-// pub fn sys_chdir() -> SysResult {
-//     let mut path = [0u8; MAXPATH];
-//     let my_proc = unsafe{ CPU_MANAGER.myproc().expect("Fail to get my process.") };
-//     LOG.begin_op();
-//     arg_str(0, &mut path, MAXPATH)?;
-//     match ICACHE.namei(&path) {
-//         Some(inode) => {
-//             let inode_guard = inode.lock();
-//             match inode_guard.dinode.itype {
-//                 InodeType::Directory => {
-//                     drop(inode_guard);
-//                     let old_cwd = my_proc.extern_data.get_mut().cwd.replace(inode);
-//                     drop(old_cwd);
-//                     LOG.end_op();
-//                     return Ok(0)
-//                 },
-
-//                 _ => {
-//                     LOG.end_op();
-//                     drop(inode_guard);
-//                     return Err(())
-//                 }
-//             }
-//         },
-
-//         None => {
-//             LOG.end_op();
-//             return Err(())
-//         }
-//     }
-
-// }
-
-
-
-// pub fn sys_unlink() -> SysResult {
-//     let mut path = [0u8; MAXPATH];
-//     let mut name = [0u8; DIRSIZ];
-//     let mut parent: Inode;
-//     let mut inode: Inode;
-
-//     arg_str(0, &mut path, MAXPATH)?;
-
-//     LOG.begin_op();
-//     match ICACHE.namei_parent(&path, &mut name) {
-//         Some(cur) => {
-//             parent = cur;
-//         },
-//         None => {
-//             LOG.end_op();
-//             return Err(())
-//         }
-//     }
-//     let mut parent_guard = parent.lock();
-//     if str_cmp(&name, ".".as_bytes(), DIRSIZ) &&
-//         str_cmp(&name, "..".as_bytes(), DIRSIZ) {
-//             drop(parent_guard);
-//             LOG.end_op();
-//             return Err(())
-//     }
-//     match parent_guard.dir_lookup(&name) {
-//         Some(cur) => {
-//             inode = cur;
-//         },
-//         _ => {
-//             drop(parent_guard);
-//             LOG.end_op();
-//             return Err(())
-//         }
-//     }
-
-//     let mut inode_guard = inode.lock();
-//     if inode_guard.dinode.nlink < 1 {
-//         panic!("sys_unlink: inods's nlink must be larger than 1.");
-//     }
-
-//     if inode_guard.dinode.itype == InodeType::Directory && 
-//         !inode_guard.is_dir_empty() {
-//             drop(inode_guard);
-//             drop(parent_guard);
-//             LOG.end_op();
-//             return Err(())
-//         }
-
-//     if inode_guard.dinode.itype == InodeType::Directory {
-//         parent_guard.dinode.nlink -= 1;
-//         parent_guard.update();
-//     }
-//     drop(parent_guard);
-
-//     inode_guard.dinode.nlink -= 1;
-//     inode_guard.update();
-//     drop(inode_guard);
-
-//     LOG.end_op();
-//     Ok(0)
-// }
-
-// /// Create the path new as a link to the same inode as old.
-// pub fn sys_link() -> SysResult {
-//     let mut new_path = [0u8; MAXPATH];
-//     let mut old_path = [0u8; MAXPATH];
-//     let mut name = [0u8; DIRSIZ];
-//     let mut inode: Inode;
-//     let mut parent: Inode;
-
-//     arg_str(0, &mut old_path, MAXPATH)?;
-//     arg_str(1, &mut new_path, MAXPATH)?;
-
-//     LOG.begin_op();
-//     match ICACHE.namei(&old_path) {
-//         Some(cur) => {
-//             inode = cur;
-//         },
-
-//         None => {
-//             LOG.end_op();
-//             return Err(())
-//         }
-//     }
-//     let mut inode_guard = inode.lock();
-//     if inode_guard.dinode.itype == InodeType::Directory {
-//         drop(inode_guard);
-//         LOG.end_op();
-//         return Err(())
-//     }
-
-//     inode_guard.dinode.nlink += 1;
-
-//     match ICACHE.namei_parent(&new_path, &mut name) {
-//         Some(cur) => {
-//             parent = cur;
-//         },
-
-//         _ => {
-//             inode_guard.dinode.nlink -= 1;
-//             drop(inode_guard);
-//             LOG.end_op();
-//             return Err(())
-//         }
-//     }
-//     let mut parent_guard = parent.lock();
-//     if parent_guard.dinode.itype != InodeType::Directory || 
-//         parent_guard.dir_link(&name, inode.inum).is_ok() {
-//             drop(parent_guard);
-//             inode_guard.dinode.nlink -= 1;
-//             drop(inode_guard);
-//             LOG.end_op();
-//             return Err(())
-//         }
-    
-//     inode_guard.update();
-//     drop(inode_guard);
-//     LOG.end_op();
-//     return Ok(0)
-// }
-
-// pub fn sys_mkdir() -> SysResult {
-//     let mut path = [0u8; MAXPATH];
-//     LOG.begin_op();
-//     arg_str(0, &mut path, MAXPATH)?;
-//     match ICACHE.create(&path, InodeType::Directory, 0, 0) {
-//         Ok(inode) => {
-//             drop(inode);
-//             LOG.end_op();
-//             Ok(0)
-//         },
-
-//         Err(err) => {
-//             println!("err: {}", err);
-//             Err(())
-//         }
-//     }
-// }

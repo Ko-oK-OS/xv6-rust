@@ -31,14 +31,6 @@ impl Pipe {
         let mut pipe = Self {
             guard: Spinlock::new(pipe_guard, "pipe")
         };
-
-        // *rf = unsafe {
-        //     FILE_TABLE.allocate().expect("Fail to allocate file")
-        // };
-
-        // *wf = unsafe {
-        //     FILE_TABLE.allocate().expect("Fail to allocate file")
-        // };
         **rf = VFile::init();
         **wf = VFile::init();
         rf.ftype = FileType::Pipe;

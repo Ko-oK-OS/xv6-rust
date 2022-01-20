@@ -28,7 +28,7 @@ pub enum FileType {
 /// syscall to specific file.
 #[derive(Clone, Copy, Debug)]
 pub struct VFile {
-    pub(crate) index: usize,
+    // pub(crate) index: usize,
     pub(crate) ftype: FileType,
     // pub(crate) refs: usize,
     pub(crate) readable: bool,
@@ -42,7 +42,6 @@ pub struct VFile {
 impl VFile {
     pub(crate) const fn init() -> Self {
         Self{
-            index: 0,
             ftype: FileType::None,
             readable: false,
             writeable: false,
@@ -74,7 +73,7 @@ impl VFile {
                 if self.major < 0 || 
                 self.major as usize >= NDEV || 
                 unsafe{ DEVICE_LIST.table[self.major as usize].read as usize == 0 }{
-                    return Err("[Error] vfs: fail to read device")
+                    return Err("[Error] vfs: Fail to read device")
                 }
                 let read = unsafe { 
                     DEVICE_LIST.table[self.major as usize].read()
@@ -131,7 +130,6 @@ impl VFile {
                     return Err("Fail to write to device")
                 }
 
-                // ret = unsafe{ DEVICES[self.major as usize].write.unwrap().call((1, addr, len)) as usize };
                 let write = unsafe{ 
                     DEVICE_LIST.table[self.major as usize].write()
                 };
