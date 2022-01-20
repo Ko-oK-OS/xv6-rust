@@ -132,13 +132,11 @@ pub unsafe fn exec(
     LOG.begin_op();
 
     // Get current inode by path
-    // println!("[Debug] path: {}", path);
     inode = ICACHE.namei(path.as_bytes()).unwrap();
 
     // Get inode data by sleeplock
     let mut inode_guard = inode.lock();
            
-    // println!("[Debug] 读取ELF Header");
     // Check ELF header
     if inode_guard.read(
         false, 

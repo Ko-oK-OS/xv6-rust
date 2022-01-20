@@ -203,15 +203,13 @@ impl ProcManager{
         };
         // close all open files. 
         let pdata = unsafe{ &mut *my_proc.data.get() };
-        // let open_files = &mut pdata.open_files;
-        // for index in 0..open_files.len() {
-        //     let file = Arc::clone(&open_files[index]);
-        //     open_files[index] = Arc::new(
-        //         VFile::init()
-        //     );
-        //     file.close();
-        //     open_files[index].take()
-        // }
+        let open_files = &mut pdata.open_files;
+        // 遍历该进程打开的文件，夺取所有权，即将引用计数减一
+        for index in 0..open_files.len() {
+            if open_files[index].is_some() {
+                open_files[index].take();
+            }
+        }
 
         LOG.begin_op();
         let cwd = pdata.cwd.as_mut().expect("Fail to get inode");

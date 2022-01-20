@@ -80,6 +80,7 @@ pub(super) fn console_read(
             if p.killed() {
                 return None
             }
+            // 当用户仍在输入的时候，调用 sleep 进行休眠
             p.sleep(&console.read_index as *const _ as usize, console);
             console = CONSOLE.acquire();
         }
@@ -175,6 +176,7 @@ pub(super) fn console_intr(c: u8) {
                 console.edit_index += Wrapping(1);
                 if c == CTRL_LF || c == CTRL_EOT || (console.edit_index - console.read_index).0 == INPUT_BUF {
                     console.write_index = console.edit_index;
+                    // 当检测到用户换行的时候，唤醒 `console_read` 进行读取
                     unsafe{
                         PROC_MANAGER.wake_up(&console.read_index as *const _ as usize)
                     };
