@@ -1,6 +1,7 @@
 use super::InodeType;
 
 
+#[repr(C)]
 pub struct Stat {
     pub dev: u32, // file
     pub inum: u32, // Inode number

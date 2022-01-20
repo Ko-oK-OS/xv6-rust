@@ -250,7 +250,7 @@ impl ProcManager{
     /// Wait for a child process to exit and return its pid. 
     /// 等待子进程退出并返回 pid
     pub fn wait(&mut self, addr: usize) -> Option<usize> {
-        let mut pid = 0;
+        let pid;
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Fail to get my process")
         };

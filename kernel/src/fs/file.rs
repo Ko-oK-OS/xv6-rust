@@ -55,7 +55,7 @@ impl VFile {
         addr: usize, 
         len: usize
     ) -> Result<usize, &'static str> {
-        let mut ret = 0;
+        let ret;
         if !self.readable() {
             panic!("File can't be read!")
         }
@@ -84,7 +84,8 @@ impl VFile {
                 let inode = self.inode.as_ref().unwrap();
                 let mut inode_guard = inode.lock();
                 match inode_guard.read(true, addr, self.offset, len as u32) {
-                    Ok(_) => {
+                    Ok(size) => {
+                        ret = size;
                         let offset = unsafe { &mut *(&self.offset as *const _ as *mut u32)};
                         *offset += ret as u32;
                         drop(inode_guard);
@@ -202,7 +203,11 @@ impl VFile {
                 let inode_guard = inode.lock();
                 inode_guard.stat(&mut stat);
                 drop(inode_guard);
-
+                
+                // println!(
+                //     "[Kernel] stat: dev: {}, inum: {}, nlink: {}, size: {}, type: {:?}", 
+                //     stat.dev, stat.inum, stat.nlink, stat.size, stat.itype
+                // );
                 let pdata = p.data.get_mut();
                 let page_table = pdata.pagetable.as_mut().unwrap();
                 page_table.copy_out(addr, (&stat) as *const Stat as *const u8, size_of::<Stat>())?;

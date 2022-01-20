@@ -480,7 +480,7 @@ impl InodeData {
         mut dst: usize, 
         offset: u32, 
         count: u32
-    ) -> Result<(), &'static str> { 
+    ) -> Result<usize, &'static str> { 
         // Check the reading content is in range.
         let end = offset.checked_add(count).ok_or("Fail to add count.")?;
         if end > self.dinode.size {
@@ -492,12 +492,10 @@ impl InodeData {
         let count = count as usize;
         let mut block_basic = offset / BSIZE;
         let mut block_offset = offset % BSIZE;
-        // println!("[Debug] count: 0x{:x}", count);
         while total < count as usize {
             let surplus_len = count - total;
             let block_no = self.bmap(block_basic as u32)?;
             let buf = BCACHE.bread(self.dev, block_no);
-            // println!("[Debug] surplus_len: 0x{:x}, BSIZE - block_offset: 0x{:x}", surplus_len, BSIZE - block_offset);
             let write_len = min(surplus_len, BSIZE - block_offset);
             if copy_from_kernel(
                 is_user, 
@@ -516,7 +514,7 @@ impl InodeData {
             block_basic = offset / BSIZE;
             block_offset = offset % BSIZE;
         }
-        Ok(())
+        Ok(total)
     }
 
 
@@ -578,8 +576,7 @@ impl InodeData {
     /// Look for an inode entry in this directory according the name. 
     /// Panics if this is not a directory. 
     pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
-        assert!(name.len() == DIRSIZ);
-        // debug_assert!(self.dev != 0);
+        // assert!(name.len() == DIRSIZ);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
         }

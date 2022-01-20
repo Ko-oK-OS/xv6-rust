@@ -12,7 +12,7 @@ use crate::arch::riscv::qemu::param::MAXARG;
 use crate::memory::{ RawPage, PageAllocator };
 use crate::misc::str_cmp;
 use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
-use crate::fs::Pipe;
+use crate::fs::{Pipe, DirEntry};
 use super::*;
 
 use alloc::string::String;
@@ -55,6 +55,7 @@ impl Syscall<'_> {
                 return Err(())
             }
         }
+        // println!("[Kernel] sys_read: dir_entry size: {}, size: {}",size_of::<DirEntry>() ,size);
         Ok(size)
     }
 
@@ -148,15 +149,15 @@ impl Syscall<'_> {
         LOG.end_op();
     
         file.inode = Some(inode);
+        // 0x0 -> read only
+        // 0x1 -> write only
+        // 0x2 -> read & write
         file.writeable = open_mode.get_bit(0) | open_mode.get_bit(1);
         file.readable = !open_mode.get_bit(0) | open_mode.get_bit(1);
         let fd;
         match unsafe { CPU_MANAGER.alloc_fd(&file) } {
             Ok(new_fd) => {
                 fd = new_fd;
-                // let pdata = unsafe{ &mut *self.process.data.get() };
-                // let file = Arc::new(file);
-                // pdata.open_files[fd].replace(file);
             }
             Err(err) => {
                 println!("[Kernel] sys_open: err: {}", err);
