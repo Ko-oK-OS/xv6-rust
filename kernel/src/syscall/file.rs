@@ -51,6 +51,7 @@ impl Syscall<'_> {
             },
 
             Err(err) => {
+                #[cfg(feature = "kernel_warning")]
                 println!("[kernel] sys_read: err: {}", err);
                 return Err(())
             }
@@ -217,7 +218,9 @@ impl Syscall<'_> {
             ) 
         };
         let ret = unsafe {
-            exec(path, &argv).expect("Fail to exec")
+            exec(path, &argv).map_err(
+                |_|(())
+            )?
         };
     
         for i in 0..MAXARG {

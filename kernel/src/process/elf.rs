@@ -132,7 +132,7 @@ pub unsafe fn exec(
     LOG.begin_op();
 
     // Get current inode by path
-    inode = ICACHE.namei(path.as_bytes()).unwrap();
+    inode = ICACHE.namei(path.as_bytes()).ok_or("Fail to find executable file")?;
 
     // Get inode data by sleeplock
     let mut inode_guard = inode.lock();

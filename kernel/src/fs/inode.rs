@@ -485,7 +485,7 @@ impl InodeData {
         // Check the reading content is in range.
         let end = offset.checked_add(count).ok_or("Fail to add count.")?;
         if end > self.dinode.size {
-            println!("[Kernel] read: end: {}, dinode.size: {}", end, self.dinode.size);
+            // println!("[Kernel] read: end: {}, dinode.size: {}", end, self.dinode.size);
             return Err("inode read: end is more than diskinode's size.")
         }
 
@@ -577,7 +577,7 @@ impl InodeData {
 
         self.update();
         
-        println!("[Kernel] Write end");
+        // println!("[Kernel] Write end");
         Ok(total)
     }
 
