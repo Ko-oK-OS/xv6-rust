@@ -234,6 +234,7 @@ impl InodeCache {
         major: i16,
         minor: i16
     ) -> Result<Inode, &'static str> {
+        // println!("[Kernel] create: path: {}", String::from_utf8(path.to_vec()).unwrap());
         let mut name: [u8; DIRSIZ] = [0; DIRSIZ];
         let dirinode = self.namei_parent(path, &mut name).unwrap();
         let mut dirinode_guard = dirinode.lock();
@@ -261,11 +262,11 @@ impl InodeCache {
         }
         // Allocate a new inode to create file
         let dev = dirinode_guard.dev;
-        // let inode = ICACHE.alloc(dev, itype).unwrap();
         let inum = inode_alloc(dev, itype);
         let inode = self.get(dev, inum);
         
         let mut inode_guard = inode.lock();
+        // println!("[Kernel] create: inode_guard dinode: {:?}", inode_guard.dinode);
         // initialize new allocated inode
         inode_guard.dinode.major = major;
         inode_guard.dinode.minor = minor;
@@ -484,6 +485,7 @@ impl InodeData {
         // Check the reading content is in range.
         let end = offset.checked_add(count).ok_or("Fail to add count.")?;
         if end > self.dinode.size {
+            println!("[Kernel] read: end: {}, dinode.size: {}", end, self.dinode.size);
             return Err("inode read: end is more than diskinode's size.")
         }
 
@@ -531,11 +533,12 @@ impl InodeData {
         mut src: usize, 
         offset: u32, 
         count: u32
-    ) -> Result<(), &'static str> {
-        let end = offset.checked_add(count).ok_or("Fail to add count.")?;
-        if end > self.dinode.size {
-            return Err("inode read: end is more than diskinode's size.")
-        }
+    ) -> Result<usize, &'static str> {
+        // let end = offset.checked_add(count).ok_or("Fail to add count.")?;
+        // if end > self.dinode.size {
+        //     println!("[Kernel] write: end: {}, dinode.size: {}", end, self.dinode.size);
+        //     return Err("inode write: end is more than diskinode's size.")
+        // }
 
         let mut offset = offset as usize;
         let count = count as usize;
@@ -546,7 +549,7 @@ impl InodeData {
             let surplus_len = count - total;
             let block_no = self.bmap(block_basic as u32)?;
             let mut buf = BCACHE.bread(self.dev, block_no);
-            let write_len = min(surplus_len, block_offset % BSIZE);
+            let write_len = min(surplus_len, BSIZE - block_offset);
             if copy_to_kernel(
                 unsafe{ (buf.raw_data_mut() as *mut u8).offset((offset % BSIZE) as isize ) }, 
                 is_user, 
@@ -564,13 +567,18 @@ impl InodeData {
             block_offset = offset % BSIZE;
 
             LOG.write(buf);
+            // println!("[Kernel] Write Once");
+            // println!("[Kernel] total: {}, count: {}", total, count);
         }
 
         if self.dinode.size < offset as u32 {
             self.dinode.size = offset as u32;
         }
 
-        Ok(())
+        self.update();
+        
+        println!("[Kernel] Write end");
+        Ok(total)
     }
 
     /// Look for an inode entry in this directory according the name. 
@@ -608,7 +616,6 @@ impl InodeData {
 
     /// Write s new directory entry (name, inum) into the directory
     pub fn dir_link(&mut self, name: &[u8], inum: u32) -> Result<(), &'static str>{
-        // self.dir_lookup(name).ok_or("Fail to find inode")?;
         if self.dir_lookup(name).is_some() {
             return Err("It's incorrect to find entry in disk")
         }
@@ -633,7 +640,7 @@ impl InodeData {
         dir_entry.inum = inum as u16;
         self.write(
             false, 
-            (&dir_entry) as *const DirEntry as usize, 
+            (&dir_entry) as *const _ as usize, 
             entry_offset, 
             size_of::<DirEntry>() as u32
         )?;

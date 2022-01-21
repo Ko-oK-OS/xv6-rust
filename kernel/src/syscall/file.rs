@@ -261,7 +261,7 @@ impl Syscall<'_> {
     pub fn sys_close(&self) -> SysResult {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
-        // 使用 take() 减去引用数
+        // 使用 take() 夺取所有权来将引用数减 1
         pdata.open_files[fd].take();
         Ok(0)
     }

@@ -155,7 +155,12 @@ impl VFile {
                     let mut inode_guard = inode.lock();
 
                     // return err when failt to write
-                    inode_guard.write(true, addr + count, self.offset, write_bytes as u32)?;
+                    inode_guard.write(
+                        true, 
+                        addr + count, 
+                        self.offset, 
+                        write_bytes as u32
+                    )?;
 
                     // release sleeplock
                     drop(inode_guard);

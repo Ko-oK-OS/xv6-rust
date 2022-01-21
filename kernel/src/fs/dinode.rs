@@ -23,6 +23,7 @@ pub struct DiskInode {
     pub addrs: [u32; NDIRECT+1] // Data block addresses
 }
 
+#[repr(C)]
 pub struct DirEntry {
     pub inum: u16,
     pub name:[u8;DIRSIZ]
