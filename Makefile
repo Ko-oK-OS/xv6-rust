@@ -82,7 +82,9 @@ UPROGS=\
 	$(USER)/_echo \
 	$(USER)/_ls \
 	$(USER)/_mkdir \
-	$(USER)/_touch
+	$(USER)/_touch \
+	$(USER)/_cat \
+	$(USER)/_rm
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)

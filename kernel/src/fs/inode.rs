@@ -172,7 +172,6 @@ impl InodeCache {
         let mut inode: Inode;
         if path[0] == b'/' {
             inode = self.get(ROOTDEV, ROOTINUM);
-            // println!("[Kernel] namex: root_inode index: {}", inode.index);
         } else {
             let p = unsafe { CPU_MANAGER.myproc().unwrap() };
             inode = self.dup(p.data.get_mut().cwd.as_ref().unwrap());
@@ -195,6 +194,7 @@ impl InodeCache {
             match data_guard.dir_lookup(name) {
                 None => {
                     drop(data_guard);
+                    // println!("[Kernel] name: {}", String::from_utf8(name.to_vec()).unwrap());
                     return None
                 },
                 Some(last_inode) => {
@@ -266,7 +266,6 @@ impl InodeCache {
         let inode = self.get(dev, inum);
         
         let mut inode_guard = inode.lock();
-        // println!("[Kernel] create: inode_guard dinode: {:?}", inode_guard.dinode);
         // initialize new allocated inode
         inode_guard.dinode.major = major;
         inode_guard.dinode.minor = minor;
@@ -601,8 +600,8 @@ impl InodeData {
             if dir_entry.inum == 0 {
                 continue;
             }
+            // println!("dir_entry_name: {}, name: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap(), String::from_utf8(name.to_vec()).unwrap());
             for i in 0..DIRSIZ {
-                // println!("dir entry: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap());
                 if dir_entry.name[i] != name[i] {
                     break;
                 }
@@ -622,15 +621,17 @@ impl InodeData {
         let mut dir_entry = DirEntry::new();
         // look for an empty dir_entry
         let mut entry_offset = 0;
+        println!("[Kernel] dinode.size: {}", self.dinode.size);
         for offset in (0..self.dinode.size).step_by(size_of::<DirEntry>()) {
+            println!("[Kernel] offset: {}", offset);
             self.read(
                 false, 
                 (&mut dir_entry) as *mut DirEntry as usize, 
                 offset, 
                 size_of::<DirEntry>() as u32
             )?;
+            entry_offset += size_of::<DirEntry>() as u32;
             if dir_entry.inum == 0 {
-                entry_offset = offset;
                 break;
             }
         }
@@ -638,12 +639,14 @@ impl InodeData {
             ptr::copy(name.as_ptr(), dir_entry.name.as_mut_ptr(), name.len());
         }
         dir_entry.inum = inum as u16;
+        println!("[Kernel] entry_offset: {}", entry_offset);
         self.write(
             false, 
             (&dir_entry) as *const _ as usize, 
             entry_offset, 
             size_of::<DirEntry>() as u32
         )?;
+        
         Ok(())
     }
 

@@ -51,12 +51,11 @@ impl Syscall<'_> {
             },
 
             Err(err) => {
-                #[cfg(feature = "kernel_warning")]
+                // #[cfg(feature = "kernel_warning")]
                 println!("[kernel] sys_read: err: {}", err);
                 return Err(())
             }
         }
-        // println!("[Kernel] sys_read: dir_entry size: {}, size: {}",size_of::<DirEntry>() ,size);
         Ok(size)
     }
 
@@ -112,7 +111,8 @@ impl Syscall<'_> {
                     Some(cur_inode) => {
                         inode = cur_inode;
                         inode_guard = inode.lock();
-                        if inode_guard.dinode.itype == InodeType::Directory && open_mode != OpenMode::RDONLY as usize{
+                        if inode_guard.dinode.itype == InodeType::Directory && open_mode != OpenMode::RDONLY as usize {
+                            println!("[Kernel] itype: {:?}, open_mode: {}", inode_guard.dinode.itype, open_mode);
                             drop(inode_guard);
                             LOG.end_op();
                             return Err(());
