@@ -139,6 +139,7 @@ And then you can debug this programe step by step.
 ## Expected Future
 - [ ] Refactor memory model
 - [ ] Better scheduler
+- [ ] Threads Support
 - [ ] SdCard
 - [ ] Network Support
 - [ ] Async IO
