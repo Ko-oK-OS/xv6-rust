@@ -24,6 +24,23 @@ pub enum FileType {
     Socket = 4,
 }
 
+#[derive(Clone)]
+pub struct Device {
+
+}
+
+#[derive(Clone)]
+pub struct File {
+
+}
+
+#[derive(Clone)]
+pub enum FileInner {
+    Device(Device),
+    File(File)
+    // Pipe(Pipe)
+}
+
 /// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file.
 #[derive(Clone, Debug)]
@@ -35,6 +52,7 @@ pub struct VFile {
     pub(crate) inode: Option<Inode>,
     pub(crate) offset: u32,
     pub(crate) major: i16
+    // inner: FileInner
 }
 
 impl VFile {

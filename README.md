@@ -120,7 +120,7 @@ And then you can debug this programe step by step.
 - NetWork
     - [x] PCI and E1000 Initialize
     - [x] Protocol Headers
-    - [ ] NetCard
+    - [ ] Network Card Driver
     - [ ] Syscall
 - Device Driver
     - [x] Virtio Disk
@@ -136,13 +136,16 @@ And then you can debug this programe step by step.
 ### Scheduler
 - [ ] Use `VecDeque` instead of raw array.
 
+### Process
+- [ ] Use `BTreeMap` to maintain open files in `Process`
+- [ ] Add `Thread` in Kernel Process
+
 ## Expected Future
-- [ ] Refactor memory model
-- [ ] Better scheduler
-- [ ] Threads Support
-- [ ] SdCard
-- [ ] Network Support
-- [ ] Async IO
+- [ ] More Clear Memory Model
+- [ ] Better Scheduler
+- [ ] SD Card Driver Support
+- [ ] Network Support(Use `smoltcp` to simplify design)
+- [ ] Async IO Support
 
 ## Docs
 
