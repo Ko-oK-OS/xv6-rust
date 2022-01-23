@@ -20,7 +20,6 @@ allocator = { path = "../allocator" }
 fs-lib = { path = "../fs-lib" }
 
 [features]
-kernel_debug = []
 
 [profile.dev]
 panic = "abort"
