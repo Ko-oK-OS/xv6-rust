@@ -121,6 +121,7 @@ impl ProcManager{
     /// WARNING: possible error occurs here.
     pub fn alloc_proc(&mut self) -> Option<&mut Process> {
         let alloc_pid = self.alloc_pid();
+        // self.proc_dump();
         for proc in self.proc.iter_mut() {
             let mut pmeta = proc.meta.acquire();
             match pmeta.state {
@@ -280,8 +281,8 @@ impl ProcManager{
                                 return None
                             }
                             drop(proc_meta);
-                            drop(wait_guard);
                             p.free_proc();
+                            drop(wait_guard);
                             return Some(pid);
                         }
                         drop(proc_meta);

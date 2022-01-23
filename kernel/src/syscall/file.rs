@@ -112,7 +112,7 @@ impl Syscall<'_> {
                         inode = cur_inode;
                         inode_guard = inode.lock();
                         if inode_guard.dinode.itype == InodeType::Directory && open_mode != OpenMode::RDONLY as usize {
-                            println!("[Kernel] itype: {:?}, open_mode: {}", inode_guard.dinode.itype, open_mode);
+                            // println!("[Kernel] itype: {:?}, open_mode: {}", inode_guard.dinode.itype, open_mode);
                             drop(inode_guard);
                             LOG.end_op();
                             return Err(());
@@ -159,6 +159,7 @@ impl Syscall<'_> {
         match unsafe { CPU_MANAGER.alloc_fd(&file) } {
             Ok(new_fd) => {
                 fd = new_fd;
+                // println!("[Kernel] fd: {}", fd);
             }
             Err(err) => {
                 println!("[Kernel] sys_open: err: {}", err);

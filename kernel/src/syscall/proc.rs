@@ -5,7 +5,7 @@ impl Syscall<'_> {
     pub fn sys_fork(&mut self) -> SysResult {
         let proc_meta = self.process.meta.acquire();
         drop(proc_meta);
-        let child_proc = self.process.fork().expect("Fail to fork process");
+        let child_proc = self.process.fork().ok_or(())?;
         let pmeta = child_proc.meta.acquire();
         let pid = pmeta.pid;
         drop(pmeta);

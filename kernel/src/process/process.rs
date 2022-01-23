@@ -336,11 +336,9 @@ impl Process{
     /// free a proc structure and the data hanging from it,
     /// including user pages.
     /// p.acquire() must be held.
-
     pub fn free_proc(&mut self) {
         let mut pdata = self.data.get_mut();
         if !pdata.trapframe.is_null() {
-            // kfree(PhysicalAddress::new(extern_data.trapframe as usize));
             drop(pdata.trapframe as *mut RawPage);
             pdata.set_trapframe(0 as *mut Trapframe);
 
@@ -482,10 +480,10 @@ impl Process{
 
             let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
             child_data.parent = Some(self as *mut Process);
-            // println!("[Debug] fork: parent address: 0x{:x}", self as *mut Process as usize);
             drop(wait);
             Some(child_proc)
         }else {
+            println!("[Kernel] fork: None");
             None
         }
     }

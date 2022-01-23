@@ -84,7 +84,9 @@ UPROGS=\
 	$(USER)/_mkdir \
 	$(USER)/_touch \
 	$(USER)/_cat \
-	$(USER)/_rm
+	$(USER)/_rm \
+	$(USER)/_forktest \
+	$(USER)/_stressfs
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
