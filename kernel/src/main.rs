@@ -48,6 +48,7 @@ mod driver;
 mod net;
 mod misc;
 mod trap;
+mod ipc;
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 

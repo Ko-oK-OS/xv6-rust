@@ -1,7 +1,9 @@
 mod proc;
 mod file;
+mod ipc;
 pub use proc::*;
 pub use file::*;
+pub use ipc::*;
 
 use crate::arch::riscv::qemu::fs::NOFILE;
 use crate::{println, process::*};
@@ -61,6 +63,13 @@ pub enum SysCallID {
     SysLink = 19,
     SysMkdir = 20,
     SysClose = 21,
+
+    SysSemGet = 22,
+    SysSemPut = 23,
+    SysSemUp  = 24,
+    SysSemDown= 25,
+    SysSemInit= 26,
+
     Unknown
 }
 
@@ -87,7 +96,14 @@ impl SysCallID {
             18 => { Self::SysUnlink },
             19 => { Self::SysLink },
             20 => { Self::SysMkdir },
-            21 => { Self::SysClose }
+            21 => { Self::SysClose },
+
+            22 => { Self::SysSemGet},
+            23 => { Self::SysSemPut},
+            24 => { Self::SysSemUp},
+            25 => { Self::SysSemDown},
+            26 => { Self::SysSemInit},
+
             _ => { Self::Unknown }
         }
     }
@@ -124,6 +140,13 @@ impl Syscall<'_> {
             SysCallID::SysUnlink => { self.sys_unlink() },
             SysCallID::SysLink => { self.sys_link() },
             SysCallID::SysMkdir => { self.sys_mkdir() },
+
+            SysCallID::SysSemGet => { self.sys_sem_get() },
+            SysCallID::SysSemPut => { self.sys_sem_put() },
+            SysCallID::SysSemUp => { self.sys_sem_up() },
+            SysCallID::SysSemDown => { self.sys_sem_down() },
+            SysCallID::SysSemInit => { self.sys_sem_init() },
+            
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }
     }

@@ -86,7 +86,9 @@ UPROGS=\
 	$(USER)/_cat \
 	$(USER)/_rm \
 	$(USER)/_forktest \
-	$(USER)/_stressfs
+	$(USER)/_stressfs \
+	$(USER)/_sem_test1 \
+	$(USER)/_sem_test2 
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
