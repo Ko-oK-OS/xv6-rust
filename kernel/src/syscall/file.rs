@@ -133,6 +133,12 @@ impl Syscall<'_> {
                 file.readable = true;
                 file.writeable = true;
             },
+            InodeType::FIFO => {
+                file.ftype = FileType::Fifo;
+                file.offset= 0;
+                file.readable = true;
+                file.writeable = true;
+            }
             _ => {
                 file.ftype = FileType::Inode;
                 file.offset = 0;
@@ -266,7 +272,9 @@ impl Syscall<'_> {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
         // 使用 take() 夺取所有权来将引用数减 1
+    
         pdata.open_files[fd].take();
+     
         Ok(0)
     }
 
@@ -369,10 +377,12 @@ impl Syscall<'_> {
             }
         }
 
+    
+
         let pgt = p.page_table();
         let pdata = unsafe{ &mut *self.process.data.get() };
         let open_files = &mut pdata.open_files;
-        if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
+        if pgt.copy_out(fd_array, &rfd as *const usize as *const u8, size_of::<usize>()).is_err() {
             open_files[rfd].take();
             open_files[wfd].take();
             // rf.close();
@@ -380,9 +390,20 @@ impl Syscall<'_> {
             return Err(())
         }
 
+        // if pgt.copy_out(
+        //     fd_array + size_of::<usize>(), 
+        //     &wfd as *const usize as *const u8,
+        //     size_of::<usize>()
+        // ).is_err() {
+        //     open_files[rfd].take();
+        //     open_files[wfd].take();
+        //     // rf.close();
+        //     // wf.close();
+        //     return Err(())
+        // }
         if pgt.copy_out(
-            fd_array + size_of::<usize>(), 
-            wf as *const _ as *const u8, 
+            fd_array + 4, 
+            &wfd as *const usize as *const u8,
             size_of::<usize>()
         ).is_err() {
             open_files[rfd].take();

@@ -8,12 +8,12 @@ use super::{FileType, VFile};
 const PIPE_SIZE: usize = 512;
 #[repr(C)]
 pub struct Pipe {
-    guard: Spinlock<PipeGuard>
+    pub guard: Spinlock<PipeGuard>
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-struct PipeGuard {
+pub struct PipeGuard {
     data: [u8; PIPE_SIZE],
     /// number of bytes read
     read_number: usize, 
@@ -77,6 +77,8 @@ impl Pipe {
                 break;
             }
             i = index;
+            // pipe_guard.read_number += 1;
+
         }
 
         unsafe{ PROC_MANAGER.wake_up(&pipe_guard.write_number as *const _ as usize) };
@@ -85,22 +87,29 @@ impl Pipe {
     }
 
     pub fn write(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
+        
         let my_proc = unsafe {
             CPU_MANAGER.myproc().ok_or("Fail to get current process")?
         };
-
+        // println!("$$$");
+        // println!("HAHA");
         let mut pipe_guard = self.guard.acquire();
         let mut i = 0;
+   
+        
         while i < len {
             if !pipe_guard.read_open || my_proc.killed() {
                 drop(pipe_guard);
                 return Err("pipe write: pipe read close or current process has been killed")
             }
+         
+
 
             if pipe_guard.write_number == pipe_guard.read_number + PIPE_SIZE {
                 unsafe {
                     PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
                 }
+            
                 my_proc.sleep(&pipe_guard.write_number as *const _ as usize, pipe_guard);
                 pipe_guard = self.guard.acquire();
             } else {
@@ -111,7 +120,9 @@ impl Pipe {
                 }
                 let write_cursor = pipe_guard.write_number % PIPE_SIZE;
                 pipe_guard.data[write_cursor % PIPE_SIZE] = char;
+                // println!("{}", char);
                 i += 1;
+                pipe_guard.write_number += 1;
             }
         }
 
@@ -119,7 +130,7 @@ impl Pipe {
             PROC_MANAGER.wake_up(&pipe_guard.read_number as *const _ as usize);
         }
         drop(pipe_guard);
-
+        
         Ok(i)
     }
 
@@ -147,7 +158,7 @@ impl Pipe {
 }
 
 impl PipeGuard {
-    fn alloc() -> *mut Self {
+    pub fn alloc() -> *mut Self {
         let pipe = unsafe{ RawPage::new_zeroed() as *mut PipeGuard };
         let pipe = unsafe{ &mut *pipe };
         pipe.read_number = 0;

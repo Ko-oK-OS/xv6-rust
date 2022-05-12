@@ -22,7 +22,7 @@ bitflags!{
         const X = PTE_X;
         const U = PTE_U;
     }
-
+    
 }
 
 impl PteFlags {

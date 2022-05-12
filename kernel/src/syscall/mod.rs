@@ -70,6 +70,12 @@ pub enum SysCallID {
     SysSemDown= 25,
     SysSemInit= 26,
 
+    SysMkfifo  = 27,
+    SysFifoGet = 28,
+    SysFifoPut = 29,
+    SysFifoRead = 30,
+    SysFifoWrite = 31,
+
     Unknown
 }
 
@@ -103,6 +109,12 @@ impl SysCallID {
             24 => { Self::SysSemUp},
             25 => { Self::SysSemDown},
             26 => { Self::SysSemInit},
+
+            27 => { Self::SysMkfifo},
+            28 => { Self::SysFifoGet},
+            29 => { Self::SysFifoPut},
+            30 => { Self::SysFifoRead},
+            31 => { Self::SysFifoWrite},
 
             _ => { Self::Unknown }
         }
@@ -146,6 +158,12 @@ impl Syscall<'_> {
             SysCallID::SysSemUp => { self.sys_sem_up() },
             SysCallID::SysSemDown => { self.sys_sem_down() },
             SysCallID::SysSemInit => { self.sys_sem_init() },
+
+            SysCallID::SysMkfifo => { self.sys_mkfifo()},
+            SysCallID::SysFifoGet => { self.sys_fifo_get() },
+            SysCallID::SysFifoPut => { self.sys_fifo_put() },
+            SysCallID::SysFifoRead => { self.sys_fifo_read() },
+            SysCallID::SysFifoWrite => { self.sys_fifo_write() },
             
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }

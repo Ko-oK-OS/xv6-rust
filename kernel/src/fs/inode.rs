@@ -244,7 +244,7 @@ impl InodeCache {
                 drop(dirinode_guard);
                 let inode_guard = inode.lock();
                 match inode_guard.dinode.itype {
-                    InodeType::Device | InodeType::File => {
+                    InodeType::Device | InodeType::File | InodeType::FIFO => {
                         if itype == InodeType::File {
                             drop(inode_guard);
                             return Ok(inode)
