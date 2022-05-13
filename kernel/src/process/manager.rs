@@ -148,6 +148,35 @@ impl ProcManager{
         None
     }
 
+    pub fn alloc_proc_withoutPGTB(&mut self) -> Option<&mut Process> {
+        let alloc_pid = self.alloc_pid();
+        // self.proc_dump();
+        for proc in self.proc.iter_mut() {
+            let mut pmeta = proc.meta.acquire();
+            match pmeta.state {
+                ProcState::UNUSED => {
+                    pmeta.pid = alloc_pid;
+                    pmeta.set_state(ProcState::ALLOCATED);
+                    let pdata = proc.data.get_mut();
+                    // Allocate a trapframe page.
+                    let trapframe = unsafe{ RawPage::new_zeroed() as *mut u8 };
+                    pdata.set_trapframe(trapframe as *mut Trapframe);
+                    // An empty user page table
+                    unsafe{
+                        pdata.proc_pagetable();
+                    }
+                    // Set up new context to start executing at forkret, 
+                    // which returns to user space. 
+                    pdata.init_context();
+                    drop(pmeta);
+                    return Some(proc)
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
 
     /// Wake up all processes sleeping on chan.
     /// Must be called without any p->lock.

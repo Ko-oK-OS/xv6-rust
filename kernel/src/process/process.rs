@@ -69,6 +69,7 @@ impl ProcMeta {
 pub struct ProcData {
     // these are private to the process, so p->lock need to be held
     pub kstack:usize,  // Virtual address of kernel stack
+    pub thread_ustack: usize,
     pub size:usize, // size of process memory
     pub pagetable: Option<Box<PageTable>>, // User page table
     pub trapframe: *mut Trapframe, // data page for trampoline.S
@@ -85,6 +86,7 @@ impl ProcData {
     pub const fn new() -> Self {
         Self {
             kstack:0,
+            thread_ustack: 0,
             size: 0,
             pagetable: None,
             trapframe: null_mut(),

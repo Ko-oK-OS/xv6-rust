@@ -16,6 +16,7 @@ mod trapframe;
 mod manager;
 mod elf;
 mod process;
+mod thread;
 pub use context::*;
 pub use trapframe::*;
 pub use cpu::*;
