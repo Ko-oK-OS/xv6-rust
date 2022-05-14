@@ -336,6 +336,68 @@ impl ProcManager{
         }
     }
 
+    pub fn join(&mut self, stack: usize) -> Option<usize> {
+        let pid;
+        let my_proc = unsafe {
+            CPU_MANAGER.myproc().expect("Fail to get my process")
+        };
+        let mut wait_guard = self.wait_lock.acquire();
+        loop {
+            let mut have_kids = false;
+            // Scan through table looking for exited children. 
+            // 遍历所有进程是否为其他进程的子进程
+            for index in 0..self.proc.len() {
+                let p = &mut self.proc[index];
+                let pdata = unsafe {
+                    p.data.get().as_mut().unwrap()
+                };
+                if let Some(parent) = pdata.parent {
+                    if parent as *const _ == my_proc as *const _ {
+                        // 确报子进程不会退出或者进行被调度出去
+                        let proc_meta = p.meta.acquire();
+                        have_kids = true;
+                        // make sure the child isn't still in exit or swtch. 
+                        if proc_meta.state == ProcState::ZOMBIE {
+                            // Found one 
+                            pid = proc_meta.pid;
+                            let page_table = pdata.pagetable.as_mut().expect("Fail to get pagetable");
+                            
+                            // 这里是要获取子进程退出的状态，当 addr 的值为 0 的时候为悬空指针，表示
+                            // 不需要获取子进程退出的状态
+                            if page_table.copy_out(stack, pdata.thread_ustack as *const u8, size_of::<usize>()).is_err() {
+                                drop(proc_meta);
+                                drop(wait_guard);
+                                return None
+                            }
+                            pdata.thread_ustack = 0;
+                            drop(proc_meta);
+                            p.free_thread();
+                            drop(wait_guard);
+                            return Some(pid);
+                        }
+                        drop(proc_meta);
+                    }
+                }
+            }
+            let my_proc_data = my_proc.meta.acquire();
+            // No point waiting if we don't have any children. 
+            if !have_kids || my_proc_data.killed {
+                drop(wait_guard);
+                drop(my_proc_data);
+                return None
+            }
+            // 释放锁，否则会死锁
+            drop(my_proc_data);
+            // Wait for a child to exit.
+            my_proc.sleep(
+                my_proc as *const _ as usize, 
+                wait_guard
+            );
+            wait_guard = self.wait_lock.acquire();
+        }
+    }
+
+
     /// Kill the process with the given pid. 
     /// The victim won't exit until it tries to return. 
     /// to user space (user_trap)

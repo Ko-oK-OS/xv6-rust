@@ -78,6 +78,53 @@ impl PageTable{
         drop(self);
     }
 
+    pub fn copy_pagetable(&mut self, pgt_b: &mut Self){
+        for i in 0..self.entries.len(){
+            let pte_a = &mut self.entries[i];
+            let pte_b = &mut pgt_b.entries[i];
+            let pte_flag_a = pte_a.as_flags();
+            if pte_a.is_valid() && !pte_a.is_leaf() {
+                let zeroed_pgt: Box<PageTable> = unsafe { Box::new_zeroed().assume_init() };
+                let child_pgt_b = Box::into_raw(zeroed_pgt);
+                pte_b.0 = ((child_pgt_b as usize >> 12) << 10) | pte_flag_a;
+
+                let child_pgt_a = unsafe { &mut *(pte_a.as_pagetable()) };
+                child_pgt_a.copy_pagetable( unsafe {&mut *child_pgt_b} );
+            }else if pte_a.is_valid() {
+                pte_b.0 = pte_a.0;
+            }
+        }
+    }
+
+    pub fn print_pagetable(&mut self) {
+        for i in 0..self.entries.len(){
+            let pte_1 = &mut self.entries[i];
+
+            if pte_1.is_valid(){
+                println!("{}--{}", i, pte_1.as_usize());
+
+                let pgt_2 = unsafe { &mut *pte_1.as_pagetable() };
+                for j in 0..pgt_2.entries.len(){
+                    let pte_2 = &mut pgt_2.entries[j];
+
+                    if pte_2.is_valid() {
+                        println!("    {}--{}", j, pte_2.as_usize());
+
+                        let pgt_3 = unsafe { &mut *pte_2.as_pagetable() };
+                        for k in 0..pgt_3.entries.len(){
+                            let pte_3 = &mut pgt_3.entries[k];
+
+                            if pte_3.is_valid(){
+                                println!("        {}--{}", k, pte_3.as_usize());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
     /// Return the address of the PTE in page table pagetable
     /// that corresponds to virtual address va.  If alloc!=0,
     /// create any required page-table pages.
@@ -302,7 +349,7 @@ impl PageTable{
             let ppn = pa.as_usize() / PGSIZE;
             self.uvm_unmap(
                 VirtualAddress::new(0),
-                 ppn,
+                ppn,
                 true
             );
         }
@@ -426,6 +473,8 @@ impl PageTable{
 
         Ok(())
     }
+
+    
 
     /// mark a PTE invalid for user access.
     /// used by exec for the user stack guard page.
@@ -604,6 +653,7 @@ impl PageTable{
         );
 
         self.uvm_free(size);
+        // self.free();
     }
 
 }

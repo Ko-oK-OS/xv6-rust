@@ -70,6 +70,9 @@ pub enum SysCallID {
     SysSemDown= 25,
     SysSemInit= 26,
 
+    SysClone  =  40,
+    SysJoin   =  41,
+
     Unknown
 }
 
@@ -103,6 +106,9 @@ impl SysCallID {
             24 => { Self::SysSemUp},
             25 => { Self::SysSemDown},
             26 => { Self::SysSemInit},
+
+            40 => { Self::SysClone},
+            41 => { Self::SysJoin},
 
             _ => { Self::Unknown }
         }
@@ -146,6 +152,9 @@ impl Syscall<'_> {
             SysCallID::SysSemUp => { self.sys_sem_up() },
             SysCallID::SysSemDown => { self.sys_sem_down() },
             SysCallID::SysSemInit => { self.sys_sem_init() },
+
+            SysCallID::SysClone   => { self.sys_clone() },
+            SysCallID::SysJoin    => { self.sys_join() },
             
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }

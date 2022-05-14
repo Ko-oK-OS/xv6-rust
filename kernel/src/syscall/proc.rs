@@ -12,6 +12,16 @@ impl Syscall<'_> {
         Ok(pid)
     }
 
+    pub fn sys_clone(&mut self) -> SysResult {
+        let func = self.arg(0);
+        let arg = self.arg(1);
+        let ustack = self.arg(2);
+
+        let ret = self.process.threadclone(func, arg, ustack);
+
+        Ok(ret)
+    }
+
     pub fn sys_exit(&self) -> SysResult {
         let status = self.arg(0);
         unsafe {
@@ -26,6 +36,21 @@ impl Syscall<'_> {
         } {
             Some(pid) => {
                 Ok(pid)
+            },
+    
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_join(&self) -> SysResult {
+        let ustack_addr = self.arg(0);
+        match unsafe {
+            PROC_MANAGER.join(ustack_addr)
+        } {
+            Some(ret) => {
+                Ok(ret)
             },
     
             None => {

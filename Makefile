@@ -48,7 +48,7 @@ $(USER)/initcode: $(USER)/initcode.S
 	$(OBJCOPY) -S -O binary $(USER)/initcode.out $(USER)/initcode
 	$(OBJDUMP) -S $(USER)/initcode.o > $(USER)/initcode.asm
 
-ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o
+ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -88,7 +88,8 @@ UPROGS=\
 	$(USER)/_forktest \
 	$(USER)/_stressfs \
 	$(USER)/_sem_test1 \
-	$(USER)/_sem_test2 
+	$(USER)/_sem_test2 \
+	$(USER)/_thread_test
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)

@@ -6,11 +6,22 @@ impl Process {
         let pdata = unsafe { &mut *self.data.get() };
         let tdata = unsafe { &mut *thread.data.get() };
         
-        // let page_table = pdata.pagetable.as_mut().unwrap();
-        // tdata.pagetable = Some(page_table);
-        // println!("In clone, assign page table");
-        // tdata.pagetable = pdata.pagetable;
-        // println!("In clone {} {}", tdata.pagetable as usize, pdata.pagetable as usize);
+        let pgt_p = pdata.pagetable.as_mut().unwrap();
+        let pgt_t = tdata.pagetable.as_mut().unwrap();
+
+        pgt_p.copy_pagetable(pgt_t);
+
+
+        // check page table copy
+
+        // pgt_p.print_pagetable();
+        // println!("-----------------------");
+        // pgt_t.print_pagetable();
+        // println!("++++++++++++++++++++++");
+        // while (true){
+
+        // }
+     
         tdata.size = pdata.size;
         tdata.name = pdata.name;    //to do
         
@@ -20,7 +31,7 @@ impl Process {
         ttf.a0 = arg;
         ttf.epc = func;
         ttf.sp = ustack + PGSIZE;
-        ttf.s0 = ttf.sp;
+        // ttf.s0 = ttf.sp;
 
         tdata.thread_ustack = ustack;
 
@@ -34,17 +45,9 @@ impl Process {
         tmeta.state = ProcState::RUNNABLE;
         drop(tmeta);
 
-        // let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
+        let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
         tdata.parent = Some(self as *mut Process);
-        // drop(wait);
-
-        // println!("Finshed Clone");
-
-        //     Some(thread)
-        // }else {
-        //     println!("[Kernel] thread clone: None");
-        //     None
-        // }
+        drop(wait);
         arg
     }
 

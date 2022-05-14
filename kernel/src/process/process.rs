@@ -79,7 +79,6 @@ pub struct ProcData {
     pub parent: Option<*mut Process>,   
     pub open_files: [Option<Arc<VFile>>; NFILE],
     pub cwd: Option<Inode>
-
 }
 
 impl ProcData {
@@ -189,6 +188,40 @@ impl ProcData {
 
         self.pagetable = Some(page_table);
     }
+
+    // pub unsafe fn thread_pagetable(&mut self) {
+
+    //     extern "C" {
+    //         fn trampoline();
+    //     }
+
+    //     // An empty page table
+    //     let mut page_table = PageTable::uvmcreate();
+    //     // map the trampoline code (for system call return )
+    //     // at the highest user virtual address.
+    //     // only the supervisor uses it, on the way
+    //     // to/from user space, so not PTE_U. 
+    //     if !page_table.map(
+    //         VirtualAddress::new(TRAMPOLINE),
+    //         PhysicalAddress::new(trampoline as usize),
+    //         PGSIZE,
+    //         PteFlags::R | PteFlags::X
+    //     ) {
+    //         page_table.uvm_free(0);
+    //     }
+
+    //     // map the trapframe just below TRAMPOLINE, for trampoline.S 
+    //     if !page_table.map(
+    //         VirtualAddress::new(TRAPFRAME), 
+    //         PhysicalAddress::new(self.trapframe as usize),
+    //         PGSIZE,
+    //         PteFlags::R | PteFlags::W
+    //     ) {
+    //         page_table.uvm_free(0);
+    //     }
+
+    //     self.pagetable = Some(page_table);
+    // }
 
     /// Initialize first user process
     pub fn user_init(&mut self) {
@@ -346,6 +379,34 @@ impl Process{
 
             if let Some(page_table) = pdata.pagetable.as_mut() {
                 page_table.proc_free_pagetable(pdata.size);
+            }
+
+
+            let mut guard = self.meta.acquire();
+
+            pdata.set_pagetable(None);
+            pdata.set_parent(None);
+            pdata.size = 0;
+
+            guard.pid = 0;
+            guard.channel = 0;
+            guard.killed = false;
+            guard.xstate = 0;
+            guard.set_state(ProcState::UNUSED);
+
+            drop(guard);
+            
+        }
+    }
+
+    pub fn free_thread(&mut self) {
+        let mut pdata = self.data.get_mut();
+        if !pdata.trapframe.is_null() {
+            drop(pdata.trapframe as *mut RawPage);
+            pdata.set_trapframe(0 as *mut Trapframe);
+
+            if let Some(page_table) = pdata.pagetable.as_mut() {
+                page_table.free();
             }
 
 
