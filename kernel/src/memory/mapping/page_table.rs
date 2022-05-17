@@ -60,19 +60,22 @@ impl PageTable{
 
     /// Recursively free page-table pages.
     /// All leaf mappings must already have been removed.
-    pub fn free(&mut self) {
+    pub fn free_pagetable(&mut self) {
         // there are 2^9 = 512 PTEs in a pagetable
         for i in 0..self.entries.len() {
-            let pte = self.entries[i];
+            let pte = &mut self.entries[i];
             if pte.is_valid() && !pte.is_leaf() {
                 // this PTE points to a lower-level page. 
                 unsafe {
                     let child_pgt = &mut *(pte.as_pagetable());
-                    child_pgt.free();
+                    child_pgt.free_pagetable();
                 }
-                self.entries[i] = PageTableEntry::new(0);
-            } else if pte.is_valid() {
-                panic!("pagetable free(): leaf not be removed");
+                self.entries[i].0 = 0;
+                // pte.free();
+            } 
+            //TODO BUG  TRAPONLINE   Don't need free, 
+            else if pte.is_valid() && pte.is_leaf() {
+                // panic!("pagetable free(): leaf not be removed {} ", pte.0);   
             }
         }
         drop(self);
@@ -282,8 +285,10 @@ impl PageTable{
 
     /// Create an empty user page table.
     /// return None if out of memory
-    pub unsafe fn uvmcreate() -> Box<PageTable>{
-        Box::new_zeroed().assume_init()
+    pub unsafe fn uvmcreate() -> *mut PageTable{
+        let pagetable: Box<PageTable> = Box::new_zeroed().assume_init();
+        let ptr = Box::into_raw(pagetable);
+        ptr
     }
 
     /// Load the user initcode into address 0 of pagetable
@@ -353,7 +358,7 @@ impl PageTable{
                 true
             );
         }
-        drop(self);
+        // drop(self);
     }
 
 
@@ -403,12 +408,16 @@ impl PageTable{
                     if !pte.is_valid() {
                         panic!("uvm_unmap: not mapped");
                     }
+                    if !pte.is_leaf() {
+                        panic!("IS NOT LEAF");
+                    }
                     if pte.as_flags() == PteFlags::V.bits() {
                         panic!("uvm_unmap: not a leaf");
                     }
                     if free {
                         let pa = pte.as_pagetable();
                         unsafe{ drop_in_place(pa) };
+                        pte.0 = 0;
                     }
                 },
 

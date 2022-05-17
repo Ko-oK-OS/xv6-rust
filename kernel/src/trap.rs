@@ -42,16 +42,16 @@ pub unsafe fn user_trap() {
     stvec::write(kernelvec as usize);
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
-    let pdata = my_proc.data.get_mut();
-
-    let tf = &mut *pdata.trapframe;
+    let tf = &mut *my_proc.trapframe;
     tf.epc = sepc;
-
+    // println!("{}", sepc);
     match scause.cause() {
+        
         Trap::Exception(Exception::UserEnvCall) => {
+            
             // user system call
             if my_proc.killed() {
-                exit(-1);
+                PROC_MANAGER.exit(1);
             }
             // Spec points to the ecall instruction,
             // but we want to return to the next instrcution
@@ -61,6 +61,7 @@ pub unsafe fn user_trap() {
             // so don't enable until done with those registers. 
             sstatus::intr_on();
             handle_syscall();
+            
         },
 
         // Device interrupt
@@ -97,7 +98,7 @@ pub unsafe fn user_trap() {
             // the SSIP bit in sip.
             sip::clear_ssip();
             if my_proc.killed() {
-                exit(-1);
+                PROC_MANAGER.exit(1);
             }
             // yield up the CPU if this is a timer interrupt
             my_proc.yielding();
@@ -112,7 +113,7 @@ pub unsafe fn user_trap() {
     }
 
     if my_proc.killed() {
-        exit(-1);
+        PROC_MANAGER.exit(1);
     }
     
     user_trap_ret();
@@ -141,8 +142,8 @@ pub unsafe fn user_trap_ret() -> ! {
 
     // set up trapframe values that uservec will need when
     // the process next re-enters the kernel.
-    let pdata = my_proc.data.get_mut();
-    pdata.user_init();
+ 
+    my_proc.user_init();
 
     // set up the registers that trampoline.S's sret will use
     // to get to user space.
@@ -153,10 +154,16 @@ pub unsafe fn user_trap_ret() -> ! {
     sstatus::write(sstatus);
 
     // set S Exception Program Counter to the saved user pc. 
-    sepc::write((*pdata.trapframe).epc);
+    sepc::write((*my_proc.trapframe).epc);
+
+    // if (*my_proc.trapframe).epc == 0 {
+    //     println!("In user_trap_ret, pid {}", my_proc.pid);
+    // }
+
+    // println!("------{}", (*my_proc.trapframe).epc);
     
     // tell trampoline.S the user page table to switch to
-    let satp = pdata.pagetable.as_ref().unwrap().as_satp();
+    let satp = my_proc.pagetable.as_ref().unwrap().as_satp();
 
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,
@@ -164,7 +171,9 @@ pub unsafe fn user_trap_ret() -> ! {
     let userret_virt = TRAMPOLINE + (userret as usize - trampoline as usize);
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
     core::mem::transmute(userret_virt as usize);
+    
     userret_virt(TRAPFRAME, satp);
+    
 }
 
 /// interrupts and exceptions from kernel code go here via kernelvec,

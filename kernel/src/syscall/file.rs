@@ -14,6 +14,7 @@ use crate::misc::str_cmp;
 use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 use crate::fs::{Pipe, DirEntry};
 use super::*;
+use crate::process::*;
 
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -23,12 +24,12 @@ use bit_field::BitField;
 impl Syscall<'_> {
     pub fn sys_dup(&self) -> SysResult {
         let old_fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[old_fd].as_ref().unwrap();
+        let curtask = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let file = curtask.open_files[old_fd].as_ref().unwrap();
         // 使用 Arc 来代替 refs
         let new_fd = unsafe{ CPU_MANAGER.alloc_fd(&file) }.unwrap();
         let new_file = Arc::clone(&file);
-        pdata.open_files[new_fd].replace(new_file);
+        curtask.open_files[new_fd].replace(new_file);
         Ok(new_fd)
     }
 
@@ -37,8 +38,8 @@ impl Syscall<'_> {
         let size: usize;
         // Get file
         let fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let file = task.open_files[fd].as_ref().unwrap();
         // 两个参数分别是读取存储的地址和读取的最大字节数
         // Get user read address
         let ptr = self.arg(1);
@@ -63,8 +64,8 @@ impl Syscall<'_> {
     pub fn sys_write(&self) -> SysResult {
         let size;
         let fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let file = task.open_files[fd].as_ref().unwrap();
         let ptr = self.arg(1);
         let len = self.arg(2);
         match file.write(ptr, len) {
@@ -264,9 +265,9 @@ impl Syscall<'_> {
 
     pub fn sys_close(&self) -> SysResult {
         let fd = self.arg(0);
-        let pdata = unsafe{ &mut *self.process.data.get() };
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
         // 使用 take() 夺取所有权来将引用数减 1
-        pdata.open_files[fd].take();
+        task.open_files[fd].take();
         Ok(0)
     }
 
@@ -277,8 +278,8 @@ impl Syscall<'_> {
         #[cfg(feature = "kernel_debug")]
         println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
 
-        let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let file = task.open_files[fd].as_ref().unwrap();
 
         #[cfg(feature = "kernel_debug")]
         println!("[Kernel] sys_fstat: File Type: {:?}", file.ftype);
@@ -306,7 +307,8 @@ impl Syscall<'_> {
                 match inode_guard.dinode.itype {
                     InodeType::Directory => {
                         drop(inode_guard);
-                        let old_cwd = unsafe{ (&mut *self.process.data.get()).cwd.replace(inode) };
+                        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+                        let old_cwd = task.cwd.replace(inode);
                         drop(old_cwd);
                         LOG.end_op();
                         return Ok(0)
@@ -369,9 +371,9 @@ impl Syscall<'_> {
             }
         }
 
-        let pgt = p.page_table();
-        let pdata = unsafe{ &mut *self.process.data.get() };
-        let open_files = &mut pdata.open_files;
+        let pgt = unsafe { &mut *p.pagetable };
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let open_files = &mut task.open_files;
         if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
             open_files[rfd].take();
             open_files[wfd].take();

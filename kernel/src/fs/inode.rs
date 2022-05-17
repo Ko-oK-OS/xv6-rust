@@ -174,7 +174,7 @@ impl InodeCache {
             inode = self.get(ROOTDEV, ROOTINUM);
         } else {
             let p = unsafe { CPU_MANAGER.myproc().unwrap() };
-            inode = self.dup(p.data.get_mut().cwd.as_ref().unwrap());
+            inode = self.dup(p.cwd.as_ref().unwrap());
         }
         let mut cur: usize = 0;
         loop {

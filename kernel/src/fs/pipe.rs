@@ -72,7 +72,8 @@ impl Pipe {
             let read_cursor = pipe_guard.read_number % PIPE_SIZE;
             let ch = pipe_guard.data[read_cursor % PIPE_SIZE];
             pipe_guard.read_number += 1;
-            let pgt = my_proc.page_table();
+            // let page_table = task.pagetable.as_mut().expect("Fail to get pagetable");
+            let pgt = unsafe { &mut *my_proc.pagetable };
             if pgt.copy_out(addr + index, &ch as *const u8, 1).is_err() {
                 break;
             }
@@ -105,7 +106,7 @@ impl Pipe {
                 pipe_guard = self.guard.acquire();
             } else {
                 let mut char: u8 = 0;
-                let pgt = my_proc.page_table();
+                let pgt = unsafe { &mut *my_proc.pagetable };
                 if pgt.copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
                     break;
                 }

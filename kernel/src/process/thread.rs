@@ -1,54 +1,53 @@
 use crate::{process::*, arch::riscv::layout::PGSIZE};
 
-impl Process {
-    pub fn threadclone(&mut self, func: usize, arg: usize, ustack: usize) -> usize {
-        let thread = unsafe{ PROC_MANAGER.alloc_proc().unwrap() };
-        let pdata = unsafe { &mut *self.data.get() };
-        let tdata = unsafe { &mut *thread.data.get() };
+impl task_struct {
+    pub fn threadclone(&mut self, func: usize, ustack: usize) -> usize {
+
+        let thread = ProcManager::alloc_thread().unwrap();
+        thread.parent = Some(self as *mut task_struct);
         
-        let pgt_p = pdata.pagetable.as_mut().unwrap();
-        let pgt_t = tdata.pagetable.as_mut().unwrap();
+        // let pgt_p = self.pagetable.as_mut().unwrap();
+        // let pgt_t = thread.pagetable.as_mut().unwrap();
 
-        pgt_p.copy_pagetable(pgt_t);
+        // pgt_p.copy_pagetable(pgt_t);
+        thread.pagetable = self.pagetable;
 
+        thread.open_files.clone_from(&self.open_files);
+        thread.cwd.clone_from(&self.cwd);
 
         // check page table copy
 
-        // pgt_p.print_pagetable();
+        // unsafe { (*self.pagetable).print_pagetable() };
         // println!("-----------------------");
-        // pgt_t.print_pagetable();
+        // unsafe { (*thread.pagetable).print_pagetable() };
         // println!("++++++++++++++++++++++");
         // while (true){
 
         // }
-     
-        tdata.size = pdata.size;
-        tdata.name = pdata.name;    //to do
+        println!("In threadclone pid is {} the child is {} func is {} ustack is {}", self.pid, thread.pid, func, ustack);
+        thread.size = self.size;
+        thread.name = self.name;    //to do
+        thread.thread_ustack = ustack;
         
-        let ptf = pdata.trapframe as *const Trapframe;
-        let ttf = unsafe{ &mut *tdata.trapframe };
+        let ptf = self.trapframe as *const Trapframe;
+        let ttf = unsafe{ &mut *thread.trapframe };
         unsafe{ copy_nonoverlapping(ptf, ttf, 1); }
-        ttf.a0 = arg;
+        // ttf.a0 = 0;
+       
         ttf.epc = func;
+       
         ttf.sp = ustack + PGSIZE;
         // ttf.s0 = ttf.sp;
+        //file  
 
-        tdata.thread_ustack = ustack;
+        let guard = unsafe { PROC_MANAGER.tasks_lock.acquire() };
+        thread.state = ProcState::RUNNABLE;
+        drop(guard);
 
-        //file
-        tdata.open_files.clone_from(&pdata.open_files);
-        tdata.cwd.clone_from(&pdata.cwd);
-
-
-
-        let mut tmeta = thread.meta.acquire();
-        tmeta.state = ProcState::RUNNABLE;
-        drop(tmeta);
-
-        let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
-        tdata.parent = Some(self as *mut Process);
-        drop(wait);
-        arg
+       
+        let tf = unsafe{ &mut *thread.trapframe };
+        println!("In threadclone pid {} epc {}", thread.pid, tf.epc);
+        0
     }
 
 }
