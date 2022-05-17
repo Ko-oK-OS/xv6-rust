@@ -382,7 +382,7 @@ impl Syscall<'_> {
         let pgt = p.page_table();
         let pdata = unsafe{ &mut *self.process.data.get() };
         let open_files = &mut pdata.open_files;
-        if pgt.copy_out(fd_array, &rfd as *const usize as *const u8, size_of::<usize>()).is_err() {
+        if pgt.copy_out(fd_array, &rfd as *const usize as *const u8, 4).is_err() {
             open_files[rfd].take();
             open_files[wfd].take();
             // rf.close();
@@ -404,7 +404,7 @@ impl Syscall<'_> {
         if pgt.copy_out(
             fd_array + 4, 
             &wfd as *const usize as *const u8,
-            size_of::<usize>()
+            4
         ).is_err() {
             open_files[rfd].take();
             open_files[wfd].take();
