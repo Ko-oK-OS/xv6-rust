@@ -35,6 +35,7 @@ impl<T> Spinlock<T>{
         if self.holding() {
             panic!("spinlock {} acquire", self.name);
         }
+
         
         while self.locked.swap(true, Ordering::Acquire){
             // Now we signals the processor that it is inside a busy-wait spin-loop 

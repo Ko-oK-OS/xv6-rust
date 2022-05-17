@@ -31,9 +31,9 @@ pub unsafe fn handle_syscall() {
         let tf = &mut *proc.trapframe;
         tf.a0 = res;
 
-        if tf.a7 == 40 || tf.a7 == 1{
-            println!("In handle_syscall pid {} epc {}, sp {}",proc.pid, tf.epc, tf.sp);
-        }
+        // if tf.a7 == 40 || tf.a7 == 1{
+        //     println!("In handle_syscall pid {} epc {}, sp {}",proc.pid, tf.epc, tf.sp);
+        // }
     }else{
         
         let tf = &mut *proc.trapframe;
@@ -74,6 +74,13 @@ pub enum SysCallID {
     SysSemDown= 25,
     SysSemInit= 26,
 
+ 
+    SysMkfifo  = 27,
+    SysFifoGet = 28,
+    SysFifoPut = 29,
+    SysFifoRead = 30,
+    SysFifoWrite = 31,
+
     SysClone  =  40,
     SysJoin   =  41,
 
@@ -110,6 +117,13 @@ impl SysCallID {
             24 => { Self::SysSemUp},
             25 => { Self::SysSemDown},
             26 => { Self::SysSemInit},
+
+            
+            27 => { Self::SysMkfifo},
+            28 => { Self::SysFifoGet},
+            29 => { Self::SysFifoPut},
+            30 => { Self::SysFifoRead},
+            31 => { Self::SysFifoWrite},
 
             40 => { Self::SysClone},
             41 => { Self::SysJoin},
@@ -158,10 +172,15 @@ impl Syscall<'_> {
             SysCallID::SysSemInit => { self.sys_sem_init() },
 
             SysCallID::SysClone   => { 
-                // println!("SysClone");
                 self.sys_clone() 
             },
             SysCallID::SysJoin    => { self.sys_join() },
+
+            SysCallID::SysMkfifo => { self.sys_mkfifo()},
+            SysCallID::SysFifoGet => { self.sys_fifo_get() },
+            SysCallID::SysFifoPut => { self.sys_fifo_put() },
+            SysCallID::SysFifoRead => { self.sys_fifo_read() },
+            SysCallID::SysFifoWrite => { self.sys_fifo_write() },
             
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }

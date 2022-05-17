@@ -8,7 +8,8 @@ pub enum InodeType {
     Empty = 0,
     Directory = 1,
     File = 2,
-    Device = 3
+    Device = 3,
+    FIFO = 4
 }
 
 /// On-disk inode structure

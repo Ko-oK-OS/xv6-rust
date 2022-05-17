@@ -1,12 +1,6 @@
-riscv64-unknown-elf-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/malloc_test.o xv6-user/malloc_test.c
-riscv64-unknown-elf-ld -z max-page-size=4096 -N -e main -Ttext 0 -o xv6-user/_malloc_test xv6-user/malloc_test.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o
-riscv64-unknown-elf-objdump -S xv6-user/_malloc_test > xv6-user/malloc_test.asm
-riscv64-unknown-elf-objdump -t xv6-user/_malloc_test | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > xv6-user/malloc_test.sym
-riscv64-unknown-elf-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/fork_test.o xv6-user/fork_test.c
-riscv64-unknown-elf-ld -z max-page-size=4096 -N -e main -Ttext 0 -o xv6-user/_fork_test xv6-user/fork_test.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o
-riscv64-unknown-elf-objdump -S xv6-user/_fork_test > xv6-user/fork_test.asm
-riscv64-unknown-elf-objdump -t xv6-user/_fork_test | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > xv6-user/fork_test.sym
-xv6-mkfs/mkfs fs.img README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test
+make --dry-run --keep-going --print-directory
+make: Entering directory '/home/rand/xv6-rust'
+ 
 make -C kernel run
 make: Leaving directory '/home/rand/xv6-rust'
  

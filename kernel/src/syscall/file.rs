@@ -134,6 +134,12 @@ impl Syscall<'_> {
                 file.readable = true;
                 file.writeable = true;
             },
+            InodeType::FIFO => {
+                file.ftype = FileType::Fifo;
+                file.offset= 0;
+                file.readable = true;
+                file.writeable = true;
+            }
             _ => {
                 file.ftype = FileType::Inode;
                 file.offset = 0;
@@ -374,7 +380,7 @@ impl Syscall<'_> {
         let pgt = unsafe { &mut *p.pagetable };
         let task = unsafe { CPU_MANAGER.myproc().unwrap() };
         let open_files = &mut task.open_files;
-        if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
+        if pgt.copy_out(fd_array, &rfd as *const _ as *const u8, size_of::<usize>()).is_err() {
             open_files[rfd].take();
             open_files[wfd].take();
             // rf.close();
@@ -382,9 +388,20 @@ impl Syscall<'_> {
             return Err(())
         }
 
+        // if pgt.copy_out(
+        //     fd_array + size_of::<usize>(), 
+        //     &wfd as *const usize as *const u8,
+        //     size_of::<usize>()
+        // ).is_err() {
+        //     open_files[rfd].take();
+        //     open_files[wfd].take();
+        //     // rf.close();
+        //     // wf.close();
+        //     return Err(())
+        // }
         if pgt.copy_out(
-            fd_array + size_of::<usize>(), 
-            wf as *const _ as *const u8, 
+            fd_array + 4, 
+            &wfd as *const usize as *const u8,
             size_of::<usize>()
         ).is_err() {
             open_files[rfd].take();

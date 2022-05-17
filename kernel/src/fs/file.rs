@@ -3,6 +3,7 @@ use crate::arch::riscv::qemu::param::NDEV;
 use crate::lock::spinlock::Spinlock;
 use crate::lock::sleeplock::SleepLock;
 use crate::process::CPU_MANAGER;
+use crate::ipc::fifo::Fifo_t;
 use super::pipe::Pipe;
 use super::inode::Inode;
 use super::devices::DEVICE_LIST;
@@ -17,11 +18,12 @@ use core::ptr::NonNull;
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u16)]
 pub enum FileType {
-    None = 0,
-    Pipe = 1,
-    Inode = 2,
+    None   = 0,
+    Pipe   = 1,
+    Inode  = 2,
     Device = 3,
     Socket = 4,
+    Fifo   = 5,
 }
 
 #[derive(Clone)]
@@ -49,6 +51,7 @@ pub struct VFile {
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
     pub(crate) pipe: Option<*mut Pipe>,
+    pub(crate) fifo: Option<*mut Fifo_t>, 
     pub(crate) inode: Option<Inode>,
     pub(crate) offset: u32,
     pub(crate) major: i16
@@ -63,6 +66,7 @@ impl VFile {
             writeable: false,
             pipe: None,
             inode: None,
+            fifo: None,
             offset: 0,
             major: 0
         }
@@ -84,6 +88,12 @@ impl VFile {
                 ret = pipe.read(addr, len)?;
                 return Ok(ret)
             },
+
+            FileType::Fifo => {
+                let fifo = unsafe{ &*self.fifo.unwrap() };
+                ret = fifo.read(addr, len)?;
+                return Ok(ret)
+            }
 
             FileType::Device => {
                 if self.major < 0 || 
@@ -137,6 +147,12 @@ impl VFile {
             FileType::Pipe => {
                 let pipe = unsafe{ &*self.pipe.unwrap() };
                 ret = pipe.write(addr, len)?;
+                Ok(ret)
+            },
+
+            FileType::Fifo => {
+                let fifo = unsafe{ &*self.fifo.unwrap() };
+                ret = fifo.write(addr, len)?;
                 Ok(ret)
             },
 

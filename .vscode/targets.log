@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue May 17 16:26:13 2022
+# Make data base, printed on Tue May 17 18:07:52 2022
 
 # Variables
 
@@ -261,7 +261,7 @@ OBJCOPY = riscv64-unknown-elf-objcopy
 # default
 SUFFIXES := 
 # makefile (from 'Makefile', line 79)
-UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test
+UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test $(USER)/_fifo_test1 $(USER)/_fifo_test2 $(USER)/_pipe_test 
 # environment
 SNAP_REEXEC = 
 # environment
@@ -280,7 +280,7 @@ LANG = C
 VSCODE_PID = 9630
  
 # variable set hash-table stats:
-# Load=133/1024=13%, Rehash=0, Collisions=22/221=10%
+# Load=133/1024=13%, Rehash=0, Collisions=22/224=10%
 
 # Pattern-specific Variable Values
 
@@ -289,9 +289,9 @@ VSCODE_PID = 9630
 # Directories
 
 # user (device 2053, inode 955528): 9 files, no impossibilities.
-# . (device 2053, inode 677081): 22 files, no impossibilities.
+# . (device 2053, inode 677081): 23 files, no impossibilities.
 
-# 31 files, no impossibilities in 2 directories.
+# 32 files, no impossibilities in 2 directories.
 
 # Implicit Rules
 
@@ -387,7 +387,7 @@ kernel/target/riscv64gc-unknown-none-elf/debug/kernel:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-16 20:57:45.14525816
+#  Last modified 2022-05-17 17:00:22.131163526
 #  File has been updated.
 #  Successfully updated.
 
@@ -434,17 +434,18 @@ xv6-user/_sem_test1:
 #  Modification time never checked.
 #  File has not been updated.
 
-fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test
+fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test xv6-user/_fifo_test1 xv6-user/_fifo_test2 xv6-user/_pipe_test
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 97):
+#  recipe to execute (from 'Makefile', line 100):
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
 
 # Not a target:
 xv6-user/initcode.S:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
+ 
 #  File has not been updated.
 
 # Not a target:
@@ -465,6 +466,12 @@ xv6-user/_forktest: xv6-user/forktest.o xv6-user/ulib.o xv6-user/usys.o xv6-user
 
 # Not a target:
 .DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+xv6-user/_fifo_test1:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -493,6 +500,12 @@ clean:
 	$(USER)/initcode $(USER)/initcode.out fs.img \
 	xv6-mkfs/mkfs $(USER)/usys.S \
 	$(UPROGS)
+
+# Not a target:
+xv6-user/_pipe_test:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
 
 # Not a target:
 xv6-user/thread.o:
@@ -557,6 +570,12 @@ asm: kernel/target/riscv64gc-unknown-none-elf/debug/kernel
 	$(OBJDUMP) -S $(KERNEL) > kernel.asm
 
 # Not a target:
+xv6-user/_fifo_test2:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
 xv6-user/_touch:
 #  Implicit rule search has not been done.
  
@@ -577,19 +596,19 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
 
 # files hash-table stats:
-# Load=42/1024=4%, Rehash=0, Collisions=3/86=3%
+# Load=45/1024=4%, Rehash=0, Collisions=3/92=3%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 69 / storage = 862 B / avg = 12 B
-# current buf: size = 8162 B / used = 862 B / count = 69 / avg = 12 B
+# strcache buffers: 1 (0) / strings = 73 / storage = 931 B / avg = 12 B
+# current buf: size = 8162 B / used = 931 B / count = 73 / avg = 12 B
 
-# strcache performance: lookups = 104 / hit rate = 33%
+# strcache performance: lookups = 108 / hit rate = 32%
 # hash-table stats:
-# Load=69/8192=1%, Rehash=0, Collisions=3/104=3%
-# Finished Make data base on Tue May 17 16:26:13 2022
+# Load=73/8192=1%, Rehash=0, Collisions=3/108=3%
+# Finished Make data base on Tue May 17 18:07:52 2022
 
  

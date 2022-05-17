@@ -23,6 +23,7 @@ pub use dinode::{ DiskInode, DirEntry, InodeType };
 pub use superblock::{ SUPER_BLOCK, SuperBlock };
 pub use devices::DEVICE_LIST;
 pub use pipe::Pipe;
+pub use pipe::PipeGuard;
 
 use log::Log;
 use bio::BufData;

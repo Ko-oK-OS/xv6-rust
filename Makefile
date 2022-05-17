@@ -91,7 +91,10 @@ UPROGS=\
 	$(USER)/_sem_test2 \
 	$(USER)/_thread_test \
 	$(USER)/_malloc_test \
-	$(USER)/_fork_test
+	$(USER)/_fork_test \
+	$(USER)/_fifo_test1 \
+	$(USER)/_fifo_test2 \
+	$(USER)/_pipe_test \
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
