@@ -27,12 +27,16 @@ pub unsafe fn handle_syscall() {
     let proc = CPU_MANAGER.myproc().unwrap();
     let mut syscall = Syscall{ process: proc };
     if let Ok(res) = syscall.syscall() {
-        let pdata = &mut *proc.data.get();
-        let tf = &mut *pdata.trapframe;
+     
+        let tf = &mut *proc.trapframe;
         tf.a0 = res;
+
+        // if tf.a7 == 40 || tf.a7 == 1{
+        //     println!("In handle_syscall pid {} epc {}, sp {}",proc.pid, tf.epc, tf.sp);
+        // }
     }else{
-        let pdata = &mut *proc.data.get();
-        let tf = &mut *pdata.trapframe;
+        
+        let tf = &mut *proc.trapframe;
         tf.a0 = -1 as isize as usize
     }
     
@@ -70,11 +74,15 @@ pub enum SysCallID {
     SysSemDown= 25,
     SysSemInit= 26,
 
+ 
     SysMkfifo  = 27,
     SysFifoGet = 28,
     SysFifoPut = 29,
     SysFifoRead = 30,
     SysFifoWrite = 31,
+
+    SysClone  =  40,
+    SysJoin   =  41,
 
     Unknown
 }
@@ -110,11 +118,15 @@ impl SysCallID {
             25 => { Self::SysSemDown},
             26 => { Self::SysSemInit},
 
+            
             27 => { Self::SysMkfifo},
             28 => { Self::SysFifoGet},
             29 => { Self::SysFifoPut},
             30 => { Self::SysFifoRead},
             31 => { Self::SysFifoWrite},
+
+            40 => { Self::SysClone},
+            41 => { Self::SysJoin},
 
             _ => { Self::Unknown }
         }
@@ -122,14 +134,14 @@ impl SysCallID {
 }
 
 pub struct Syscall<'a>{
-    process: &'a mut Process
+    process: &'a mut task_struct
 }
 
 impl Syscall<'_> {
     pub fn syscall(&mut self) -> SysResult {
-        let pdata = self.process.data.get_mut();
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
         // 获取进程的trapframe
-        let tf = unsafe{ &mut *pdata.trapframe };
+        let tf = unsafe{ &mut *task.trapframe };
         // 获取系统调用 id 号
         let sys_id = SysCallID::new(tf.a7);
         
@@ -148,7 +160,7 @@ impl Syscall<'_> {
             SysCallID::SysSbrk => { self.sys_sbrk() },
             SysCallID::SysFstat => { self.sys_fstat() },
             SysCallID::SysChdir => { self.sys_chdir()},
-            SysCallID::SysPipe => { self.sys_pipe() },
+            SysCallID::SysPipe => { unsafe { self.sys_pipe() } },
             SysCallID::SysUnlink => { self.sys_unlink() },
             SysCallID::SysLink => { self.sys_link() },
             SysCallID::SysMkdir => { self.sys_mkdir() },
@@ -158,6 +170,11 @@ impl Syscall<'_> {
             SysCallID::SysSemUp => { self.sys_sem_up() },
             SysCallID::SysSemDown => { self.sys_sem_down() },
             SysCallID::SysSemInit => { self.sys_sem_init() },
+
+            SysCallID::SysClone   => { 
+                self.sys_clone() 
+            },
+            SysCallID::SysJoin    => { self.sys_join() },
 
             SysCallID::SysMkfifo => { self.sys_mkfifo()},
             SysCallID::SysFifoGet => { self.sys_fifo_get() },
@@ -171,8 +188,8 @@ impl Syscall<'_> {
 
     /// 获取第n个位置的参数
     pub fn arg(&self, id: usize) -> usize {
-        let pdata = unsafe{ &mut* self.process.data.get() };
-        let tf = unsafe{ &*pdata.trapframe };
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let tf = unsafe{ &*task.trapframe };
         match id {
             0 => tf.a0,
             1 => tf.a1,
@@ -186,8 +203,8 @@ impl Syscall<'_> {
 
     /// 通过地址获取str并将其填入到缓冲区中
     pub fn copy_from_str(&self, addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
-        let pdata = unsafe{ &mut *self.process.data.get() };
-        let pgt = pdata.pagetable.as_mut().unwrap();
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let pgt = unsafe { &mut *task.pagetable };
         if pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
             println!("Fail to copy in str");
             return Err(())
@@ -196,15 +213,15 @@ impl Syscall<'_> {
     }
 
     pub fn copy_form_addr(&self, addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
-        let pdata = unsafe{ &mut *self.process.data.get() };
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
     
-        if addr > pdata.size || addr + size_of::<usize>() > pdata.size {
+        if addr > task.size || addr + size_of::<usize>() > task.size {
             println!("[Debug] addr: 0x{:x}", addr);
-            println!("[Debug] pdata size: 0x{:x}", pdata.size);
+            println!("[Debug] task size: 0x{:x}", task.size);
             panic!("拷贝的地址值超出了进程")
         }
     
-        let pgt = pdata.pagetable.as_mut().unwrap();
+        let pgt = unsafe { &mut *task.pagetable };
         if pgt.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
             println!("Fail copy data from pagetable!");
             return Err(())

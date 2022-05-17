@@ -1,7 +1,7 @@
 KERNEL = kernel/target/riscv64gc-unknown-none-elf/debug/kernel
 USER = xv6-user
 INCLUDE = xv6-user/include
-CPUS = 2
+CPUS = 1
 
 CC = riscv64-unknown-elf-gcc
 LD = riscv64-unknown-elf-ld
@@ -32,7 +32,7 @@ $(KERNEL):
 	make -C kernel
 
 asm: $(KERNEL)
-	$(OBJDUMP) -S $(KERNEL) > kernel.S
+	$(OBJDUMP) -S $(KERNEL) > kernel.asm
 
 clean:
 	rm -rf kernel.S
@@ -48,7 +48,7 @@ $(USER)/initcode: $(USER)/initcode.S
 	$(OBJCOPY) -S -O binary $(USER)/initcode.out $(USER)/initcode
 	$(OBJDUMP) -S $(USER)/initcode.o > $(USER)/initcode.asm
 
-ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o
+ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -89,9 +89,12 @@ UPROGS=\
 	$(USER)/_stressfs \
 	$(USER)/_sem_test1 \
 	$(USER)/_sem_test2 \
+	$(USER)/_thread_test \
+	$(USER)/_malloc_test \
+	$(USER)/_fork_test \
 	$(USER)/_fifo_test1 \
 	$(USER)/_fifo_test2 \
-	$(USER)/_pipe_test
+	$(USER)/_pipe_test \
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)

@@ -3,7 +3,7 @@ use core::ptr::*;
 use core::cell::{ UnsafeCell, RefCell };
 use core::str::from_utf8;
 use alloc::vec::Vec;
-use alloc::vec;
+use alloc::{vec, task};
 use alloc::sync::Arc;
 use array_macro::array;
 
@@ -35,13 +35,23 @@ pub enum ProcState{
 }
 
 
-pub struct Process {
-    pub meta: Spinlock<ProcMeta>,
-    pub data: UnsafeCell<ProcData>,
-}
+pub struct task_struct {
+    // pub meta: Spinlock<ProcMeta>,
+    // pub data: UnsafeCell<ProcData>,
 
-pub struct ProcMeta {
-    // p->lock must be held when using these
+    pub kstack:usize,  // Virtual address of kernel stack
+    pub thread_ustack: usize,
+    pub size:usize, // size of process memory
+    pub pagetable: *mut PageTable, // User page table
+    pub trapframe: *mut Trapframe, // data page for trampoline.S
+    pub context: Context, // switch() here to run processs
+    pub name: [u8; 16],   // Process name (debugging)
+    // proc_tree_lock must be held when using this:
+    pub parent: Option<*mut task_struct>,   
+    pub open_files: [Option<Arc<VFile>>; NFILE],
+    pub cwd: Option<Inode>,
+
+
     pub state: ProcState,
     pub channel: usize, // If non-zero, sleeping on chan
     pub killed: bool, // If non-zero, have been killed
@@ -49,50 +59,68 @@ pub struct ProcMeta {
     pub pid: usize,   // Process ID
 }
 
-impl ProcMeta {
-    pub const fn new() -> Self {
-        Self {
-            state: ProcState::UNUSED,
-            channel: 0,
-            killed: false,
-            xstate: 0,
-            pid: 0,
+// pub struct ProcMeta {
+//     // p->lock must be held when using these
+//     pub state: ProcState,
+//     pub channel: usize, // If non-zero, sleeping on chan
+//     pub killed: bool, // If non-zero, have been killed
+//     pub xstate: usize, // Exit status to be returned to parent's wait
+//     pub pid: usize,   // Process ID
+// }
 
-        }
-    }
+// impl ProcMeta {
+//     pub const fn new() -> Self {
+//         Self {
+//             state: ProcState::UNUSED,
+//             channel: 0,
+//             killed: false,
+//             xstate: 0,
+//             pid: 0,
 
-    pub fn set_state(&mut self, state: ProcState) {
-        self.state = state;
-    }
-}
+//         }
+//     }
 
-pub struct ProcData {
-    // these are private to the process, so p->lock need to be held
-    pub kstack:usize,  // Virtual address of kernel stack
-    pub size:usize, // size of process memory
-    pub pagetable: Option<Box<PageTable>>, // User page table
-    pub trapframe: *mut Trapframe, // data page for trampoline.S
-    pub context: Context, // switch() here to run processs
-    pub name: [u8; 16],   // Process name (debugging)
-    // proc_tree_lock must be held when using this:
-    pub parent: Option<*mut Process>,   
-    pub open_files: [Option<Arc<VFile>>; NFILE],
-    pub cwd: Option<Inode>
+//     pub fn set_state(&mut self, state: ProcState) {
+//         self.state = state;
+//     }
+// }
 
-}
+// pub struct ProcData {
+//     // these are private to the process, so p->lock need to be held
+//     pub kstack:usize,  // Virtual address of kernel stack
+//     pub thread_ustack: usize,
+//     pub size:usize, // size of process memory
+//     pub pagetable: Option<Box<PageTable>>, // User page table
+//     pub trapframe: *mut Trapframe, // data page for trampoline.S
+//     pub context: Context, // switch() here to run processs
+//     pub name: [u8; 16],   // Process name (debugging)
+//     // proc_tree_lock must be held when using this:
+//     pub parent: Option<*mut Process>,   
+//     pub open_files: [Option<Arc<VFile>>; NFILE],
+//     pub cwd: Option<Inode>,
 
-impl ProcData {
+//     pub meta: ProcMeta
+// }
+
+impl task_struct {
     pub const fn new() -> Self {
         Self {
             kstack:0,
+            thread_ustack: 0,
             size: 0,
-            pagetable: None,
+            pagetable: null_mut(),
             trapframe: null_mut(),
             context: Context::new(),
             name: [0u8; 16],
             parent: None,
             open_files: array![_ => None; NFILE],
-            cwd: None
+            cwd: None,
+            
+            state: ProcState::UNUSED,
+            channel: 0,
+            killed: false,
+            xstate: 0,
+            pid: 0,
         }
     }
 
@@ -110,7 +138,7 @@ impl ProcData {
         }
     }
 
-    pub fn set_parent(&mut self, parent: Option<*mut Process>) {
+    pub fn set_parent(&mut self, parent: Option<*mut task_struct>) {
         self.parent = parent;
     }
 
@@ -122,7 +150,7 @@ impl ProcData {
         self.trapframe = trapframe;
     }
 
-    pub fn set_pagetable(&mut self, pagetable: Option<Box<PageTable>>) {
+    pub fn set_pagetable(&mut self, pagetable: *mut PageTable) {
         self.pagetable = pagetable
     }
 
@@ -154,39 +182,39 @@ impl ProcData {
 
     // Create a user page table for a given process,
     // with no user memory, but with trampoline pages
-    pub unsafe fn proc_pagetable(&mut self) {
+    // pub unsafe fn proc_pagetable(&mut self) {
 
-        extern "C" {
-            fn trampoline();
-        }
+    //     extern "C" {
+    //         fn trampoline();
+    //     }
 
-        // An empty page table
-        let mut page_table = PageTable::uvmcreate();
-        // map the trampoline code (for system call return )
-        // at the highest user virtual address.
-        // only the supervisor uses it, on the way
-        // to/from user space, so not PTE_U. 
-        if !page_table.map(
-            VirtualAddress::new(TRAMPOLINE),
-            PhysicalAddress::new(trampoline as usize),
-            PGSIZE,
-            PteFlags::R | PteFlags::X
-        ) {
-            page_table.uvm_free(0);
-        }
+    //     // An empty page table
+    //     let mut page_table = PageTable::uvmcreate();
+    //     // map the trampoline code (for system call return )
+    //     // at the highest user virtual address.
+    //     // only the supervisor uses it, on the way
+    //     // to/from user space, so not PTE_U. 
+    //     if !page_table.map(
+    //         VirtualAddress::new(TRAMPOLINE),
+    //         PhysicalAddress::new(trampoline as usize),
+    //         PGSIZE,
+    //         PteFlags::R | PteFlags::X
+    //     ) {
+    //         page_table.uvm_free(0);
+    //     }
 
-        // map the trapframe just below TRAMPOLINE, for trampoline.S 
-        if !page_table.map(
-            VirtualAddress::new(TRAPFRAME), 
-            PhysicalAddress::new(self.trapframe as usize),
-            PGSIZE,
-            PteFlags::R | PteFlags::W
-        ) {
-            page_table.uvm_free(0);
-        }
+    //     // map the trapframe just below TRAMPOLINE, for trampoline.S 
+    //     if !page_table.map(
+    //         VirtualAddress::new(TRAPFRAME), 
+    //         PhysicalAddress::new(self.trapframe as usize),
+    //         PGSIZE,
+    //         PteFlags::R | PteFlags::W
+    //     ) {
+    //         page_table.uvm_free(0);
+    //     }
 
-        self.pagetable = Some(page_table);
-    }
+    //     self.pagetable = Some(page_table);
+    // }
 
     /// Initialize first user process
     pub fn user_init(&mut self) {
@@ -205,161 +233,190 @@ impl ProcData {
             cpu::cpuid()
         };
     }
-}
 
 
 
-impl Process{
-    pub const fn new() -> Self{
-        Self{    
-            meta: Spinlock::new(ProcMeta::new(), "process"),
-            data: UnsafeCell::new(ProcData::new()),
-        }
-    }
+    // pub const fn new() -> Self{
+    //     Self{    
+    //         meta: Spinlock::new(ProcMeta::new(), "process"),
+    //         data: UnsafeCell::new(ProcData::new()),
+    //     }
+    // }
 
     pub fn init(&mut self, kstack: usize) {
-        let pdata = unsafe {
-            &mut *self.data.get()
-        };
+        // let pdata = unsafe {
+        //     &mut *self.data.get()
+        // };
 
-        pdata.open_files = array![_ => None; NFILE];
+        self.open_files = array![_ => None; NFILE];
 
-        pdata.set_kstack(kstack);
+        self.set_kstack(kstack);
     }
 
-    pub fn as_ptr(&self) -> *const Process{
-        self as *const Process
+    pub fn as_ptr(&self) -> *const task_struct{
+        self as *const task_struct
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut Process{
-        self as *mut Process
+    pub fn as_mut_ptr(&mut self) -> *mut task_struct{
+        self as *mut task_struct
     }
 
     pub fn as_ptr_addr(&self) -> usize{
-        self as *const Process as usize
+        self as *const task_struct as usize
     }
 
     pub fn as_mut_ptr_addr(&mut self) -> usize{
-        self as *mut Process as usize
+        self as *mut task_struct as usize
     }
 
     pub fn killed(&self) -> bool {
-        let proc_data = self.meta.acquire();
-        let killed = proc_data.killed;
-        drop(proc_data);
-        killed
+        self.killed
     }
 
     pub fn pid(&self) -> usize {
-        let proc_data = self.meta.acquire();
-        let pid = proc_data.pid;
-        drop(proc_data);
-        pid
+        self.pid
     }
 
     pub fn set_state(&mut self, state: ProcState) {
-        let mut proc_data = self.meta.acquire();
-        proc_data.set_state(state);
-        drop(proc_data);
+        self.state = state;
     }
 
     pub fn set_killed(&mut self, killed: bool) {
-        let mut proc_data = self.meta.acquire();
-        proc_data.killed = killed;
-        drop(proc_data);
+        self.killed = killed;
     }
 
     pub fn state(&self) -> ProcState {
-        let proc_data = self.meta.acquire();
-        let state = proc_data.state;
-        drop(proc_data);
-        state
+        self.state
     }
 
     pub fn name(&self) -> &str {
-        let pdata = unsafe{ &*self.data.get() };
-        from_utf8(&pdata.name).unwrap()
+        from_utf8(&self.name).unwrap()
     }
 
-    pub fn modify_kill(&self, killed: bool) {
-        let mut proc_data = self.meta.acquire();
-        proc_data.killed = killed;
-        drop(proc_data);
+    pub fn modify_kill(&mut self, killed: bool) {
+        self.killed = killed;
     }
 
-    pub fn page_table(&self) -> &mut Box<PageTable> {
-        let pdata = unsafe{ &mut *self.data.get() };
-        let page_table = pdata.pagetable.as_mut().expect("Fail to get page table");
-        page_table
-    }
+    // pub fn page_table(&mut self) -> &mut Box<PageTable> {
+    //     &mut self.pagetable.unwrap()
+    // }
 
     /// Create a user page table for a given process,
     /// with no user memory, but with trampoline pages. 
-    pub fn proc_pagetable(&self) -> Option<Box<PageTable>> {
+  
+    
+    pub fn proc_pagetable(&self) -> *mut PageTable {
         // An empty page table
         let mut page_table = unsafe{ PageTable::uvmcreate() };
-         
+        let pagetable = unsafe { &mut *page_table };
         // map the trampoline code(for system call return)
         // at the highest user virtual address. 
         // only the supervisor uses it, on the way
         // to/from user space, so not PTE_U. 
         unsafe{
-            if !page_table.map(
+            if !pagetable.map(
             VirtualAddress::new(TRAMPOLINE), 
             PhysicalAddress::new(trampoline as usize),
              PGSIZE, 
              PteFlags::R | PteFlags::X
             ) {
-                page_table.uvm_free(0);
-                return None
+                pagetable.uvm_free(0);
+                return null_mut();
             }
 
             // map the trapframe just below TRAMPOLINE, for trampoline.S 
-            if !page_table.map(
+            if !pagetable.map(
                 VirtualAddress::new(TRAPFRAME), 
-                PhysicalAddress::new((&*self.data.get()).get_trapframe() as usize), 
+                PhysicalAddress::new(self.get_trapframe() as usize), 
                 PGSIZE, 
                 PteFlags::R | PteFlags::W
             ) {
-                page_table.uvm_unmap(
+                pagetable.uvm_unmap(
                     VirtualAddress::new(TRAPFRAME), 
                     1, 
                     false
                 );
-                page_table.uvm_free(0);
-                return None
+                pagetable.uvm_free(0);
+                return null_mut();
             }
         }
-        Some(page_table)
+        page_table
     }
 
     /// free a proc structure and the data hanging from it,
     /// including user pages.
     /// p.acquire() must be held.
     pub fn free_proc(&mut self) {
-        let mut pdata = self.data.get_mut();
-        if !pdata.trapframe.is_null() {
-            drop(pdata.trapframe as *mut RawPage);
-            pdata.set_trapframe(0 as *mut Trapframe);
-
-            if let Some(page_table) = pdata.pagetable.as_mut() {
-                page_table.proc_free_pagetable(pdata.size);
-            }
+        if !self.trapframe.is_null() {
+            unsafe { drop_in_place(self.trapframe as *mut RawPage) };
 
 
-            let mut guard = self.meta.acquire();
 
-            pdata.set_pagetable(None);
-            pdata.set_parent(None);
-            pdata.size = 0;
+            self.set_trapframe(0 as *mut Trapframe);
 
-            guard.pid = 0;
-            guard.channel = 0;
-            guard.killed = false;
-            guard.xstate = 0;
-            guard.set_state(ProcState::UNUSED);
+            // if let Some(page_table) = self.pagetable {
+            //     page_table.proc_free_pagetable(self.size);
+            // }
+            let pagetable = unsafe { &mut *self.pagetable };
+            
+            // println!("+++++++++++++++++++++");
+            // pagetable.print_pagetable();
+            // println!("+++++++++++++++++++++");
 
-            drop(guard);
+            // pagetable.proc_free_pagetable(self.size);
+
+            // println!("+++++++++++++++++++++");
+            // pagetable.print_pagetable();
+            // println!("+++++++++++++++++++++");
+
+
+            // pagetable.free_pagetable();
+            // self.set_pagetable(0 as *mut PageTable);
+            
+            // println!("+++++++++++++++++++++");
+            // pagetable.print_pagetable();
+            // println!("+++++++++++++++++++++");
+            // while(true){
+
+            // }
+
+            // self.set_pagetable(None);
+            self.set_parent(None);
+            self.size = 0;
+
+            self.pid = 0;
+            self.channel = 0;
+            self.killed = false;
+            self.xstate = 0;
+            self.set_state(ProcState::UNUSED);
+            
+        }
+    }
+
+    pub fn free_thread(&mut self) {
+        if !self.trapframe.is_null() {
+            unsafe { drop_in_place(self.trapframe as *mut RawPage); }
+
+            self.set_trapframe(0 as *mut Trapframe);
+
+            // let pagetable = unsafe { &mut *self.pagetable };
+            // pagetable.proc_free_pagetable(self.size);
+
+            // pagetable.free_pagetable();
+            self.set_pagetable(0 as *mut PageTable);
+
+
+            // self.set_pagetable(None);
+            self.set_parent(None);
+            self.size = 0;
+
+            self.thread_ustack = 0;
+
+            self.pid = 0;
+            self.channel = 0;
+            self.killed = false;
+            self.xstate = 0;
+            self.set_state(ProcState::UNUSED);
             
         }
     }
@@ -368,9 +425,8 @@ impl Process{
     /// Grow or shrink user memory by n bytes. 
     /// Return true on success, false on failure. 
     pub fn grow_proc(&mut self, count: isize) -> Result<(), &'static str> {
-        let mut pdata = self.data.get_mut();
-        let mut size = pdata.size; 
-        let page_table = pdata.pagetable.as_mut().unwrap();
+        let mut size = self.size; 
+        let page_table = unsafe { &mut *self.pagetable };
         if count > 0 {
             match unsafe { page_table.uvm_alloc(size, size + count as usize) } {
                 Some(new_size) => {
@@ -386,7 +442,7 @@ impl Process{
             size = page_table.uvm_dealloc(size, new_size);
         }
 
-        pdata.size = size;
+        self.size = size;
 
         Ok(())
     }
@@ -396,91 +452,108 @@ impl Process{
     /// yield is a keyword in rust
     pub fn yielding(&mut self) {
         // println!("[Debug] 让出 CPU");
-        let mut pmeta = self.meta.acquire();
-        let ctx = self.data.get_mut().get_context_mut();
-        pmeta.set_state(ProcState::RUNNABLE);
+        let guard = unsafe { PROC_MANAGER.tasks_lock.acquire() };
+   
+        self.set_state(ProcState::RUNNABLE);
 
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
-            pmeta = my_cpu.sched(
-                pmeta,
-                ctx
-            );
+            my_cpu.sched();
         }
-        drop(pmeta)
+        drop(guard);
     }
 
     /// Atomically release lock and sleep on chan
     /// Reacquires lock when awakened.
-    pub fn sleep<T>(&self, channel: usize, lock: SpinlockGuard<'_, T>) {
+    pub fn sleep<T>(&mut self, channel: usize, lock: SpinlockGuard<'_, T>) {
         // Must acquire p->lock in order to 
         // change p->state and then call sched.
         // Once we hold p->lock, we can be
         // guaranteed that we won't miss any wakeup
         // (wakeup locks p->lock)
         // so it's okay to release lk;
-        let mut guard = self.meta.acquire();
+
+
+        // let mut guard = self.meta.acquire();
+        // drop(lock);
+        // // Go to sleep.
+        // guard.channel = channel;
+        // guard.set_state(ProcState::SLEEPING);
+        // unsafe {
+        //     let my_cpu = CPU_MANAGER.mycpu();
+        //     let ctx = (&mut (*self.data.get())).get_context_mut();      
+        //     // get schedule process
+        //     guard = my_cpu.sched(
+        //         guard, 
+        //         ctx
+        //     );
+        //     // Tide up
+        //     guard.channel = 0;
+        //     drop(guard);
+        // }
+        
+        let tasks_guard = unsafe { PROC_MANAGER.tasks_lock.acquire() };
         drop(lock);
-        // Go to sleep.
-        guard.channel = channel;
-        guard.set_state(ProcState::SLEEPING);
+
+        self.channel = channel;
+        self.state = ProcState::SLEEPING;
+
         unsafe {
-            let my_cpu = CPU_MANAGER.mycpu();
-            let ctx = (&mut (*self.data.get())).get_context_mut();      
-            // get schedule process
-            guard = my_cpu.sched(
-                guard, 
-                ctx
-            );
-            // Tide up
-            guard.channel = 0;
-            drop(guard);
+            let mycpu = CPU_MANAGER.mycpu();
+            // let cur_ctx = (&mut self.context);
+
+            mycpu.sched();
         }
+        
+        self.channel = 0;
+
+        drop(tasks_guard);
+        
     }
 
     /// Find a unallocated fd
     pub fn fd_alloc(&mut self, file: &VFile) -> Result<usize, &'static str>{
-        let pdata = unsafe {
-            &mut *self.data.get()
-        };
-        let fd = pdata.find_unallocated_fd()?;
-        pdata.open_files[fd].replace(Arc::new(file.clone()));
+        
+        let fd = self.find_unallocated_fd()?;
+        self.open_files[fd].replace(Arc::new(file.clone()));
         Ok(fd)       
     } 
 
     pub fn fork(&mut self) -> Option<&mut Self> {
         // 从表中获取未被分配的子进程
-        if let Some(child_proc) = unsafe{ PROC_MANAGER.alloc_proc() } {
+        if let Some(child_proc) = ProcManager::alloc_proc()  {
             // 从当前进程的页表拷贝到子进程中
-            let pdata = unsafe{ &mut *self.data.get() };
-            let child_data = unsafe{ &mut *child_proc.data.get() };
-            if unsafe{ pdata.pagetable.as_mut().unwrap().uvm_copy(
-                child_data.pagetable.as_mut().unwrap(), 
-                pdata.size
+            // let pdata = unsafe{ &mut *self.data.get() };
+            // let child_data = unsafe{ &mut *child_proc.data.get() };
+            if unsafe{ self.pagetable.as_mut().unwrap().uvm_copy(
+                child_proc.pagetable.as_mut().unwrap(), 
+                self.size
             ).is_err() } {
                 panic!("fork: Fail to copy data from parent process.")
             }
             // 将当前进程的 trapframe 拷贝到子进程
-            let ptf = pdata.trapframe as *const Trapframe;
-            let child_tf = unsafe{ &mut *child_data.trapframe };
+            let ptf = self.trapframe as *const Trapframe;
+            let child_tf = unsafe{ &mut *child_proc.trapframe };
             unsafe{ copy_nonoverlapping(ptf, child_tf, 1); }
             // fork 后子进程应当返回0
             child_tf.a0 = 0;
 
             // 子进程拷贝父进程的文件和工作目录
-            child_data.open_files.clone_from(&pdata.open_files);
-            child_data.cwd.clone_from(&pdata.cwd);
+            child_proc.open_files.clone_from(&self.open_files);
+            child_proc.cwd.clone_from(&self.cwd);
 
-            child_data.name = pdata.name;
-            child_data.size = pdata.size;
+            child_proc.name = self.name;
+            child_proc.size = self.size;
 
-            let mut child_meta = child_proc.meta.acquire();
-            child_meta.state = ProcState::RUNNABLE;
-            drop(child_meta);
+            // let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
+            child_proc.parent = Some(self as *mut task_struct);
+            // drop(wait);
 
-            let wait = unsafe{ PROC_MANAGER.wait_lock.acquire() };
-            child_data.parent = Some(self as *mut Process);
-            drop(wait);
+            let guard = unsafe { PROC_MANAGER.tasks_lock.acquire() };
+            child_proc.state = ProcState::RUNNABLE;
+            drop(guard);
+
+            println!("Self pid is {}, child pid is {}", self.pid, child_proc.pid);
             Some(child_proc)
         }else {
             println!("[Kernel] fork: None");

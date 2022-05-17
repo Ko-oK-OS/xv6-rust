@@ -1,0 +1,6 @@
+make --dry-run --keep-going --print-directory
+make: Entering directory '/home/rand/xv6-rust'
+ 
+make -C kernel run
+make: Leaving directory '/home/rand/xv6-rust'
+ 

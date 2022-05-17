@@ -120,6 +120,7 @@ impl Scause{
         if self.is_interrupt() {
             Trap::Interrupt(Interrupt::from(self.code()))
         }else{
+            
             Trap::Exception(Exception::from(self.code()))
         }
     }

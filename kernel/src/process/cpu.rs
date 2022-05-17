@@ -1,4 +1,6 @@
+use alloc::task;
 use array_macro::array;
+use spin::MutexGuard;
 use crate::fs::VFile;
 use crate::arch::riscv::{ tp, sstatus };
 use crate::arch::riscv::qemu::param::NCPU;
@@ -8,7 +10,7 @@ use core::ops::IndexMut;
 use core::ptr::NonNull;
 use super::*;
 pub struct CPU {
-    pub process: Option<NonNull<Process>>, // The process running on this cpu, or null.
+    pub process: Option<NonNull<task_struct>>, // The process running on this cpu, or null.
     pub context: Context, // swtch() here to enter scheduler().
     pub noff: usize, // Depth of push_off() nesting.
     pub intena: usize // Were interrupts enabled before push_off()?
@@ -37,7 +39,7 @@ impl CPUManager{
         &mut self.cpus[cpu_id]
     }
 
-    pub unsafe fn myproc(&mut self) -> Option<&mut Process>{
+    pub unsafe fn myproc(&mut self) -> Option<&mut task_struct>{
         push_off();
         let c = CPU_MANAGER.mycpu();
         let p = &mut *c.process.unwrap().as_ptr();
@@ -45,17 +47,17 @@ impl CPUManager{
         Some(p)
     }
 
-    pub fn yield_proc(&mut self) {
-        if let Some(my_proc) = unsafe{ self.myproc() } {
-            let guard = my_proc.meta.acquire();
-            if guard.state == ProcState::RUNNING {
-                drop(guard);
-                my_proc.yielding();
-            }else {
-                drop(guard);
-            }
-        }
-    }
+    // pub fn yield_proc(&mut self) {
+    //     if let Some(my_proc) = unsafe{ self.myproc() } {
+    //         let guard = my_proc.meta.acquire();
+    //         if guard.state == ProcState::RUNNING {
+    //             drop(guard);
+    //             my_proc.yielding();
+    //         }else {
+    //             drop(guard);
+    //         }
+    //     }
+    // }
     
     /// Per-CPU process scheduler.
     /// Each CPU calls scheduler() after setting itself up.
@@ -73,29 +75,35 @@ impl CPUManager{
         loop {
             // Avoid deadlock by ensuring that devices can interrupt.
             sstatus::intr_on();
+
+            let guard = PROC_MANAGER.tasks_lock.acquire();
             match PROC_MANAGER.seek_runnable() {
-                Some(proc) => {
+                Some(task) => {
                     // Switch to chosen process. It is the process's job
                     // to release it's lock and then reacquire it 
                     // before jumping back to us.
-                    c.set_proc(NonNull::new(proc as *mut Process));
-                    let mut pmeta = proc.meta.acquire();
-                    pmeta.state = ProcState::RUNNING;
+                    c.set_proc(NonNull::new(task as *mut task_struct));
+                    
+                    task.state = ProcState::RUNNING;
+
                     switch(
                         c.get_context_mut(),
-                        &mut proc.data.get_mut().context as *mut Context
+                        &mut task.context as *mut Context
                     );
+
                     if c.get_context_mut().is_null() {
                         panic!("context switch back with no process reference.");
                     }
                     // Process is done running for now. 
                     // It should have changed it's process state before coming back. 
                     c.set_proc(None);
-                    drop(pmeta);
+
+
                 }
 
                 None => {}
             }
+            drop(guard);
         }
     }
 
@@ -108,8 +116,7 @@ impl CPUManager{
         let proc = unsafe {
             self.myproc().unwrap()
         };
-        let pdata = unsafe{ &mut *proc.data.get() };
-        pdata.open_files[fd].take();
+        proc.open_files[fd].take();
     }
 }
 
@@ -123,7 +130,7 @@ impl CPU{
         }
     }
 
-    pub fn set_proc(&mut self, proc:Option<NonNull<Process>>){
+    pub fn set_proc(&mut self, proc:Option<NonNull<task_struct>>){
         self.process = proc;
     }
 
@@ -139,19 +146,16 @@ impl CPU{
     /// be proc->intena and proc->noff, but that would
     /// break in the few places where a lock is held but
     /// there's no process.
-    pub unsafe fn sched<'a>
-    (
-        &mut self, 
-        guard: SpinlockGuard<'a, ProcMeta>, 
-        ctx: *mut Context
-    ) 
-    -> SpinlockGuard<'a, ProcMeta>
+    pub unsafe fn sched<'a>(&mut self) 
     {
         extern "C" {
             fn switch(old: *mut Context, new: *mut Context);
         }
 
-        if !guard.holding() {
+        let curtask = CPU_MANAGER.myproc().unwrap();
+        let cur_ctx =  &mut curtask.context as *mut Context ;
+
+        if !PROC_MANAGER.tasks_lock.holding() {
             panic!("sched: not holding proc's lock");
         }
         // only holding self.proc.lock
@@ -161,7 +165,7 @@ impl CPU{
         }
             
         // proc is not running. 
-        if guard.state == ProcState::RUNNING {
+        if curtask.state == ProcState::RUNNING {
             panic!("sched: proc is running");
         }
 
@@ -174,27 +178,29 @@ impl CPU{
         // println!("[Kernel] switch");
         // println!("[Kernel] old_context: 0x{:x}, new_context: 0x{:x}", ctx as usize, &mut self.context as *mut Context as usize);
         switch(
-            ctx, 
+            cur_ctx, 
             &mut self.context as *mut Context
         );
-        self.intena = intena;
-        guard
-        
+
+
+        self.intena = intena; 
     }
 
     /// Yield the holding process if any and it's RUNNING.
     /// Directly return if none.
     pub fn try_yield_proc(&mut self) {
+
         if !self.process.is_none() {
-            let guard = unsafe {
-                (&mut *self.process.unwrap().as_ptr()).meta.acquire()
-            };
-            if guard.state == ProcState::RUNNING {
-                drop(guard);
-                unsafe { self.process.unwrap().as_mut().yielding() }
-            } else {
-                drop(guard);
-            }
+            // let guard = unsafe {
+            //     (&mut *self.process.unwrap().as_ptr()).meta.acquire()
+            // };
+            // if guard.state == ProcState::RUNNING {
+            //     drop(guard);
+            //     unsafe { self.process.unwrap().as_mut().yielding() }
+            // } else {
+            //     drop(guard);
+            // }
+            unsafe { self.process.unwrap().as_mut().yielding(); }
         }
     }
 

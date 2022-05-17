@@ -3,13 +3,25 @@ use super::*;
 
 impl Syscall<'_> {
     pub fn sys_fork(&mut self) -> SysResult {
-        let proc_meta = self.process.meta.acquire();
-        drop(proc_meta);
+       
         let child_proc = self.process.fork().ok_or(())?;
-        let pmeta = child_proc.meta.acquire();
-        let pid = pmeta.pid;
-        drop(pmeta);
+       
+        let pid = child_proc.pid;
+       
         Ok(pid)
+    }
+
+    pub fn sys_clone(&mut self) -> SysResult {
+        let func = self.arg(0);
+       
+        let ustack = self.arg(1);
+
+        let ret = self.process.threadclone(func, ustack);
+
+        // let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        // let tf = unsafe { &mut *task.trapframe } ;
+        // println!("In sys_clone, pid {} epc {}", task.pid, tf.epc);
+        Ok(ret)
     }
 
     pub fn sys_exit(&self) -> SysResult {
@@ -34,19 +46,35 @@ impl Syscall<'_> {
         }
     }
 
+    pub fn sys_join(&self) -> SysResult {
+        let ustack_addr = self.arg(0);
+        match unsafe {
+            PROC_MANAGER.join(ustack_addr)
+        } {
+            Some(ret) => {
+                Ok(ret)
+            },
+    
+            None => {
+                Err(())
+            }
+        }
+    }
+
     pub fn sys_getpid(&self) -> SysResult {
-        let pmeta = self.process.meta.acquire();
-        let pid = pmeta.pid;
-        drop(pmeta);
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let pid = task.pid;
+
         Ok(pid)
     }
     
     
     pub fn sys_sbrk(&mut self) -> SysResult {
         let size = self.arg(0);
-        let pdata = unsafe{ &*self.process.data.get() };
-        let addr = pdata.size;
-        drop(pdata);
+
+        let task = unsafe{ &*self.process };
+        let addr = task.size;
+     
         match self.process.grow_proc(size as isize) {
             Ok(()) => {
                 return Ok(addr)

@@ -1,4 +1,4 @@
-pub const NPROC:usize = 64; // maximum number of processes
+pub const NTASK:usize = 8; // maximum number of processes
 pub const NCPU:usize = 8; // maximum number of CPUs
 pub const NDEV:usize = 10;  // maximum major device number
 pub const MAXARG:usize  = 32;  // max exec arguments

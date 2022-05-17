@@ -243,12 +243,8 @@ impl VFile {
                 inode_guard.stat(&mut stat);
                 drop(inode_guard);
                 
-                // println!(
-                //     "[Kernel] stat: dev: {}, inum: {}, nlink: {}, size: {}, type: {:?}", 
-                //     stat.dev, stat.inum, stat.nlink, stat.size, stat.itype
-                // );
-                let pdata = p.data.get_mut();
-                let page_table = pdata.pagetable.as_mut().unwrap();
+               
+                let page_table = unsafe { &mut *p.pagetable };
                 page_table.copy_out(addr, (&stat) as *const Stat as *const u8, size_of::<Stat>())?;
                 Ok(())
             },  

@@ -1,6 +1,6 @@
 use crate::{lock::spinlock::Spinlock, memory::{ RawPage, PageAllocator }, process::{CPU, CPU_MANAGER, PROC_MANAGER}};
 use crate::fs::{FileType, VFile};
-use crate::fs::{Pipe, PipeGuard};
+use crate::fs::{Pipe, PipeData};
 use core::ptr::drop_in_place;
 
 
@@ -85,7 +85,7 @@ impl FifoTable {
     }
 
     pub fn alloc(&mut self, s: [u8; NAME_LEN]) -> Option<&Fifo_t>{
-        let pipe_guard = unsafe{ *PipeGuard::alloc() }; 
+        let pipe_guard = unsafe{ *PipeData::alloc() }; 
         let mut pipe = Pipe {
             guard: Spinlock::new(pipe_guard, "pipe")
         };

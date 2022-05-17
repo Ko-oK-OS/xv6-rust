@@ -11,7 +11,7 @@ use core::mem::size_of;
 use core::ops::IndexMut;
 
 use super::CPU_MANAGER;
-use super::Process;
+use super::task_struct;
 
 use alloc::boxed::Box;
 use alloc::string::String;
@@ -67,7 +67,7 @@ pub struct ProgHeader {
 #[allow(unused_variables)]
 #[allow(unused_assignments)]
 fn load_seg(
-    page_table: &mut Box<PageTable>, 
+    page_table: *mut PageTable, 
     va: usize, 
     inode_data: &mut SleepLockGuard<InodeData>,
     offset: usize, 
@@ -80,8 +80,9 @@ fn load_seg(
     }
 
     let mut copy_size: usize = 0;
+    let pagetable = unsafe { &mut *page_table };
     while copy_size < size {
-        match page_table
+        match pagetable
                 .pgt_translate(va) {
             Some(pa) => {
                 // 将用户虚拟地址翻译成物理地址
@@ -121,9 +122,9 @@ pub unsafe fn exec(
 ) -> Result<usize, &'static str> {
     let elf = Box::<ElfHeader>::new_zeroed().assume_init();
     let ph = Box::<ProgHeader>::new_zeroed().assume_init();
-    let mut page_table: Box<PageTable>;
+    // let mut page_table: *mut PageTable;
     let mut size = 0;
-    let p: &mut Process;
+    let p: &mut task_struct;
     let mut sp: usize;
     let stack_base: usize;
     let mut user_stack: [usize; MAXARG] = [0;MAXARG];
@@ -158,9 +159,9 @@ pub unsafe fn exec(
     }
 
     let my_proc = CPU_MANAGER.myproc().unwrap();
-        page_table = my_proc
-            .proc_pagetable()
-            .expect("Fail to alloc pagetable for current process.");
+    let pagetable = my_proc.proc_pagetable();
+    let page_table = &mut *pagetable;
+            
         
         let ph_size = size_of::<ProgHeader>() as u32;
         // Load program into memeory. 
@@ -213,7 +214,7 @@ pub unsafe fn exec(
                 // load segement information
                 // println!("[Debug] 偏移量: 0x{:x}, 文件大小: 0x{:x}", ph.off, ph.file_size);
                 if load_seg(
-                    &mut page_table, 
+                    pagetable, 
                     ph.vaddr, 
                     &mut inode_guard, 
                     ph.off, 
@@ -240,7 +241,7 @@ pub unsafe fn exec(
         LOG.end_op();
 
         p = CPU_MANAGER.myproc().unwrap();
-        let old_size = (&*p.data.get()).size;
+        let old_size = p.size;
 
         // Allocate two pages at the next page boundary
         // Use the second as the user stack. 
@@ -321,8 +322,8 @@ pub unsafe fn exec(
     // arguments to user main(argc, argv)
     // argc is returned via the system call return
     // value, which goes in a0. 
-    let pdata = p.data.get_mut();
-    let trapframe = &mut *pdata.trapframe;
+    
+    let trapframe = &mut *p.trapframe;
     trapframe.a1 = sp;
 
     // Save program name for debugging
@@ -333,14 +334,14 @@ pub unsafe fn exec(
             exec_name.push(c);
         }
     }
-    core::ptr::copy(exec_name.as_ptr(), &mut pdata.name as *mut u8, 16);
+    core::ptr::copy(exec_name.as_ptr(), &mut p.name as *mut u8, 16);
 
     // Commit to user image.
-    let old_pgt = pdata.pagetable.as_mut().take().unwrap();
+    let old_pgt = p.pagetable.as_mut().take().unwrap();
     old_pgt.proc_free_pagetable(old_size);
 
-    pdata.pagetable = Some(page_table);
-    pdata.size = size;
+    p.pagetable = pagetable;
+    p.size = size;
     // initial program counter = main
     trapframe.epc = elf.entry;
     // initial stack pointer

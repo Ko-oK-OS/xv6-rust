@@ -50,8 +50,7 @@ pub fn copy_to_kernel(
         let my_proc =  CPU_MANAGER.myproc().unwrap();
         
         if is_user {
-            let pdata = &mut *(my_proc.data.get());
-            let page_table = pdata.pagetable.as_mut().unwrap();
+            let page_table = my_proc.pagetable.as_mut().unwrap();
             page_table.copy_in(
                 dst,
                 src,
@@ -81,8 +80,7 @@ pub fn copy_from_kernel(
     unsafe{
         let p = CPU_MANAGER.myproc().unwrap();
         if is_user {
-            let pdata = p.data.get_mut();
-            let page_table = pdata.pagetable.as_mut().unwrap();
+            let page_table = p.pagetable.as_mut().unwrap();
             page_table
                 .copy_out(
                     dst,
