@@ -36,6 +36,18 @@ pub struct Pipe {
 // }
 
 impl Pipe {
+    pub fn init() -> *mut Pipe{
+        let pipe_ptr = unsafe{ RawPage::new_zeroed() as *mut Pipe };
+        let pipe = unsafe { &mut *pipe_ptr };
+        pipe.read_open = true;
+        pipe.write_open = true;
+        pipe.nread = 0;
+        pipe.nwrite = 0;
+        pipe.pipe_lock = Spinlock::new((), "pipelock");
+
+        pipe_ptr
+    }
+
     pub unsafe fn alloc(rf: *mut *mut VFile, wf: *mut *mut VFile) -> *mut Pipe {
         let pipe_ptr = unsafe{ RawPage::new_zeroed() as *mut Pipe };
 
