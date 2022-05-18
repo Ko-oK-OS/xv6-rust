@@ -176,11 +176,11 @@ impl Syscall<'_> {
             },
             SysCallID::SysJoin    => { self.sys_join() },
 
-            SysCallID::SysMkfifo => { self.sys_mkfifo()},
-            SysCallID::SysFifoGet => { self.sys_fifo_get() },
-            SysCallID::SysFifoPut => { self.sys_fifo_put() },
-            SysCallID::SysFifoRead => { self.sys_fifo_read() },
-            SysCallID::SysFifoWrite => { self.sys_fifo_write() },
+            // SysCallID::SysMkfifo => { self.sys_mkfifo()},
+            // SysCallID::SysFifoGet => { self.sys_fifo_get() },
+            // SysCallID::SysFifoPut => { self.sys_fifo_put() },
+            // SysCallID::SysFifoRead => { self.sys_fifo_read() },
+            // SysCallID::SysFifoWrite => { self.sys_fifo_write() },
             
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }

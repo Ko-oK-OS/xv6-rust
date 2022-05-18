@@ -388,17 +388,6 @@ impl Syscall<'_> {
             return Err(())
         }
 
-        // if pgt.copy_out(
-        //     fd_array + size_of::<usize>(), 
-        //     &wfd as *const usize as *const u8,
-        //     size_of::<usize>()
-        // ).is_err() {
-        //     open_files[rfd].take();
-        //     open_files[wfd].take();
-        //     // rf.close();
-        //     // wf.close();
-        //     return Err(())
-        // }
         if pgt.copy_out(
             fd_array + 4, 
             &wfd as *const usize as *const u8,

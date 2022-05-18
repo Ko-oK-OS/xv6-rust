@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue May 17 18:07:52 2022
+# Make data base, printed on Wed May 18 09:22:40 2022
 
 # Variables
 
@@ -53,7 +53,7 @@ VSCODE_NLS_CONFIG = {"locale":"zh-cn","availableLanguages":{},"_languagePackSupp
 # environment
 JOURNAL_STREAM = 8:48117
 # makefile (from 'Makefile', line 20)
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -fno-pie -no-pie
+CFLAGS = -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -fno-pie -no-pie
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # environment
@@ -387,7 +387,7 @@ kernel/target/riscv64gc-unknown-none-elf/debug/kernel:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-17 17:00:22.131163526
+#  Last modified 2022-05-18 09:22:03.269520766
 #  File has been updated.
 #  Successfully updated.
 
@@ -445,7 +445,6 @@ fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-u
 xv6-user/initcode.S:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
- 
 #  File has not been updated.
 
 # Not a target:
@@ -560,6 +559,7 @@ xv6-user/umalloc.o:
 xv6-user/_stressfs:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
+ 
 #  File has not been updated.
 
 asm: kernel/target/riscv64gc-unknown-none-elf/debug/kernel
@@ -578,7 +578,6 @@ xv6-user/_fifo_test2:
 # Not a target:
 xv6-user/_touch:
 #  Implicit rule search has not been done.
- 
 #  Modification time never checked.
 #  File has not been updated.
 
@@ -609,6 +608,6 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 # strcache performance: lookups = 108 / hit rate = 32%
 # hash-table stats:
 # Load=73/8192=1%, Rehash=0, Collisions=3/108=3%
-# Finished Make data base on Tue May 17 18:07:52 2022
+# Finished Make data base on Wed May 18 09:22:40 2022
 
  

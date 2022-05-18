@@ -3,7 +3,7 @@ use crate::arch::riscv::qemu::param::NDEV;
 use crate::lock::spinlock::Spinlock;
 use crate::lock::sleeplock::SleepLock;
 use crate::process::CPU_MANAGER;
-use crate::ipc::fifo::Fifo_t;
+// use crate::ipc::fifo::Fifo_t;
 use super::pipe::Pipe;
 use super::inode::Inode;
 use super::devices::DEVICE_LIST;
@@ -51,7 +51,7 @@ pub struct VFile {
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
     pub(crate) pipe: Option<*mut Pipe>,
-    pub(crate) fifo: Option<*mut Fifo_t>, 
+    // pub(crate) fifo: Option<*mut Fifo_t>, 
     pub(crate) inode: Option<Inode>,
     pub(crate) offset: u32,
     pub(crate) major: i16
@@ -66,7 +66,7 @@ impl VFile {
             writeable: false,
             pipe: None,
             inode: None,
-            fifo: None,
+            // fifo: None,
             offset: 0,
             major: 0
         }
@@ -89,11 +89,11 @@ impl VFile {
                 return Ok(ret)
             },
 
-            FileType::Fifo => {
-                let fifo = unsafe{ &*self.fifo.unwrap() };
-                ret = fifo.read(addr, len)?;
-                return Ok(ret)
-            }
+            // FileType::Fifo => {
+            //     let fifo = unsafe{ &*self.fifo.unwrap() };
+            //     ret = fifo.read(addr, len)?;
+            //     return Ok(ret)
+            // }
 
             FileType::Device => {
                 if self.major < 0 || 
@@ -146,15 +146,17 @@ impl VFile {
         match self.ftype {
             FileType::Pipe => {
                 let pipe = unsafe{ &*self.pipe.unwrap() };
+                println!("))) {} {} ", addr, len);
                 ret = pipe.write(addr, len)?;
+                // println!(")))");
                 Ok(ret)
             },
 
-            FileType::Fifo => {
-                let fifo = unsafe{ &*self.fifo.unwrap() };
-                ret = fifo.write(addr, len)?;
-                Ok(ret)
-            },
+            // FileType::Fifo => {
+            //     let fifo = unsafe{ &*self.fifo.unwrap() };
+            //     ret = fifo.write(addr, len)?;
+            //     Ok(ret)
+            // },
 
             FileType::Device => {
                 if self.major < 0 || 
