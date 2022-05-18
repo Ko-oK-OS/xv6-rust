@@ -84,7 +84,7 @@ impl VFile {
 
         match self.ftype {
             FileType::Pipe => {
-                let pipe = unsafe{ &*self.pipe.unwrap() };
+                let pipe = unsafe{ &mut *self.pipe.unwrap() };
                 ret = pipe.read(addr, len)?;
                 return Ok(ret)
             },
@@ -145,8 +145,8 @@ impl VFile {
         
         match self.ftype {
             FileType::Pipe => {
-                let pipe = unsafe{ &*self.pipe.unwrap() };
-                println!("))) {} {} ", addr, len);
+                let pipe = unsafe{ &mut *self.pipe.unwrap() };
+          
                 ret = pipe.write(addr, len)?;
                 // println!(")))");
                 Ok(ret)

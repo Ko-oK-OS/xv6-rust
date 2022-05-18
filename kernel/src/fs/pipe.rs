@@ -8,53 +8,71 @@ use super::{FileType, VFile};
 const PIPE_SIZE: usize = 512;
 #[repr(C)]
 pub struct Pipe {
-    pub pipe: *mut PipeData,
+    data: [u8; PIPE_SIZE],
+  
+    nread: usize, 
+
+    nwrite: usize, 
+ 
+    read_open: bool,
+
+    write_open: bool,
+
     pub pipe_lock: Spinlock<()>
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct PipeData {
-    data: [u8; PIPE_SIZE],
-    /// number of bytes read
-    read_number: usize, 
-    /// number of bytes written
-    write_number: usize, 
-    /// read fd is still open
-    read_open: bool,
-    /// write fd is still open
-    write_open: bool
-}
+// #[repr(C)]
+// #[derive(Clone, Copy)]
+// pub struct PipeData {
+//     data: [u8; PIPE_SIZE],
+//     /// number of bytes read
+//     read_number: usize, 
+//     /// number of bytes written
+//     write_number: usize, 
+//     /// read fd is still open
+//     read_open: bool,
+//     /// write fd is still open
+//     write_open: bool
+// }
 
 impl Pipe {
-    pub unsafe fn alloc(rf: *mut *mut VFile, wf: *mut *mut VFile) -> Self {
-        let pipedata = unsafe{ *PipeData::alloc() }; 
-        let mut pipe = Self {
-            pipe: PipeData::alloc(),
-            pipe_lock: Spinlock::new((), "pipe")
-        };
+    pub unsafe fn alloc(rf: *mut *mut VFile, wf: *mut *mut VFile) -> *mut Pipe {
+        let pipe_ptr = unsafe{ RawPage::new_zeroed() as *mut Pipe };
+
+        // let pipedata = unsafe{ *PipeData::alloc() }; 
+        // let mut pipe = Self {
+        //     pipe: PipeData::alloc(),
+        //     pipe_lock: Spinlock::new((), "pipe")
+        // };
+        let pipe = &mut *pipe_ptr;
+        pipe.read_open = true;
+        pipe.write_open = true;
+        pipe.nread = 0;
+        pipe.nwrite = 0;
+        pipe.pipe_lock = Spinlock::new((), "pipelock");
+
         **rf = VFile::init();
         **wf = VFile::init();
         (*(*rf)).ftype = FileType::Pipe;
         (*(*rf)).readable = true;
         (*(*rf)).writeable = false;
-        (*(*rf)).pipe = Some(&mut pipe as *mut Pipe);
+        (*(*rf)).pipe = Some(pipe as *mut Pipe);
         (*(*wf)).ftype = FileType::Pipe;
         (*(*wf)).readable = false;
         (*(*wf)).writeable = true;
-        (*(*wf)).pipe = Some(&mut pipe as *mut Pipe);
+        (*(*wf)).pipe = Some(pipe as *mut Pipe);
 
-        pipe
+        pipe_ptr
     }
 
-    pub fn read(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
+    pub fn read(&mut self, addr: usize, len: usize) -> Result<usize, &'static str> {
         let my_proc = unsafe {
             CPU_MANAGER.myproc().ok_or("Fail to get my process")?
         };
 
         let mut guard = self.pipe_lock.acquire();
-        let pipe = unsafe { &mut *self.pipe };
-        while pipe.read_number == pipe.write_number && pipe.write_open {
+        // let pipe = unsafe { &mut *self.pipe };
+        while self.nread == self.nwrite && self.write_open {
             // Pipe empty
             if my_proc.killed() {
                 drop(guard);
@@ -63,7 +81,7 @@ impl Pipe {
             // pipe read sleep
             
             my_proc.sleep(
-                &pipe.read_number as *const _ as usize, 
+                &self.nread as *const _ as usize, 
                 guard
             );
             guard = self.pipe_lock.acquire();
@@ -85,11 +103,11 @@ impl Pipe {
         // }
         let mut i = 0;
         while i < len {
-            if pipe.read_number == pipe.write_number {
+            if self.nread == self.nwrite {
                 break;
             }
-            let ch = pipe.data[pipe.read_number % PIPE_SIZE];
-            pipe.read_number += 1;
+            let ch = self.data[self.nread % PIPE_SIZE];
+            self.nread += 1;
             
             let pgt = unsafe { &mut *my_proc.pagetable };
             if pgt.copy_out(addr + i, &ch as *const u8, 1).is_err() {
@@ -98,12 +116,12 @@ impl Pipe {
             i += 1;
         }
 
-        unsafe{ PROC_MANAGER.wake_up(&pipe.write_number as *const _ as usize) };
+        unsafe{ PROC_MANAGER.wake_up(&self.nwrite as *const _ as usize) };
         drop(guard);
         Ok(i)
     }
 
-    pub fn write(&self, addr: usize, len: usize) -> Result<usize, &'static str> {
+    pub fn write(&mut self, addr: usize, len: usize) -> Result<usize, &'static str> {
         
         let my_proc = unsafe {
             CPU_MANAGER.myproc().ok_or("Fail to get current process")?
@@ -111,10 +129,10 @@ impl Pipe {
         // println!("$$$");
        
         let mut guard = self.pipe_lock.acquire();
-        let pipe = unsafe { &mut *self.pipe };
+        // let pipe = unsafe { &mut *self.pipe };
         let mut i = 0;
 
-        pipe.write_open;
+        // pipe.write_open;
 
         // println!("$$$");
         
@@ -128,13 +146,13 @@ impl Pipe {
             // }
             // println!("HEHE");
            
-            if pipe.write_number == pipe.read_number + PIPE_SIZE {
+            if self.nwrite == self.nread + PIPE_SIZE {
                 
                 
                 unsafe {
-                    PROC_MANAGER.wake_up(&pipe.read_number as *const _ as usize);
+                    PROC_MANAGER.wake_up(&self.nread as *const _ as usize);
                 }
-                my_proc.sleep(&pipe.write_number as *const _ as usize, guard);
+                my_proc.sleep(&self.nwrite as *const _ as usize, guard);
                 guard = self.pipe_lock.acquire();
             } else {
                 // println!("HAHA");
@@ -143,11 +161,11 @@ impl Pipe {
                 if pgt.copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
                     break;
                 }
-                let write_cursor = pipe.write_number % PIPE_SIZE;
-                pipe.data[write_cursor] = char;
-                println!("+{}", char);
+                let write_cursor = self.nwrite % PIPE_SIZE;
+                self.data[write_cursor] = char;
+                // println!("+{}", char);
                 
-                pipe.write_number += 1;
+                self.nwrite += 1;
                 i += 1;
             }
         }
@@ -155,51 +173,51 @@ impl Pipe {
          
 
         unsafe {
-            PROC_MANAGER.wake_up(&pipe.read_number as *const _ as usize);
+            PROC_MANAGER.wake_up(&self.nread as *const _ as usize);
         }
         drop(guard);
         
         Ok(i)
     }
 
-    pub fn close(&self, writeable: bool) {
-        let mut guard = self.pipe_lock.acquire();
-        let pipe = unsafe { &mut *self.pipe };
+    pub fn close(&mut self, writeable: bool) {
+        let guard = self.pipe_lock.acquire();
+        // let self = unsafe { &mut *self.self };
         if writeable {
-            pipe.write_open = false;
+            self.write_open = false;
             unsafe {
-                PROC_MANAGER.wake_up(&pipe.read_number as *const _ as usize);
+                PROC_MANAGER.wake_up(&self.nread as *const _ as usize);
             }
         } else {
-            pipe.read_open = false;
+            self.read_open = false;
             unsafe {
-                PROC_MANAGER.wake_up(&pipe.write_number as *const _ as usize);
+                PROC_MANAGER.wake_up(&self.nwrite as *const _ as usize);
             }
         }
         
-        if !pipe.read_open && !pipe.write_open {
-            pipe.free();
+        if !self.read_open && !self.write_open {
             drop(guard);
+            drop(self);
         } else {
             drop(guard);
         }
     }
 }
 
-impl PipeData {
-    pub fn alloc() -> *mut Self {
-        let pipe = unsafe{ RawPage::new_zeroed() as *mut PipeData };
-        let pipe = unsafe{ &mut *pipe };
-        pipe.read_number = 0;
-        pipe.write_number = 0;
-        pipe.read_open = true;
-        pipe.write_open = true;
-        pipe as *mut Self 
-    }
+// impl PipeData {
+//     pub fn alloc() -> *mut Self {
+//         let pipe = unsafe{ RawPage::new_zeroed() as *mut PipeData };
+//         let pipe = unsafe{ &mut *pipe };
+//         pipe.read_number = 0;
+//         pipe.write_number = 0;
+//         pipe.read_open = true;
+//         pipe.write_open = true;
+//         pipe as *mut Self 
+//     }
 
-    pub fn free(&mut self) {
-        unsafe {
-            drop_in_place(self as *const _ as *mut RawPage)
-        }
-    }
-}
+//     pub fn free(&mut self) {
+//         unsafe {
+//             drop_in_place(self as *const _ as *mut RawPage)
+//         }
+//     }
+// }
