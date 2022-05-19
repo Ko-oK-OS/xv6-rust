@@ -157,6 +157,7 @@ impl ProcManager{
                     // Set up new context to start executing at forkret, 
                     // which returns to user space. 
                     task.init_context();
+                    task.thread = 0;
 
                     return Some(task)
                 }
@@ -182,13 +183,14 @@ impl ProcManager{
                     drop(guard);
 
                     // Allocate a trapframe page.
-                    let trapframe = unsafe{ RawPage::new_zeroed() as *mut u8 };
-                    task.set_trapframe(trapframe as *mut Trapframe);
+                    // let trapframe = unsafe{ RawPage::new_zeroed() as *mut u8 };
+                    // task.set_trapframe(trapframe as *mut Trapframe);
         
                     // task.pagetable = ;
                     // Set up new context to start executing at forkret, 
                     // which returns to user space. 
                     task.init_context();
+                    task.thread = 1;
 
                     return Some(task)
                 }
@@ -271,7 +273,7 @@ impl ProcManager{
             CPU_MANAGER.myproc().expect("Current cpu's process is none.")
         };
         // close all open files. 
-        
+        // println!("STATUS {}", status);
         let open_files = &mut curtask.open_files;
         // 遍历该进程打开的文件，夺取所有权，即将引用计数减一
         for index in 0..open_files.len() {
@@ -396,11 +398,11 @@ impl ProcManager{
                         have_kids = true;
                         if p.state == ProcState::ZOMBIE {
                             pid = p.pid;
-                            let page_table = unsafe { &mut *p.pagetable };
-                            if page_table.copy_out(stack, p.thread_ustack as *const u8, size_of::<usize>()).is_err() {
-                                drop(guard);
-                                return None
-                            }
+                            // let page_table = unsafe { &mut *p.pagetable };
+                            // if page_table.copy_out(stack, p.thread_ustack as *const u8, size_of::<usize>()).is_err() {
+                            //     drop(guard);
+                            //     return None
+                            // }
                             println!("(FIND");
                             p.free_thread();
                             drop(guard);

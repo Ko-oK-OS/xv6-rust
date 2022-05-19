@@ -1,6 +1,7 @@
 KERNEL = kernel/target/riscv64gc-unknown-none-elf/debug/kernel
 USER = xv6-user
 INCLUDE = xv6-user/include
+UTHREAD = $(USER)/uthread
 CPUS = 1
 
 CC = riscv64-unknown-elf-gcc
@@ -48,10 +49,31 @@ $(USER)/initcode: $(USER)/initcode.S
 	$(OBJCOPY) -S -O binary $(USER)/initcode.out $(USER)/initcode
 	$(OBJDUMP) -S $(USER)/initcode.o > $(USER)/initcode.asm
 
-ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
+ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o 
 
-_%: %.o $(ULIB)
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+CRT = $(ULIB) $(USER)/start.o
+
+
+
+$(USER)/start.o: $(USER)/start.S 
+	$(CC) $(CFLAGS) -c -o $(USER)/start.o $(USER)/start.S
+
+UTHREADLIB = $(UTHREAD)/%.o
+
+$(UTHREAD)/getcontext.o: $(UTHREAD)/getcontext.S 
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+$(UTHREAD)/setcontext.o: $(UTHREAD)/setcontext.S
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+$(UTHREAD)/ucontext.o: (UTHREAD)/getcontext.o $(UTHREAD)/setcontext.o $(UTHREAD)/ucontext.c
+	$(CC) $(CFLAGS) -c $^ -o $@
+
+$(UTHREAD)/uthread.o: $(UTHREAD)/uthread.c
+	$(CC) $(CFLAGS) -c $^ -o $@
+
+_%: %.o $(CRT)
+	$(LD) $(LDFLAGS) -N -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 

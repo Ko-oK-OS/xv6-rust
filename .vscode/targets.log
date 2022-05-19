@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Wed May 18 09:22:40 2022
+# Make data base, printed on Fri May 20 00:38:37 2022
 
 # Variables
 
@@ -47,12 +47,12 @@ CURDIR := /home/rand/xv6-rust
 # makefile
 SHELL = /bin/sh
 # environment
-SNAP_DATA = /var/snap/code/96
+SNAP_DATA = /var/snap/code/97
 # environment
 VSCODE_NLS_CONFIG = {"locale":"zh-cn","availableLanguages":{},"_languagePackSupport":true}
 # environment
-JOURNAL_STREAM = 8:48117
-# makefile (from 'Makefile', line 20)
+JOURNAL_STREAM = 8:47836
+# makefile (from 'Makefile', line 21)
 CFLAGS = -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -fno-pie -no-pie
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
@@ -77,35 +77,35 @@ DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-_ = /snap/code/96/usr/share/code/code
+_ = /snap/code/97/usr/share/code/code
 # environment
-MANAGERPID = 1056
+MANAGERPID = 1039
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 VSCODE_CWD = /home/rand
 # environment
-GSETTINGS_SCHEMA_DIR = /snap/code/96/usr/share/glib-2.0/schemas
+GSETTINGS_SCHEMA_DIR = /snap/code/97/usr/share/glib-2.0/schemas
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
 PATH = /home/rand/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-# makefile (from 'Makefile', line 7)
+# makefile (from 'Makefile', line 8)
 LD = riscv64-unknown-elf-ld
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/rand-virtual-machine:@/tmp/.ICE-unix/1533,unix/rand-virtual-machine:/tmp/.ICE-unix/1533
+SESSION_MANAGER = local/rand-virtual-machine:@/tmp/.ICE-unix/1528,unix/rand-virtual-machine:/tmp/.ICE-unix/1528
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
 GDK_PIXBUF_MODULE_FILE = /home/rand/snap/code/common/.cache/gdk-pixbuf-loaders.cache
 # environment
-SNAP = /snap/code/96
-# makefile (from 'Makefile', line 4)
+SNAP = /snap/code/97
+# makefile (from 'Makefile', line 5)
 CPUS = 1
 # environment
-SNAP_VERSION = da15b6fd
+SNAP_VERSION = c3511e6c
 # environment
 XDG_MENU_PREFIX = gnome-
 # environment
@@ -115,13 +115,13 @@ DISABLE_WAYLAND = 1
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = ee860b3892504d7ea9fc45c5aedbba19
-# makefile (from 'Makefile', line 26)
+INVOCATION_ID = 67675e0210e64c56a8b36ae3306b9d60
+# makefile (from 'Makefile', line 27)
 LDFLAGS = -z max-page-size=4096
 # environment
-GDK_PIXBUF_MODULEDIR = /snap/code/96/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders
-# makefile (from 'Makefile', line 51)
-ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
+GDK_PIXBUF_MODULEDIR = /snap/code/97/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders
+# makefile (from 'Makefile', line 52)
+ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o $(UTHREAD)/uthread.o
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -131,11 +131,13 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 9585
+GIO_LAUNCHED_DESKTOP_FILE_PID = 16743
 # automatic
 %F = $(notdir $%)
 # environment
 DISPLAY = :0
+# makefile (from 'Makefile', line 4)
+UTHREAD = $(USER)/uthread
 # environment
 VSCODE_PIPE_LOGGING = true
 # environment
@@ -145,7 +147,7 @@ PWD = /home/rand/xv6-rust
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1498
+SSH_AGENT_PID = 1470
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -159,7 +161,7 @@ LESSCLOSE = /usr/bin/lesspipe %s %s
 # environment
 VSCODE_CLI = 1
 # environment
-VSCODE_CODE_CACHE_PATH = /home/rand/.config/Code/CachedData/da15b6fd3ef856477bf6f4fb29ba1b7af717770d
+VSCODE_CODE_CACHE_PATH = /home/rand/.config/Code/CachedData/c3511e6c69bb39013c4a4b7b9566ec1ca73fc4d5
 # environment
 LOGNAME = rand
 # environment
@@ -189,27 +191,29 @@ MAKECMDGOALS := all
 # environment
 QT_IM_MODULE = ibus
 # environment
-SNAP_USER_DATA = /home/rand/snap/code/96
+SNAP_USER_DATA = /home/rand/snap/code/97
 # environment
 SHLVL = 0
-# makefile (from 'Makefile', line 6)
+# makefile (from 'Makefile', line 7)
 CC = riscv64-unknown-elf-gcc
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-d36eb655-f505-415f-a6cc-1b36e61a8169.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-4943f985-a1fc-4f36-b4b3-85c55726a35e.sock
 # default
 MAKE_VERSION := 4.2.1
 # makefile (from 'Makefile', line 2)
 USER = xv6-user
 # environment
-SNAP_REVISION = 96
+SNAP_REVISION = 97
 # makefile
 .DEFAULT_GOAL := run
 # makefile (from 'Makefile', line 3)
 INCLUDE = xv6-user/include
 # environment
 XDG_CURRENT_DESKTOP = Unity
+# makefile (from 'Makefile', line 54)
+CRT = $(ULIB) $(USER)/start.o
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
 # default
@@ -221,7 +225,7 @@ MAKE_COMMAND := make
 # environment
 LANGUAGE = zh_CN:zh
 # environment
-VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.67.1-main.sock
+VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.67.2-main.sock
 # environment
 BAMF_DESKTOP_FILE_HINT = /var/lib/snapd/desktop/applications/code_code.desktop
 # makefile
@@ -232,7 +236,7 @@ MFLAGS = -pqrR
 *D = $(patsubst %/,%,$(dir $*))
 # automatic
 +D = $(patsubst %/,%,$(dir $+))
-# makefile (from 'Makefile', line 9)
+# makefile (from 'Makefile', line 10)
 OBJDUMP = riscv64-unknown-elf-objdump
 # environment
 GDK_BACKEND = x11
@@ -256,11 +260,11 @@ LC_ALL = C
 GJS_DEBUG_TOPICS = JS ERROR;JS LOG
 # automatic
 ^F = $(notdir $^)
-# makefile (from 'Makefile', line 8)
+# makefile (from 'Makefile', line 9)
 OBJCOPY = riscv64-unknown-elf-objcopy
 # default
 SUFFIXES := 
-# makefile (from 'Makefile', line 79)
+# makefile (from 'Makefile', line 98)
 UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test $(USER)/_fifo_test1 $(USER)/_fifo_test2 $(USER)/_pipe_test 
 # environment
 SNAP_REEXEC = 
@@ -274,13 +278,13 @@ WINDOWPATH = 2
 GJS_DEBUG_OUTPUT = stderr
 # default
 .RECIPEPREFIX := 
+ 
 # environment
 LANG = C
 # environment
-VSCODE_PID = 9630
- 
+VSCODE_PID = 16787
 # variable set hash-table stats:
-# Load=133/1024=13%, Rehash=0, Collisions=22/224=10%
+# Load=135/1024=13%, Rehash=0, Collisions=22/252=9%
 
 # Pattern-specific Variable Values
 
@@ -289,15 +293,15 @@ VSCODE_PID = 9630
 # Directories
 
 # user (device 2053, inode 955528): 9 files, no impossibilities.
-# . (device 2053, inode 677081): 23 files, no impossibilities.
+# . (device 2053, inode 677081): 22 files, no impossibilities.
 
-# 32 files, no impossibilities in 2 directories.
+# 31 files, no impossibilities in 2 directories.
 
 # Implicit Rules
 
-_%: %.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o
-#  recipe to execute (from 'Makefile', line 54):
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+_%: %.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/uthread/uthread.o xv6-user/start.o
+#  recipe to execute (from 'Makefile', line 73):
+	$(LD) $(LDFLAGS) -N -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
@@ -329,8 +333,15 @@ xv6-user/usys.o: xv6-user/usys.S
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 62):
+#  recipe to execute (from 'Makefile', line 81):
 	$(CC) $(CFLAGS) -c -o $(USER)/usys.o $(USER)/usys.S
+
+xv6-user/uthread/ucontext.o: (UTHREAD)/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.c
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 67):
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 # Not a target:
 xv6-user/_ls:
@@ -361,11 +372,25 @@ xv6-user/ulib.o:
 #  Modification time never checked.
 #  File has not been updated.
 
-xv6-user/initcode: xv6-user/initcode.S
+# Not a target:
+xv6-user/start.S:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 46):
+
+xv6-user/uthread/setcontext.o: xv6-user/uthread/setcontext.S
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 64):
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+xv6-user/initcode: xv6-user/initcode.S
+#  Implicit rule search has not been done.
+ 
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 47):
 	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Iinclude -c $(USER)/initcode.S -o $(USER)/initcode.o
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $(USER)/initcode.out $(USER)/initcode.o
 	$(OBJCOPY) -S -O binary $(USER)/initcode.out $(USER)/initcode
@@ -377,17 +402,24 @@ xv6-user/include/fs.h:
 #  Modification time never checked.
 #  File has not been updated.
 
+xv6-user/uthread/uthread.o: xv6-user/uthread/uthread.c
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 70):
+	$(CC) $(CFLAGS) -c $^ -o $@
+
 kernel/target/riscv64gc-unknown-none-elf/debug/kernel:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 32):
+#  recipe to execute (from 'Makefile', line 33):
 	make -C kernel
 
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-18 09:22:03.269520766
+#  Last modified 2022-05-20 00:29:54.143125234
 #  File has been updated.
 #  Successfully updated.
 
@@ -397,6 +429,13 @@ xv6-mkfs/mkfs.c:
 #  Modification time never checked.
 #  File has not been updated.
 
+xv6-user/uthread/getcontext.o: xv6-user/uthread/getcontext.S
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 61):
+	$(CC) $(CFLAGS) -c -o $@ $^
+
 # Not a target:
 xv6-user/include/param.h:
 #  Implicit rule search has not been done.
@@ -404,6 +443,7 @@ xv6-user/include/param.h:
 #  File has not been updated.
 
 # Not a target:
+ 
 xv6-user/_fork_test:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -425,11 +465,23 @@ xv6-user/usys.S: xv6-user/usys.pl
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 59):
+#  recipe to execute (from 'Makefile', line 78):
 	perl $(USER)/usys.pl > $(USER)/usys.S
 
 # Not a target:
+xv6-user/uthread/ucontext.c:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
 xv6-user/_sem_test1:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+xv6-user/uthread/setcontext.S:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -438,7 +490,7 @@ fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-u
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 100):
+#  recipe to execute (from 'Makefile', line 119):
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
 
 # Not a target:
@@ -449,15 +501,16 @@ xv6-user/initcode.S:
 
 # Not a target:
 xv6-user/forktest.o:
+ 
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
 
-xv6-user/_forktest: xv6-user/forktest.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o
+xv6-user/_forktest: xv6-user/forktest.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/uthread/uthread.o
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 65):
+#  recipe to execute (from 'Makefile', line 84):
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $(USER)/_forktest $(USER)/forktest.o $(USER)/ulib.o $(USER)/usys.o
@@ -465,6 +518,18 @@ xv6-user/_forktest: xv6-user/forktest.o xv6-user/ulib.o xv6-user/usys.o xv6-user
 
 # Not a target:
 .DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+xv6-user/uthread/uthread.c:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+xv6-user/uthread/getcontext.S:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -483,16 +548,17 @@ xv6-user/_rm:
 
 run: fs.img
 #  Implicit rule search has not been done.
+ 
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 29):
+#  recipe to execute (from 'Makefile', line 30):
 	make -C kernel run
 
 clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 38):
+#  recipe to execute (from 'Makefile', line 39):
 	rm -rf kernel.S
 	make -C kernel clean
 	rm -f $(USER)/*.o $(USER)/*.d $(USER)/*.asm $(USER)/*.sym \
@@ -526,6 +592,12 @@ user/*.d:
 #  Failed to be updated.
 
 # Not a target:
+(UTHREAD)/getcontext.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
 xv6-user/printf.o:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -555,18 +627,25 @@ xv6-user/umalloc.o:
 #  Modification time never checked.
 #  File has not been updated.
 
+xv6-user/start.o: xv6-user/start.S
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 58):
+ 
+	$(CC) $(CFLAGS) -c -o $(USER)/start.o $(USER)/start.S
+
 # Not a target:
 xv6-user/_stressfs:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
- 
 #  File has not been updated.
 
 asm: kernel/target/riscv64gc-unknown-none-elf/debug/kernel
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 35):
+#  recipe to execute (from 'Makefile', line 36):
 	$(OBJDUMP) -S $(KERNEL) > kernel.asm
 
 # Not a target:
@@ -591,23 +670,24 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 71):
+#  recipe to execute (from 'Makefile', line 90):
 	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
 
 # files hash-table stats:
-# Load=45/1024=4%, Rehash=0, Collisions=3/92=3%
+# Load=56/1024=5%, Rehash=0, Collisions=4/111=4%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 73 / storage = 931 B / avg = 12 B
-# current buf: size = 8162 B / used = 931 B / count = 73 / avg = 12 B
+# strcache buffers: 1 (0) / strings = 84 / storage = 1218 B / avg = 14 B
+# current buf: size = 8162 B / used = 1218 B / count = 84 / avg = 14 B
 
-# strcache performance: lookups = 108 / hit rate = 32%
+# strcache performance: lookups = 127 / hit rate = 33%
 # hash-table stats:
-# Load=73/8192=1%, Rehash=0, Collisions=3/108=3%
-# Finished Make data base on Wed May 18 09:22:40 2022
+ 
+# Load=84/8192=1%, Rehash=0, Collisions=4/127=3%
+# Finished Make data base on Fri May 20 00:38:37 2022
 
  

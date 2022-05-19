@@ -18,9 +18,9 @@ impl Syscall<'_> {
 
         let ret = self.process.threadclone(func, ustack);
 
-        // let task = unsafe { CPU_MANAGER.myproc().unwrap() };
-        // let tf = unsafe { &mut *task.trapframe } ;
-        // println!("In sys_clone, pid {} epc {}", task.pid, tf.epc);
+        let task = unsafe { CPU_MANAGER.myproc().unwrap() };
+        let tf = unsafe { &mut *task.trapframe } ;
+        println!("In sys_clone, pid {} epc {}", task.pid, tf.epc);
         Ok(ret)
     }
 

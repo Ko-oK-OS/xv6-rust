@@ -57,6 +57,8 @@ pub struct task_struct {
     pub killed: bool, // If non-zero, have been killed
     pub xstate: usize, // Exit status to be returned to parent's wait
     pub pid: usize,   // Process ID
+
+    pub thread: usize
 }
 
 // pub struct ProcMeta {
@@ -121,6 +123,8 @@ impl task_struct {
             killed: false,
             xstate: 0,
             pid: 0,
+
+            thread: 0
         }
     }
 
@@ -394,17 +398,17 @@ impl task_struct {
     }
 
     pub fn free_thread(&mut self) {
-        if !self.trapframe.is_null() {
-            unsafe { drop_in_place(self.trapframe as *mut RawPage); }
+        // if !self.trapframe.is_null() {
+            // unsafe { drop_in_place(self.trapframe as *mut RawPage); }
 
-            self.set_trapframe(0 as *mut Trapframe);
+            // self.set_trapframe(0 as *mut Trapframe);
 
             // let pagetable = unsafe { &mut *self.pagetable };
             // pagetable.proc_free_pagetable(self.size);
 
             // pagetable.free_pagetable();
             self.set_pagetable(0 as *mut PageTable);
-
+            self.set_trapframe(0 as *mut Trapframe);
 
             // self.set_pagetable(None);
             self.set_parent(None);
@@ -418,7 +422,7 @@ impl task_struct {
             self.xstate = 0;
             self.set_state(ProcState::UNUSED);
             
-        }
+        // }
     }
 
     
@@ -549,11 +553,21 @@ impl task_struct {
             child_proc.parent = Some(self as *mut task_struct);
             // drop(wait);
 
+            // unsafe {
+            //     (&mut *(self.pagetable)).print_pagetable();
+            //     (&mut *(child_proc.pagetable)).print_pagetable();
+            // }
+            
+
+            // while(true){
+
+            // }
+
             let guard = unsafe { PROC_MANAGER.tasks_lock.acquire() };
             child_proc.state = ProcState::RUNNABLE;
             drop(guard);
 
-            println!("Self pid is {}, child pid is {}", self.pid, child_proc.pid);
+            // println!("Self pid is {}, child pid is {}", self.pid, child_proc.pid);
             Some(child_proc)
         }else {
             println!("[Kernel] fork: None");

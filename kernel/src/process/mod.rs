@@ -93,7 +93,9 @@ unsafe fn fork_ret() -> ! {
     // println!("user trap return");
     let task = unsafe { CPU_MANAGER.myproc().unwrap() };
     let tf = unsafe { &mut *task.trapframe } ;
-    // println!("In fork_ret, pid {} epc {}", task.pid, tf.epc);
+    if tf.a7 == 40 {
+        println!("In fork_ret, pid {} epc {} sp {}", task.pid, tf.epc, tf.sp);
+    }
     user_trap_ret();
 }
 

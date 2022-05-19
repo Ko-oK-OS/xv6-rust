@@ -1,4 +1,5 @@
 use core::panic;
+use core::mem::*;
 
 use crate::syscall::handle_syscall;
 use crate::driver::plic::{plic_claim, plic_complete};
@@ -48,6 +49,11 @@ pub unsafe fn user_trap() {
     match scause.cause() {
         
         Trap::Exception(Exception::UserEnvCall) => {
+
+            // if tf.a7 == 40 {
+            //     println!("In cause, pid {}", my_proc.pid);
+            // }
+            
             
             // user system call
             if my_proc.killed() {
@@ -116,6 +122,9 @@ pub unsafe fn user_trap() {
         PROC_MANAGER.exit(1);
     }
     
+    // if tf.a7 == 40 {
+    //     println!("In user_trap, pid {} epc {} sp {}", my_proc.pid, tf.epc, tf.sp);
+    // }
     user_trap_ret();
 }
 
@@ -143,7 +152,18 @@ pub unsafe fn user_trap_ret() -> ! {
     // set up trapframe values that uservec will need when
     // the process next re-enters the kernel.
  
-    my_proc.user_init();
+    // my_proc.user_init();
+
+    let tf = &mut *my_proc.trapframe;
+    // kernel page table
+    tf.kernel_satp = satp::read();
+    // process's kernel stack 
+    tf.kernel_sp = my_proc.kstack + PGSIZE * 4;
+    // kernel user trap address
+    tf.kernel_trap = user_trap as usize;
+    // current process's cpu id.
+    tf.kernel_hartid = cpu::cpuid();
+    
 
     // set up the registers that trampoline.S's sret will use
     // to get to user space.
@@ -154,7 +174,10 @@ pub unsafe fn user_trap_ret() -> ! {
     sstatus::write(sstatus);
 
     // set S Exception Program Counter to the saved user pc. 
-    sepc::write((*my_proc.trapframe).epc);
+    // if tf.a7 == 1 {
+    //     println!("hehe pid {} epc {} ra {}", my_proc.pid, tf.epc, tf.ra);
+    // }
+    sepc::write(tf.epc);
 
     // if (*my_proc.trapframe).epc == 0 {
     //     println!("In user_trap_ret, pid {}", my_proc.pid);
@@ -172,8 +195,7 @@ pub unsafe fn user_trap_ret() -> ! {
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
     core::mem::transmute(userret_virt as usize);
     
-    userret_virt(TRAPFRAME, satp);
-    
+    userret_virt(TRAPFRAME + (my_proc.thread * size_of::<Trapframe>()), satp);
 }
 
 /// interrupts and exceptions from kernel code go here via kernelvec,
