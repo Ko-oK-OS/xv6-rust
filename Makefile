@@ -1,7 +1,7 @@
 KERNEL = kernel/target/riscv64gc-unknown-none-elf/debug/kernel
 USER = xv6-user
 INCLUDE = xv6-user/include
-UTHREAD = $(USER)/uthread
+UTHREAD = xv6-user/uthread
 CPUS = 1
 
 CC = riscv64-unknown-elf-gcc
@@ -43,22 +43,26 @@ clean:
 	xv6-mkfs/mkfs $(USER)/usys.S \
 	$(UPROGS)
 
+
+
+
 $(USER)/initcode: $(USER)/initcode.S
 	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Iinclude -c $(USER)/initcode.S -o $(USER)/initcode.o
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $(USER)/initcode.out $(USER)/initcode.o
 	$(OBJCOPY) -S -O binary $(USER)/initcode.out $(USER)/initcode
 	$(OBJDUMP) -S $(USER)/initcode.o > $(USER)/initcode.asm
 
-ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o 
+ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
 
-CRT = $(ULIB) $(USER)/start.o
+CRT = $(ULIB) $(USER)/start.o $(UTHREADLIB)
 
 
-
+UTHREADLIB = $(UTHREAD)/getcontext.o $(UTHREAD)/setcontext.o $(UTHREAD)/ucontext.o $(UTHREAD)/uswtch.o $(UTHREAD)/uthread.o
 $(USER)/start.o: $(USER)/start.S 
 	$(CC) $(CFLAGS) -c -o $(USER)/start.o $(USER)/start.S
 
-UTHREADLIB = $(UTHREAD)/%.o
+$(UTHREAD)/uswtch.o: $(UTHREAD)/uswtch.S 
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(UTHREAD)/getcontext.o: $(UTHREAD)/getcontext.S 
 	$(CC) $(CFLAGS) -c -o $@ $^
@@ -66,11 +70,12 @@ $(UTHREAD)/getcontext.o: $(UTHREAD)/getcontext.S
 $(UTHREAD)/setcontext.o: $(UTHREAD)/setcontext.S
 	$(CC) $(CFLAGS) -c -o $@ $^
 
-$(UTHREAD)/ucontext.o: (UTHREAD)/getcontext.o $(UTHREAD)/setcontext.o $(UTHREAD)/ucontext.c
+$(UTHREAD)/ucontext.o: $(UTHREAD)/getcontext.o $(UTHREAD)/setcontext.o $(UTHREAD)/ucontext.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 $(UTHREAD)/uthread.o: $(UTHREAD)/uthread.c
 	$(CC) $(CFLAGS) -c $^ -o $@
+
 
 _%: %.o $(CRT)
 	$(LD) $(LDFLAGS) -N -Ttext 0 -o $@ $^
@@ -91,6 +96,8 @@ $(USER)/_forktest: $(USER)/forktest.o $(ULIB)
 
 xv6-mkfs/mkfs: xv6-mkfs/mkfs.c $(INCLUDE)/fs.h $(INCLUDE)/param.h
 	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
+
+
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
@@ -117,6 +124,8 @@ UPROGS=\
 	$(USER)/_fifo_test1 \
 	$(USER)/_fifo_test2 \
 	$(USER)/_pipe_test \
+	$(USER)/_uthreadtest
+
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)

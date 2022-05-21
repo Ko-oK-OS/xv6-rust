@@ -384,7 +384,7 @@ impl ProcManager{
         let my_proc = unsafe {
             CPU_MANAGER.myproc().expect("Fail to get my process")
         };
-        
+        println!("In join the stack varible addr is {}", stack);
         loop {
             let mut guard = self.tasks_lock.acquire();
             let mut have_kids = false;
@@ -398,12 +398,12 @@ impl ProcManager{
                         have_kids = true;
                         if p.state == ProcState::ZOMBIE {
                             pid = p.pid;
+
+                            //TODO    BUG!!!!!!!!!!!!!!!!!!!!!!
+
                             // let page_table = unsafe { &mut *p.pagetable };
-                            // if page_table.copy_out(stack, p.thread_ustack as *const u8, size_of::<usize>()).is_err() {
-                            //     drop(guard);
-                            //     return None
-                            // }
-                            println!("(FIND");
+                            // page_table.copy_out(stack, p.thread_ustack as *const u8, size_of::<usize>());
+                            // println!("(FIND");
                             p.free_thread();
                             drop(guard);
                             return Some(pid);
