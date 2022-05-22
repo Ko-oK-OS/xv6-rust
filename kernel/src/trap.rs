@@ -1,6 +1,12 @@
+use core::intrinsics::write_bytes;
 use core::panic;
 use core::mem::*;
 
+use crate::memory::PageAllocator;
+use crate::memory::PhysicalAddress;
+use crate::memory::VirtualAddress;
+use crate::memory::mapping::page_table_entry::{ PageTableEntry, PteFlags};
+use crate::memory::page_round_down;
 use crate::syscall::handle_syscall;
 use crate::driver::plic::{plic_claim, plic_complete};
 use crate::driver::virtio_disk::DISK;
@@ -31,6 +37,7 @@ pub unsafe fn trap_init_hart() {
 pub unsafe fn user_trap() {
     let sepc = sepc::read();
     let scause = Scause::new(scause::read());
+    let stval = stval::read();
 
     if !sstatus::is_from_user() {
         panic!("user_trap(): not from user mode");
@@ -109,6 +116,20 @@ pub unsafe fn user_trap() {
             // yield up the CPU if this is a timer interrupt
             my_proc.yielding();
         },
+
+        Trap::Exception(Exception::LoadPageFault | Exception::StorePageFault) => {
+            let mut va = page_round_down(stval);
+            let mut pa = RawPage::new_zeroed();
+            write_bytes(pa as *mut u8, 0, PGSIZE);
+
+            let task = CPU_MANAGER.myproc().unwrap();
+            let pgtable = &mut *task.pagetable;
+
+            pgtable.map(VirtualAddress::new(va),
+                        PhysicalAddress::new(pa),
+                        PGSIZE,
+                        PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U);
+        }
 
         _ => {
             println!("usertrap: unexpected scacuse: {:?}\n pid: {}", scause.cause(), my_proc.pid());
@@ -236,6 +257,8 @@ pub unsafe fn kernel_trap(
         Trap::Exception(Exception::StorePageFault) => {
             panic!("[Panic] Store Page Fault!\n stval: 0x{:x}\n sepc: 0x{:x}\n", stval, sepc);
         },
+
+        
 
         Trap::Exception(Exception::KernelEnvCall) => {
             match which  {

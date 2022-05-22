@@ -405,6 +405,8 @@ impl PageTable{
         for _ in 0..npages {
             match self.translate(va) {
                 Some(pte) => {
+                    // TO DO !!!!!!!!!!!! is valid check ?
+
                     if !pte.is_valid() {
                         panic!("uvm_unmap: not mapped");
                     }

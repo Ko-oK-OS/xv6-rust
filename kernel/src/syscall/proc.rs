@@ -1,4 +1,4 @@
-use crate::trap::TICKS_LOCK;
+use crate::{trap::TICKS_LOCK, memory::page_round_up};
 use super::*;
 
 impl Syscall<'_> {
@@ -72,7 +72,7 @@ impl Syscall<'_> {
     pub fn sys_sbrk(&mut self) -> SysResult {
         let size = self.arg(0);
 
-        let task = unsafe{ &*self.process };
+        let task = unsafe{ &mut *self.process };
         let addr = task.size;
      
         match self.process.grow_proc(size as isize) {
@@ -84,6 +84,13 @@ impl Syscall<'_> {
                 panic!("err: {:?}", err);
             }
         }
+
+
+        //TODO  Lazy allocation
+
+        // task.size += page_round_up(size);
+
+        // Ok(0)
     }
     
     
