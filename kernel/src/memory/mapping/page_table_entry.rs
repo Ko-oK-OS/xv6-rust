@@ -94,9 +94,31 @@ impl PageTableEntry{
         Self(pte)
     }
 
+    pub fn add_W_bit(&self) -> Self {
+        let pte = self.as_usize() | (PteFlags::W.bits());
+        Self(pte)
+    }
+
+    pub fn add_R_bit(&self) -> Self {
+        let pte = self.as_usize() | (PteFlags::R.bits());
+        Self(pte)
+    }
+
     #[inline]
     pub fn rm_user_bit(&mut self) {
         self.0 &= !(PteFlags::U.bits());
+    }
+
+    pub fn rm_W_bit(&mut self){
+        self.0 &= !(PteFlags::W.bits());
+    }
+
+    pub fn rm_R_bit(&mut self){
+        self.0 &= !(PteFlags::R.bits());
+    }
+
+    pub fn rm_X_bit(&mut self){
+        self.0 &= !(PteFlags::X.bits());
     }
 
     // implement PTE2PA

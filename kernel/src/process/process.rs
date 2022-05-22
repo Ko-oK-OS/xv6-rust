@@ -526,15 +526,23 @@ impl task_struct {
     pub fn fork(&mut self) -> Option<&mut Self> {
         // 从表中获取未被分配的子进程
         if let Some(child_proc) = ProcManager::alloc_proc()  {
-            // 从当前进程的页表拷贝到子进程中
-            // let pdata = unsafe{ &mut *self.data.get() };
-            // let child_data = unsafe{ &mut *child_proc.data.get() };
+            
+            //COW
+
             if unsafe{ self.pagetable.as_mut().unwrap().uvm_copy(
                 child_proc.pagetable.as_mut().unwrap(), 
                 self.size
             ).is_err() } {
                 panic!("fork: Fail to copy data from parent process.")
             }
+
+            // let pgt_a = unsafe { &mut *self.pagetable };
+            // let pgt_b = unsafe { &mut *child_proc.pagetable };
+            // pgt_a.copy_pagetable_rmW(pgt_b);
+
+
+
+
             // 将当前进程的 trapframe 拷贝到子进程
             let ptf = self.trapframe as *const Trapframe;
             let child_tf = unsafe{ &mut *child_proc.trapframe };

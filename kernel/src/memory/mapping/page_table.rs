@@ -99,6 +99,28 @@ impl PageTable{
         }
     }
 
+    pub fn copy_pagetable_rmW(&mut self, pgt_b: &mut Self){
+        for i in 0..self.entries.len(){
+            let pte_a = &mut self.entries[i];
+            let pte_b = &mut pgt_b.entries[i];
+            let pte_flag_a = pte_a.as_flags();
+            if pte_a.is_valid() && !pte_a.is_leaf() {
+                let zeroed_pgt: Box<PageTable> = unsafe { Box::new_zeroed().assume_init() };
+                let child_pgt_b = Box::into_raw(zeroed_pgt);
+                pte_b.0 = ((child_pgt_b as usize >> 12) << 10) | pte_flag_a;
+
+                let child_pgt_a = unsafe { &mut *(pte_a.as_pagetable()) };
+                child_pgt_a.copy_pagetable( unsafe {&mut *child_pgt_b} );
+            }else if pte_a.is_valid() {
+                // pte_b.0 = pte_a.0;
+                pte_b.rm_W_bit();
+                pte_a.rm_W_bit();
+            }
+        }
+    }
+
+
+
     pub fn print_pagetable(&mut self) {
         for i in 0..self.entries.len(){
             let pte_1 = &mut self.entries[i];
@@ -479,6 +501,66 @@ impl PageTable{
                     panic!("uvmcopy: No exist pte(pte should exist)");
                 }
             }
+            va.add_page();
+        }
+
+        Ok(())
+    }
+
+    pub unsafe fn uvm_cow(
+        &mut self, 
+        child_pgt: &mut Self, 
+        size: usize
+    ) -> Result<(), &'static str> {
+        let mut va = VirtualAddress::new(0);
+        while va.as_usize() != size {
+            match self.translate(va) {
+                Some(pte) => {
+                    if !pte.is_valid() {
+                        panic!("uvmcopy(): page not present");
+                    }
+
+                    let page_table = pte.as_pagetable();
+                    let flags = pte.as_flags();
+                    let flags = PteFlags::new(flags);
+
+                    // COW Don't need copy uvm
+
+                    // let allocated_pgt = &mut *(RawPage::new_zeroed() as *mut PageTable);
+                    // allocated_pgt.write(& *page_table);
+
+                    // println!("uvm_copy: va: 0x{:x}", va.as_usize());
+
+                    let pa = (&mut *page_table).as_addr();
+
+                    if !child_pgt.map(
+                        va,
+                        PhysicalAddress::new(pa),
+                        PGSIZE,
+                        flags
+                    ) {
+                        // drop(allocated_pgt);
+                        // child_pgt.uvm_unmap(
+                        //     VirtualAddress::new(0), 
+                        //     va.as_usize() / PGSIZE, 
+                        //     true
+                        // );
+                        return Err("uvmcopy: Fail.")
+                    }
+                },
+
+                None => {
+                    panic!("uvmcopy: No exist pte(pte should exist)");
+                }
+            }
+
+            //set pte Only Read
+            let pte_parent = self.translate(va).unwrap();
+            let pte_child = child_pgt.translate(va).unwrap();
+            pte_parent.rm_W_bit();
+            pte_child.rm_W_bit();
+
+
             va.add_page();
         }
 

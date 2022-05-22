@@ -117,19 +117,19 @@ pub unsafe fn user_trap() {
             my_proc.yielding();
         },
 
-        Trap::Exception(Exception::LoadPageFault | Exception::StorePageFault) => {
-            let mut va = page_round_down(stval);
-            let mut pa = RawPage::new_zeroed();
-            write_bytes(pa as *mut u8, 0, PGSIZE);
+        // Trap::Exception(Exception::LoadPageFault | Exception::StorePageFault) => {
+        //     let mut va = page_round_down(stval);
+        //     let mut pa = RawPage::new_zeroed();
+        //     write_bytes(pa as *mut u8, 0, PGSIZE);
 
-            let task = CPU_MANAGER.myproc().unwrap();
-            let pgtable = &mut *task.pagetable;
+        //     let task = CPU_MANAGER.myproc().unwrap();
+        //     let pgtable = &mut *task.pagetable;
 
-            pgtable.map(VirtualAddress::new(va),
-                        PhysicalAddress::new(pa),
-                        PGSIZE,
-                        PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U);
-        }
+        //     pgtable.map(VirtualAddress::new(va),
+        //                 PhysicalAddress::new(pa),
+        //                 PGSIZE,
+        //                 PteFlags::W | PteFlags::R | PteFlags::X | PteFlags::U);
+        // }
 
         _ => {
             println!("usertrap: unexpected scacuse: {:?}\n pid: {}", scause.cause(), my_proc.pid());
