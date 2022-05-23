@@ -121,26 +121,26 @@ impl PageTable{
 
 
 
-    pub fn print_pagetable(&mut self) {
+    pub unsafe fn print_pagetable(&mut self) {
         for i in 0..self.entries.len(){
             let pte_1 = &mut self.entries[i];
 
             if pte_1.is_valid(){
-                println!("{}--{}", i, pte_1.as_usize());
+                println!("{}--{:x}", i, (*pte_1.as_pagetable()).as_addr());
 
                 let pgt_2 = unsafe { &mut *pte_1.as_pagetable() };
                 for j in 0..pgt_2.entries.len(){
                     let pte_2 = &mut pgt_2.entries[j];
 
                     if pte_2.is_valid() {
-                        println!("    {}--{}", j, pte_2.as_usize());
+                        println!("    {}--{}", j, (*pte_2.as_pagetable()).as_addr());
 
                         let pgt_3 = unsafe { &mut *pte_2.as_pagetable() };
                         for k in 0..pgt_3.entries.len(){
                             let pte_3 = &mut pgt_3.entries[k];
 
                             if pte_3.is_valid(){
-                                println!("        {}--{}", k, pte_3.as_usize());
+                                println!("        {}--{}", k, (*pte_3.as_pagetable()).as_addr());
                             }
                         }
                     }

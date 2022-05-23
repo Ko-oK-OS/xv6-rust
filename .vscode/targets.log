@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun May 22 21:17:11 2022
+# Make data base, printed on Mon May 23 19:04:42 2022
 
 # Variables
 
@@ -51,7 +51,7 @@ SNAP_DATA = /var/snap/code/97
 # environment
 VSCODE_NLS_CONFIG = {"locale":"zh-cn","availableLanguages":{},"_languagePackSupport":true}
 # environment
-JOURNAL_STREAM = 8:47836
+JOURNAL_STREAM = 8:48643
 # makefile (from 'Makefile', line 21)
 CFLAGS = -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -fno-pie -no-pie
 # environment
@@ -79,7 +79,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 _ = /snap/code/97/usr/share/code/code
 # environment
-MANAGERPID = 1039
+MANAGERPID = 1183
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
@@ -95,7 +95,7 @@ LD = riscv64-unknown-elf-ld
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/rand-virtual-machine:@/tmp/.ICE-unix/1528,unix/rand-virtual-machine:/tmp/.ICE-unix/1528
+SESSION_MANAGER = local/rand-virtual-machine:@/tmp/.ICE-unix/1707,unix/rand-virtual-machine:/tmp/.ICE-unix/1707
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -115,7 +115,7 @@ DISABLE_WAYLAND = 1
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = 67675e0210e64c56a8b36ae3306b9d60
+INVOCATION_ID = 40a7053cdcce43578bcc070e3f5d6587
 # makefile (from 'Makefile', line 27)
 LDFLAGS = -z max-page-size=4096
 # environment
@@ -131,7 +131,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 16743
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2601
 # automatic
 %F = $(notdir $%)
 # environment
@@ -147,7 +147,7 @@ PWD = /home/rand/xv6-rust
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1470
+SSH_AGENT_PID = 1667
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -199,7 +199,7 @@ CC = riscv64-unknown-elf-gcc
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-4943f985-a1fc-4f36-b4b3-85c55726a35e.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-decc2bba-912c-42f1-9ef1-4bec104c8303.sock
 # default
 MAKE_VERSION := 4.2.1
 # makefile (from 'Makefile', line 2)
@@ -278,13 +278,12 @@ WINDOWPATH = 2
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
 GJS_DEBUG_OUTPUT = stderr
- 
 # default
 .RECIPEPREFIX := 
 # environment
 LANG = C
 # environment
-VSCODE_PID = 16787
+VSCODE_PID = 2645
 # variable set hash-table stats:
 # Load=136/1024=13%, Rehash=0, Collisions=24/250=10%
 
@@ -317,6 +316,7 @@ xv6-user/_malloc_test:
 #  Modification time never checked.
 #  File has not been updated.
 
+ 
 # Not a target:
 all:
 #  Command line target.
@@ -556,7 +556,6 @@ xv6-user/_fifo_test1:
 xv6-user/_rm:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
- 
 #  File has not been updated.
 
 run: fs.img
@@ -661,6 +660,7 @@ xv6-user/uthread/uswtch.S:
 
 # Not a target:
 xv6-user/_fifo_test2:
+ 
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -698,6 +698,6 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 # strcache performance: lookups = 135 / hit rate = 36%
 # hash-table stats:
 # Load=86/8192=1%, Rehash=0, Collisions=4/135=3%
-# Finished Make data base on Sun May 22 21:17:11 2022
+# Finished Make data base on Mon May 23 19:04:42 2022
 
  
