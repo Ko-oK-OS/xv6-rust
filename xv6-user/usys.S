@@ -185,3 +185,23 @@ msg_recv:
  li a7, SYS_msg_recv
  ecall
  ret
+.global shm_get
+shm_get:
+ li a7, SYS_shm_get
+ ecall
+ ret
+.global shm_put
+shm_put:
+ li a7, SYS_shm_put
+ ecall
+ ret
+.global shm_map
+shm_map:
+ li a7, SYS_shm_map
+ ecall
+ ret
+.global shm_unmap
+shm_unmap:
+ li a7, SYS_shm_unmap
+ ecall
+ ret

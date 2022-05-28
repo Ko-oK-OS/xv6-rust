@@ -56,3 +56,8 @@ entry("msg_alloc");
 entry("msg_get");
 entry("msg_send");
 entry("msg_recv");
+
+entry("shm_get");
+entry("shm_put");
+entry("shm_map");
+entry("shm_unmap");

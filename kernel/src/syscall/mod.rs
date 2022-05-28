@@ -86,6 +86,11 @@ pub enum SysCallID {
     SysMsgWrite  = 34,
     SysMsgRead   = 35,
 
+    SysShmGet    = 36,
+    SysShmPut    = 37,
+    SysShmMap    = 38,
+    SysShmUnmap  = 39,
+
     SysClone  =  40,
     SysJoin   =  41,
 
@@ -134,6 +139,11 @@ impl SysCallID {
             33 => { Self::SysMsgGet},
             34 => { Self::SysMsgWrite},
             35 => { Self::SysMsgRead},
+
+            36 => { Self::SysShmGet},
+            37 => { Self::SysShmPut},
+            38 => { Self::SysShmMap},
+            39 => { Self::SysShmUnmap},
 
             40 => { Self::SysClone},
             41 => { Self::SysJoin},
@@ -197,6 +207,11 @@ impl Syscall<'_> {
             SysCallID::SysFifoPut => { self.sys_fifo_put() },
             SysCallID::SysFifoRead => { self.sys_fifo_read() },
             SysCallID::SysFifoWrite => { self.sys_fifo_write() },
+
+            SysCallID::SysShmGet   => { self.sys_shm_get() },
+            SysCallID::SysShmPut   => { self.sys_shm_put() },
+            SysCallID::SysShmMap   => { self.sys_shm_map() },
+            SysCallID::SysShmUnmap => { self.sys_shm_unmap() },
             
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }

@@ -19,6 +19,7 @@ use crate::arch::riscv::qemu::layout::{ PGSIZE, TRAMPOLINE, TRAPFRAME };
 use crate::arch::riscv::register::satp;
 use super::*;
 use crate::fs::{FileType, Inode, VFile};
+use crate::ipc::bitmap::*;
 
 
 use alloc::boxed::Box;
@@ -50,6 +51,8 @@ pub struct task_struct {
     pub parent: Option<*mut task_struct>,   
     pub open_files: [Option<Arc<VFile>>; NFILE],
     pub cwd: Option<Inode>,
+
+    pub sharemem_bitmap: *mut BitMap,
 
 
     pub state: ProcState,
@@ -117,6 +120,8 @@ impl task_struct {
             parent: None,
             open_files: array![_ => None; NFILE],
             cwd: None,
+
+            sharemem_bitmap: null_mut(),
             
             state: ProcState::UNUSED,
             channel: 0,
@@ -363,30 +368,28 @@ impl task_struct {
             // }
             let pagetable = unsafe { &mut *self.pagetable };
             
-            // println!("+++++++++++++++++++++");
-            // pagetable.print_pagetable();
-            // println!("+++++++++++++++++++++");
+        
 
             // pagetable.proc_free_pagetable(self.size);
 
-            // println!("+++++++++++++++++++++");
-            // pagetable.print_pagetable();
-            // println!("+++++++++++++++++++++");
+     
 
-
-            // pagetable.free_pagetable();
-            // self.set_pagetable(0 as *mut PageTable);
+            pagetable.free_pagetable();
+            self.set_pagetable(0 as *mut PageTable);
             
-            // println!("+++++++++++++++++++++");
-            // pagetable.print_pagetable();
-            // println!("+++++++++++++++++++++");
-            // while(true){
+    
 
-            // }
+            unsafe{
+                drop_in_place(self.sharemem_bitmap);
+            }
+            self.sharemem_bitmap = 0 as *mut BitMap;
 
-            // self.set_pagetable(None);
+
+
             self.set_parent(None);
             self.size = 0;
+
+            
 
             self.pid = 0;
             self.channel = 0;

@@ -167,7 +167,7 @@ impl PageTable{
     /// or 0 if not mapped.
     /// Can only be used to look up user pages.
     /// 将虚拟地址翻译成物理地址，返回页表项
-    fn translate(
+    pub fn translate(
         &mut self,
         va: VirtualAddress
     ) -> Option<&mut PageTableEntry> {

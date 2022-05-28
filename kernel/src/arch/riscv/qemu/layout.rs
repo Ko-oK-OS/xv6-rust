@@ -82,4 +82,8 @@ pub const TRAMPOLINE: usize = MAXVA - PGSIZE;
 pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 
 
+pub const MAP_END: usize = KERNEL_BASE - PGSIZE;
+pub const MAP_START: usize = MAP_END - 128*1024*1024;
+
+
 

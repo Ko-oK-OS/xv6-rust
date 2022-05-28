@@ -126,7 +126,9 @@ UPROGS=\
 	$(USER)/_pipe_test \
 	$(USER)/_uthreadtest \
 	$(USER)/_msgtest1 \
-	$(USER)/_msgtest2
+	$(USER)/_msgtest2 \
+	$(USER)/_shmtest1 \
+	$(USER)/_shmtest2
 
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)

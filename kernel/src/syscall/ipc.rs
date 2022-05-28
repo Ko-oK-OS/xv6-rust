@@ -2,6 +2,8 @@ use crate::ipc::semaphore::SEM_MANAGER;
 // use crate::ipc::fifo::FIFO_MANAGER;
 use crate::ipc::fifo::*;
 use crate::ipc::msgqueue::*;
+use crate::ipc::sharemem::MAX_NAME_LEN;
+use crate::ipc::sharemem::SHARE_MEM_MANAGER;
 use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 
 use super::*;
@@ -274,5 +276,66 @@ impl Syscall<'_>{
         }
     }
 
-    
+    pub fn sys_shm_get(&self) -> SysResult {
+        let nameAddr = self.arg(0);
+        let size = self.arg(1);
+        let flags = self.arg(2);
+
+        let mut name: [u8; MAX_NAME_LEN] = [0; MAX_NAME_LEN];
+        self.copy_from_str(nameAddr, &mut name, MAX_NAME_LEN).unwrap();
+
+        let opt = unsafe { SHARE_MEM_MANAGER.get(name, size, flags) };
+        match opt {
+            Some(id) => {
+                Ok(id)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_shm_map(&self) -> SysResult {
+        let id = self.arg(0);
+        let shmaddr = self.arg(1);
+        let shmflag = self.arg(2);
+
+        let opt = unsafe{SHARE_MEM_MANAGER.map(id, shmaddr, shmflag)};
+        match opt {
+            Some(addr) => {
+                Ok(addr)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_shm_unmap(&self) -> SysResult {
+        let id = self.arg(0);
+        
+        let opt = unsafe{SHARE_MEM_MANAGER.unmap(id)};
+        match opt{
+            Some(res) => {
+                Ok(res)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_shm_put(&self) -> SysResult {
+        let id = self.arg(0);
+        
+        let opt = unsafe{SHARE_MEM_MANAGER.put(id)};
+        match opt{
+            Some(res) => {
+                Ok(res)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
 }

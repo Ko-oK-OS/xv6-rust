@@ -5,6 +5,7 @@ use core::cell::RefCell;
 use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::NonNull};
 use core::ops::{ DerefMut };
+use alloc::{boxed::Box, vec};
 use super::*;
 use crate::arch::riscv::qemu::fs::ROOTIPATH;
 use crate::arch::riscv::qemu::{
@@ -15,6 +16,7 @@ use crate::fs::VFile;
 use crate::lock::spinlock::{ Spinlock, SpinlockGuard };
 use crate::arch::riscv::register::sstatus::intr_on;
 use crate::memory::*;
+use crate::ipc::bitmap::*;
 
 pub struct ProcManager {
     tasks: [task_struct; NTASK],
@@ -154,6 +156,11 @@ impl ProcManager{
                     //     task.proc_pagetable();
                     // }
                     task.pagetable = task.proc_pagetable();
+
+                    let box_bitmap: Box<BitMap> = unsafe { Box::new_zeroed().assume_init() };
+                    let ptr = Box::into_raw(box_bitmap);
+                    task.sharemem_bitmap = ptr;
+
                     // Set up new context to start executing at forkret, 
                     // which returns to user space. 
                     task.init_context();

@@ -38,5 +38,10 @@
 #define SYS_msg_send   34
 #define SYS_msg_recv   35
 
+#define SYS_shm_get    36
+#define SYS_shm_put    37
+#define SYS_shm_map    38
+#define SYS_shm_unmap  39
+
 #define SYS_clone    40
 #define SYS_join     41

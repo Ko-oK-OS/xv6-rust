@@ -41,6 +41,13 @@ int msg_get(char*);
 int msg_send(int, void*, int);
 int msg_recv(int, void*, int);
 
+
+int shm_get(char*, int, int);
+int shm_put(int);
+int shm_map(int, long, int);
+int shm_unmap(int);
+
+
 int clone(void (*start_routine)(void *), void *stack);
 int join(void*);
 int thread_create(void (*start_routine)(void *));
