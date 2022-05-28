@@ -165,3 +165,23 @@ join:
  li a7, SYS_join
  ecall
  ret
+.global msg_alloc
+msg_alloc:
+ li a7, SYS_msg_alloc
+ ecall
+ ret
+.global msg_get
+msg_get:
+ li a7, SYS_msg_get
+ ecall
+ ret
+.global msg_send
+msg_send:
+ li a7, SYS_msg_send
+ ecall
+ ret
+.global msg_recv
+msg_recv:
+ li a7, SYS_msg_recv
+ ecall
+ ret

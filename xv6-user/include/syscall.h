@@ -33,6 +33,10 @@
 #define SYS_fifo_read 30
 #define SYS_fifo_write 31
 
+#define SYS_msg_alloc  32
+#define SYS_msg_get    33
+#define SYS_msg_send   34
+#define SYS_msg_recv   35
 
 #define SYS_clone    40
 #define SYS_join     41

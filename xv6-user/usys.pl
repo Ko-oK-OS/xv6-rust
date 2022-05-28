@@ -51,3 +51,8 @@ entry("fifo_put");
 
 entry("clone");
 entry("join");
+
+entry("msg_alloc");
+entry("msg_get");
+entry("msg_send");
+entry("msg_recv");

@@ -36,6 +36,11 @@ int fifo_put(int);
 int fifo_read(int, void*, int);
 int fifo_write(int, void*, int);
 
+int msg_alloc(char*);
+int msg_get(char*);
+int msg_send(int, void*, int);
+int msg_recv(int, void*, int);
+
 int clone(void (*start_routine)(void *), void *stack);
 int join(void*);
 int thread_create(void (*start_routine)(void *));

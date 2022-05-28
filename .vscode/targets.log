@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Mon May 23 19:04:42 2022
+# Make data base, printed on Sat May 28 13:46:23 2022
 
 # Variables
 
@@ -267,7 +267,7 @@ OBJCOPY = riscv64-unknown-elf-objcopy
 # default
 SUFFIXES := 
 # makefile (from 'Makefile', line 108)
-UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test $(USER)/_fifo_test1 $(USER)/_fifo_test2 $(USER)/_pipe_test $(USER)/_uthreadtest
+UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test $(USER)/_fifo_test1 $(USER)/_fifo_test2 $(USER)/_pipe_test $(USER)/_uthreadtest $(USER)/_msgtest1 $(USER)/_msgtest2
 # environment
 SNAP_REEXEC = 
 # environment
@@ -278,6 +278,7 @@ WINDOWPATH = 2
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
 GJS_DEBUG_OUTPUT = stderr
+ 
 # default
 .RECIPEPREFIX := 
 # environment
@@ -285,7 +286,7 @@ LANG = C
 # environment
 VSCODE_PID = 2645
 # variable set hash-table stats:
-# Load=136/1024=13%, Rehash=0, Collisions=24/250=10%
+# Load=136/1024=13%, Rehash=0, Collisions=24/252=10%
 
 # Pattern-specific Variable Values
 
@@ -316,7 +317,6 @@ xv6-user/_malloc_test:
 #  Modification time never checked.
 #  File has not been updated.
 
- 
 # Not a target:
 all:
 #  Command line target.
@@ -420,7 +420,7 @@ kernel/target/riscv64gc-unknown-none-elf/debug/kernel:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-21 23:59:59.855366645
+#  Last modified 2022-05-28 13:45:27.199136363
 #  File has been updated.
 #  Successfully updated.
 
@@ -481,16 +481,22 @@ xv6-user/_sem_test1:
 #  File has not been updated.
 
 # Not a target:
+xv6-user/_msgtest1:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
 xv6-user/uthread/setcontext.S:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
 
-fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test xv6-user/_fifo_test1 xv6-user/_fifo_test2 xv6-user/_pipe_test xv6-user/_uthreadtest
+fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test xv6-user/_fifo_test1 xv6-user/_fifo_test2 xv6-user/_pipe_test xv6-user/_uthreadtest xv6-user/_msgtest1 xv6-user/_msgtest2
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 131):
+#  recipe to execute (from 'Makefile', line 133):
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
 
 # Not a target:
@@ -550,6 +556,7 @@ xv6-user/uthread/getcontext.S:
 xv6-user/_fifo_test1:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
+ 
 #  File has not been updated.
 
 # Not a target:
@@ -601,6 +608,12 @@ user/*.d:
 #  File does not exist.
 #  File has been updated.
 #  Failed to be updated.
+
+# Not a target:
+xv6-user/_msgtest2:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
 
 # Not a target:
 xv6-user/printf.o:
@@ -660,7 +673,6 @@ xv6-user/uthread/uswtch.S:
 
 # Not a target:
 xv6-user/_fifo_test2:
- 
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -685,19 +697,19 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
 
 # files hash-table stats:
-# Load=58/1024=6%, Rehash=0, Collisions=4/114=4%
+# Load=60/1024=6%, Rehash=0, Collisions=4/118=3%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 86 / storage = 1269 B / avg = 14 B
-# current buf: size = 8162 B / used = 1269 B / count = 86 / avg = 14 B
+# strcache buffers: 1 (0) / strings = 88 / storage = 1307 B / avg = 14 B
+# current buf: size = 8162 B / used = 1307 B / count = 88 / avg = 14 B
 
-# strcache performance: lookups = 135 / hit rate = 36%
+# strcache performance: lookups = 137 / hit rate = 35%
 # hash-table stats:
-# Load=86/8192=1%, Rehash=0, Collisions=4/135=3%
-# Finished Make data base on Mon May 23 19:04:42 2022
+# Load=88/8192=1%, Rehash=0, Collisions=4/137=3%
+# Finished Make data base on Sat May 28 13:46:23 2022
 
  

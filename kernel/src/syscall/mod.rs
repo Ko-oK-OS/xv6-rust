@@ -81,6 +81,11 @@ pub enum SysCallID {
     SysFifoRead = 30,
     SysFifoWrite = 31,
 
+    SysMsgAlloc  = 32,
+    SysMsgGet    = 33,
+    SysMsgWrite  = 34,
+    SysMsgRead   = 35,
+
     SysClone  =  40,
     SysJoin   =  41,
 
@@ -124,6 +129,11 @@ impl SysCallID {
             29 => { Self::SysFifoPut},
             30 => { Self::SysFifoRead},
             31 => { Self::SysFifoWrite},
+
+            32 => { Self::SysMsgAlloc},
+            33 => { Self::SysMsgGet},
+            34 => { Self::SysMsgWrite},
+            35 => { Self::SysMsgRead},
 
             40 => { Self::SysClone},
             41 => { Self::SysJoin},
@@ -175,6 +185,12 @@ impl Syscall<'_> {
                 self.sys_clone() 
             },
             SysCallID::SysJoin    => { self.sys_join() },
+
+
+            SysCallID::SysMsgAlloc => { self.sys_mq_alloc() },
+            SysCallID::SysMsgGet   => { self.sys_mq_get() },
+            SysCallID::SysMsgWrite => { self.sys_mq_send() },
+            SysCallID::SysMsgRead  => { self.sys_mq_recv() },
 
             SysCallID::SysMkfifo => { self.sys_mkfifo()},
             SysCallID::SysFifoGet => { self.sys_fifo_get() },

@@ -1,6 +1,7 @@
 use crate::ipc::semaphore::SEM_MANAGER;
 // use crate::ipc::fifo::FIFO_MANAGER;
 use crate::ipc::fifo::*;
+use crate::ipc::msgqueue::*;
 use crate::{arch::riscv::qemu::{fs::OpenMode, param::MAXPATH}, fs::{FileType, ICACHE, Inode, InodeData, InodeType, LOG, VFile}, lock::sleeplock::{SleepLock, SleepLockGuard}};
 
 use super::*;
@@ -208,4 +209,70 @@ impl Syscall<'_>{
     }
 
 
+    pub fn sys_mq_alloc(&self) -> SysResult {
+        let mut name: [u8; 16] = [0;16];
+        let addr = self.arg(0);
+        self.copy_from_str(addr, &mut name, NAME_LEN).unwrap();
+        let id = unsafe { MSG_QUE_MANAGER.alloc(name) };
+
+        match id {
+            Some(ret) => {
+                Ok(ret)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_mq_get(&self) -> SysResult {
+        let mut name: [u8; 16] = [0;16];
+        let addr = self.arg(0);
+        self.copy_from_str(addr, &mut name, NAME_LEN).unwrap();
+
+        let id = unsafe {MSG_QUE_MANAGER.get(name) };
+
+        match id{
+            Some(ret) => {
+                Ok(ret)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_mq_send(&self) -> SysResult {
+        let id = self.arg(0);
+        let addr = self.arg(1);
+        let len = self.arg(2);
+
+        let ret = unsafe { MSG_QUE_MANAGER.write(id, addr, len) };
+        match ret{
+            Some(res) => {
+                Ok(res)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    pub fn sys_mq_recv(&self) -> SysResult {
+        let id = self.arg(0);
+        let addr = self.arg(1);
+        let len = self.arg(2);
+
+        let ret = unsafe { MSG_QUE_MANAGER.read(id, addr, len) };
+        match ret{
+            Some(res) => {
+                Ok(res)
+            }
+            None => {
+                Err(())
+            }
+        }
+    }
+
+    
 }
