@@ -1,0 +1,129 @@
+Date : 2022-05-28 21:15:48
+Directory : /home/rand/xv6-rust/kernel
+Total : 89 files,  7711 codes, 2023 comments, 1907 blanks, all 11641 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Rust     |         88 |      7,666 |      2,015 |      1,885 |     11,566 |
+| Makefile |          1 |         45 |          8 |         22 |         75 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                              | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                 |         89 |      7,711 |      2,023 |      1,907 |     11,641 |
+| src                                                               |         88 |      7,666 |      2,015 |      1,885 |     11,566 |
+| src/arch                                                          |         33 |        649 |        137 |        141 |        927 |
+| src/arch/riscv                                                    |         32 |        648 |        136 |        141 |        925 |
+| src/arch/riscv/qemu                                               |          7 |        234 |         83 |         67 |        384 |
+| src/arch/riscv/register                                           |         24 |        410 |         53 |         73 |        536 |
+| src/driver                                                        |          6 |        733 |        178 |        168 |      1,079 |
+| src/fs                                                            |         11 |      1,588 |        317 |        277 |      2,182 |
+| src/ipc                                                           |          6 |        706 |         70 |        209 |        985 |
+| src/lock                                                          |          3 |        161 |         14 |         44 |        219 |
+| src/logo                                                          |          1 |          1 |          0 |          1 |          2 |
+| src/memory                                                        |          7 |      1,020 |        167 |        226 |      1,413 |
+| src/memory/mapping                                                |          4 |        772 |        155 |        157 |      1,084 |
+| src/net                                                           |          4 |         80 |        517 |        129 |        726 |
+| src/process                                                       |          8 |      1,190 |        431 |        356 |      1,977 |
+| src/syscall                                                       |          4 |      1,044 |         69 |        204 |      1,317 |
++-------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                          | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /home/rand/xv6-rust/kernel/Makefile                               | Makefile |         45 |          8 |         22 |         75 |
+| /home/rand/xv6-rust/kernel/src/arch/mod.rs                        | Rust     |          1 |          1 |          0 |          2 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/mod.rs                  | Rust     |          4 |          0 |          1 |          5 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/devices.rs         | Rust     |          1 |          0 |          0 |          1 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/e1000.rs           | Rust     |         79 |          8 |          9 |         96 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/fs.rs              | Rust     |         55 |         14 |         15 |         84 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/layout.rs          | Rust     |         24 |         42 |         24 |         90 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/mod.rs             | Rust     |         35 |          0 |          9 |         44 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/param.rs           | Rust     |          7 |          2 |          3 |         12 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/qemu/virtio.rs          | Rust     |         33 |         17 |          7 |         57 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/clint.rs       | Rust     |         20 |          1 |         10 |         31 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mcounteren.rs  | Rust     |         10 |          1 |          1 |         12 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/medeleg.rs     | Rust     |         10 |          0 |          1 |         11 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mepc.rs        | Rust     |          4 |          3 |          0 |          7 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mhartid.rs     | Rust     |          6 |          1 |          0 |          7 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mideleg.rs     | Rust     |         10 |          0 |          1 |         11 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mie.rs         | Rust     |         15 |          1 |          2 |         18 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mod.rs         | Rust     |         29 |          1 |          2 |         32 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mscratch.rs    | Rust     |          4 |          0 |          0 |          4 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mstatus.rs     | Rust     |         27 |          4 |          8 |         39 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/mtvec.rs       | Rust     |         10 |          1 |          1 |         12 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/ra.rs          | Rust     |          6 |          0 |          0 |          6 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/satp.rs        | Rust     |         10 |          4 |          2 |         16 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/scause.rs      | Rust     |        111 |         11 |         21 |        143 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/sepc.rs        | Rust     |         10 |          3 |          1 |         14 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/sie.rs         | Rust     |         20 |          3 |          3 |         26 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/sip.rs         | Rust     |         16 |          1 |          4 |         21 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/sp.rs          | Rust     |          6 |          0 |          0 |          6 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/sscratch.rs    | Rust     |          4 |          1 |          1 |          6 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/sstatus.rs     | Rust     |         46 |         11 |         12 |         69 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/stval.rs       | Rust     |         10 |          1 |          1 |         12 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/stvec.rs       | Rust     |         10 |          2 |          1 |         13 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/time.rs        | Rust     |          6 |          1 |          0 |          7 |
+| /home/rand/xv6-rust/kernel/src/arch/riscv/register/tp.rs          | Rust     |         10 |          2 |          1 |         13 |
+| /home/rand/xv6-rust/kernel/src/driver/console.rs                  | Rust     |        138 |         33 |         28 |        199 |
+| /home/rand/xv6-rust/kernel/src/driver/mod.rs                      | Rust     |          5 |          0 |          2 |          7 |
+| /home/rand/xv6-rust/kernel/src/driver/pci.rs                      | Rust     |          0 |         43 |         12 |         55 |
+| /home/rand/xv6-rust/kernel/src/driver/plic.rs                     | Rust     |         58 |          5 |         17 |         80 |
+| /home/rand/xv6-rust/kernel/src/driver/uart.rs                     | Rust     |        184 |         48 |         46 |        278 |
+| /home/rand/xv6-rust/kernel/src/driver/virtio_disk.rs              | Rust     |        348 |         49 |         63 |        460 |
+| /home/rand/xv6-rust/kernel/src/fs/bio.rs                          | Rust     |        219 |         38 |         37 |        294 |
+| /home/rand/xv6-rust/kernel/src/fs/bitmap.rs                       | Rust     |         62 |         12 |         12 |         86 |
+| /home/rand/xv6-rust/kernel/src/fs/devices.rs                      | Rust     |         40 |          1 |          9 |         50 |
+| /home/rand/xv6-rust/kernel/src/fs/dinode.rs                       | Rust     |         55 |          1 |          7 |         63 |
+| /home/rand/xv6-rust/kernel/src/fs/file.rs                         | Rust     |        186 |         35 |         44 |        265 |
+| /home/rand/xv6-rust/kernel/src/fs/inode.rs                        | Rust     |        552 |        110 |         71 |        733 |
+| /home/rand/xv6-rust/kernel/src/fs/log.rs                          | Rust     |        197 |         29 |         22 |        248 |
+| /home/rand/xv6-rust/kernel/src/fs/mod.rs                          | Rust     |         39 |          7 |         10 |         56 |
+| /home/rand/xv6-rust/kernel/src/fs/pipe.rs                         | Rust     |        129 |         65 |         42 |        236 |
+| /home/rand/xv6-rust/kernel/src/fs/stat.rs                         | Rust     |         20 |          0 |          3 |         23 |
+| /home/rand/xv6-rust/kernel/src/fs/superblock.rs                   | Rust     |         89 |         19 |         20 |        128 |
+| /home/rand/xv6-rust/kernel/src/ipc/bitmap.rs                      | Rust     |         70 |          0 |         29 |         99 |
+| /home/rand/xv6-rust/kernel/src/ipc/fifo.rs                        | Rust     |        112 |         21 |         44 |        177 |
+| /home/rand/xv6-rust/kernel/src/ipc/mod.rs                         | Rust     |          5 |          0 |          0 |          5 |
+| /home/rand/xv6-rust/kernel/src/ipc/msgqueue.rs                    | Rust     |        166 |          4 |         60 |        230 |
+| /home/rand/xv6-rust/kernel/src/ipc/semaphore.rs                   | Rust     |        144 |         38 |         24 |        206 |
+| /home/rand/xv6-rust/kernel/src/ipc/sharemem.rs                    | Rust     |        209 |          7 |         52 |        268 |
+| /home/rand/xv6-rust/kernel/src/lock/mod.rs                        | Rust     |          2 |          0 |          0 |          2 |
+| /home/rand/xv6-rust/kernel/src/lock/sleeplock.rs                  | Rust     |         75 |          7 |         16 |         98 |
+| /home/rand/xv6-rust/kernel/src/lock/spinlock.rs                   | Rust     |         84 |          7 |         28 |        119 |
+| /home/rand/xv6-rust/kernel/src/logo/mod.rs                        | Rust     |          1 |          0 |          1 |          2 |
+| /home/rand/xv6-rust/kernel/src/main.rs                            | Rust     |        120 |         25 |         34 |        179 |
+| /home/rand/xv6-rust/kernel/src/memory/address.rs                  | Rust     |        122 |          2 |         42 |        166 |
+| /home/rand/xv6-rust/kernel/src/memory/kalloc.rs                   | Rust     |         46 |          2 |         13 |         61 |
+| /home/rand/xv6-rust/kernel/src/memory/mapping/kernel_map.rs       | Rust     |         92 |         17 |         19 |        128 |
+| /home/rand/xv6-rust/kernel/src/memory/mapping/mod.rs              | Rust     |         13 |          0 |          5 |         18 |
+| /home/rand/xv6-rust/kernel/src/memory/mapping/page_table.rs       | Rust     |        535 |        130 |         95 |        760 |
+| /home/rand/xv6-rust/kernel/src/memory/mapping/page_table_entry.rs | Rust     |        132 |          8 |         38 |        178 |
+| /home/rand/xv6-rust/kernel/src/memory/mod.rs                      | Rust     |         80 |          8 |         14 |        102 |
+| /home/rand/xv6-rust/kernel/src/misc.rs                            | Rust     |         51 |          3 |          7 |         61 |
+| /home/rand/xv6-rust/kernel/src/net/e1000.rs                       | Rust     |          0 |        194 |         43 |        237 |
+| /home/rand/xv6-rust/kernel/src/net/mbuf.rs                        | Rust     |         77 |          8 |         19 |        104 |
+| /home/rand/xv6-rust/kernel/src/net/mod.rs                         | Rust     |          3 |          0 |          0 |          3 |
+| /home/rand/xv6-rust/kernel/src/net/protocol.rs                    | Rust     |          0 |        315 |         67 |        382 |
+| /home/rand/xv6-rust/kernel/src/printf.rs                          | Rust     |         79 |          6 |         10 |         95 |
+| /home/rand/xv6-rust/kernel/src/process/context.rs                 | Rust     |         63 |          2 |          7 |         72 |
+| /home/rand/xv6-rust/kernel/src/process/cpu.rs                     | Rust     |        152 |         50 |         39 |        241 |
+| /home/rand/xv6-rust/kernel/src/process/elf.rs                     | Rust     |        270 |         38 |         49 |        357 |
+| /home/rand/xv6-rust/kernel/src/process/manager.rs                 | Rust     |        284 |        116 |         76 |        476 |
+| /home/rand/xv6-rust/kernel/src/process/mod.rs                     | Rust     |         42 |         37 |         24 |        103 |
+| /home/rand/xv6-rust/kernel/src/process/process.rs                 | Rust     |        303 |        161 |        134 |        598 |
+| /home/rand/xv6-rust/kernel/src/process/thread.rs                  | Rust     |         32 |         14 |         22 |         68 |
+| /home/rand/xv6-rust/kernel/src/process/trapframe.rs               | Rust     |         44 |         13 |          5 |         62 |
+| /home/rand/xv6-rust/kernel/src/shutdown.rs                        | Rust     |         38 |          3 |         12 |         53 |
+| /home/rand/xv6-rust/kernel/src/syscall/file.rs                    | Rust     |        458 |         33 |         65 |        556 |
+| /home/rand/xv6-rust/kernel/src/syscall/ipc.rs                     | Rust     |        255 |         26 |         60 |        341 |
+| /home/rand/xv6-rust/kernel/src/syscall/mod.rs                     | Rust     |        232 |          7 |         45 |        284 |
+| /home/rand/xv6-rust/kernel/src/syscall/proc.rs                    | Rust     |         99 |          3 |         34 |        136 |
+| /home/rand/xv6-rust/kernel/src/trap.rs                            | Rust     |        206 |         78 |         67 |        351 |
+| Total                                                             |          |      7,711 |      2,023 |      1,907 |     11,641 |
++-------------------------------------------------------------------+----------+------------+------------+------------+------------+

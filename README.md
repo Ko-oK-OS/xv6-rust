@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # xv6-rust
 ## Introduction
 
@@ -166,3 +167,7 @@ And then you can debug this programe step by step.
 
 ## License
 MIT License
+=======
+# proj4-xv6-rust
+
+>>>>>>> 3f9cc0baa1738d3669e7c497d48777833c80b4a0
