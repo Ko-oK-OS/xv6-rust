@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Mon Jun  6 11:38:43 2022
+# Make data base, printed on Fri Jun 17 01:13:28 2022
 
 # Variables
 
@@ -47,11 +47,11 @@ CURDIR := /home/rand/xv6-rust
 # makefile
 SHELL = /bin/sh
 # environment
-SNAP_DATA = /var/snap/code/97
+SNAP_DATA = /var/snap/code/99
 # environment
 VSCODE_NLS_CONFIG = {"locale":"zh-cn","availableLanguages":{},"_languagePackSupport":true}
 # environment
-JOURNAL_STREAM = 8:48643
+JOURNAL_STREAM = 8:52227
 # makefile (from 'Makefile', line 21)
 CFLAGS = -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -fno-pie -no-pie
 # environment
@@ -77,15 +77,15 @@ DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-_ = /snap/code/97/usr/share/code/code
+_ = /snap/code/99/usr/share/code/code
 # environment
-MANAGERPID = 1183
+MANAGERPID = 1149
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 VSCODE_CWD = /home/rand
 # environment
-GSETTINGS_SCHEMA_DIR = /snap/code/97/usr/share/glib-2.0/schemas
+GSETTINGS_SCHEMA_DIR = /snap/code/99/usr/share/glib-2.0/schemas
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
@@ -95,17 +95,17 @@ LD = riscv64-unknown-elf-ld
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/rand-virtual-machine:@/tmp/.ICE-unix/1707,unix/rand-virtual-machine:/tmp/.ICE-unix/1707
+SESSION_MANAGER = local/rand-virtual-machine:@/tmp/.ICE-unix/1625,unix/rand-virtual-machine:/tmp/.ICE-unix/1625
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
 GDK_PIXBUF_MODULE_FILE = /home/rand/snap/code/common/.cache/gdk-pixbuf-loaders.cache
 # environment
-SNAP = /snap/code/97
+SNAP = /snap/code/99
 # makefile (from 'Makefile', line 5)
 CPUS = 1
 # environment
-SNAP_VERSION = c3511e6c
+SNAP_VERSION = 30d9c6cd
 # environment
 XDG_MENU_PREFIX = gnome-
 # environment
@@ -115,11 +115,11 @@ DISABLE_WAYLAND = 1
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = 40a7053cdcce43578bcc070e3f5d6587
+INVOCATION_ID = e752649c07534657b3c5c03f3bf1d981
 # makefile (from 'Makefile', line 27)
 LDFLAGS = -z max-page-size=4096
 # environment
-GDK_PIXBUF_MODULEDIR = /snap/code/97/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders
+GDK_PIXBUF_MODULEDIR = /snap/code/99/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders
 # makefile (from 'Makefile', line 55)
 ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
 # default
@@ -131,7 +131,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 71603
+GIO_LAUNCHED_DESKTOP_FILE_PID = 3962
 # automatic
 %F = $(notdir $%)
 # environment
@@ -147,7 +147,7 @@ PWD = /home/rand/xv6-rust
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1667
+SSH_AGENT_PID = 1571
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -161,7 +161,7 @@ LESSCLOSE = /usr/bin/lesspipe %s %s
 # environment
 VSCODE_CLI = 1
 # environment
-VSCODE_CODE_CACHE_PATH = /home/rand/.config/Code/CachedData/c3511e6c69bb39013c4a4b7b9566ec1ca73fc4d5
+VSCODE_CODE_CACHE_PATH = /home/rand/.config/Code/CachedData/30d9c6cd9483b2cc586687151bcbcd635f373630
 # environment
 LOGNAME = rand
 # environment
@@ -191,7 +191,7 @@ MAKECMDGOALS := all
 # environment
 QT_IM_MODULE = ibus
 # environment
-SNAP_USER_DATA = /home/rand/snap/code/97
+SNAP_USER_DATA = /home/rand/snap/code/99
 # environment
 SHLVL = 0
 # makefile (from 'Makefile', line 7)
@@ -199,13 +199,13 @@ CC = riscv64-unknown-elf-gcc
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-0ad2b37c-bce8-4ccf-8d31-e20adf2c6c74.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-bc9e41ae-33e7-4d08-a67e-afadc8c80c78.sock
 # default
 MAKE_VERSION := 4.2.1
 # makefile (from 'Makefile', line 2)
 USER = xv6-user
 # environment
-SNAP_REVISION = 97
+SNAP_REVISION = 99
 # makefile
 .DEFAULT_GOAL := run
 # makefile (from 'Makefile', line 3)
@@ -227,7 +227,7 @@ MAKE_COMMAND := make
 # environment
 LANGUAGE = zh_CN:zh
 # environment
-VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.67.2-main.sock
+VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.68.1-main.sock
 # environment
 BAMF_DESKTOP_FILE_HINT = /var/lib/snapd/desktop/applications/code_code.desktop
 # makefile
@@ -284,7 +284,7 @@ GJS_DEBUG_OUTPUT = stderr
 # environment
 LANG = C
 # environment
-VSCODE_PID = 71647
+VSCODE_PID = 4004
 # variable set hash-table stats:
 # Load=136/1024=13%, Rehash=0, Collisions=24/255=9%
 
@@ -295,9 +295,9 @@ VSCODE_PID = 71647
 # Directories
 
 # user (device 2053, inode 303738): 9 files, no impossibilities.
-# . (device 2053, inode 303342): 23 files, no impossibilities.
+# . (device 2053, inode 303342): 25 files, no impossibilities.
 
-# 32 files, no impossibilities in 2 directories.
+# 34 files, no impossibilities in 2 directories.
 
 # Implicit Rules
 
@@ -395,6 +395,7 @@ xv6-user/ulib.o:
 # Not a target:
 xv6-user/start.S:
 #  Implicit rule search has not been done.
+ 
 #  Modification time never checked.
 #  File has not been updated.
 
@@ -510,6 +511,7 @@ xv6-user/uthread/setcontext.S:
 #  Modification time never checked.
 #  File has not been updated.
 
+ 
 fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_wc xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test xv6-user/_fifo_test1 xv6-user/_fifo_test2 xv6-user/_pipe_test xv6-user/_uthreadtest xv6-user/_msgtest1 xv6-user/_msgtest2 xv6-user/_shmtest1 xv6-user/_shmtest2
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -559,7 +561,6 @@ xv6-user/_forktest: xv6-user/forktest.o xv6-user/ulib.o xv6-user/usys.o xv6-user
 #  File has not been updated.
 
 # Not a target:
- 
 xv6-user/uthread/uthread.c:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -673,6 +674,7 @@ xv6-user/start.o: xv6-user/start.S
 # Not a target:
 xv6-user/_stressfs:
 #  Implicit rule search has not been done.
+ 
 #  Modification time never checked.
 #  File has not been updated.
 
@@ -722,12 +724,12 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 91 / storage = 1358 B / avg = 14 B
-# current buf: size = 8162 B / used = 1358 B / count = 91 / avg = 14 B
+# strcache buffers: 1 (0) / strings = 93 / storage = 1377 B / avg = 14 B
+# current buf: size = 8162 B / used = 1377 B / count = 93 / avg = 14 B
 
-# strcache performance: lookups = 140 / hit rate = 35%
+# strcache performance: lookups = 142 / hit rate = 34%
 # hash-table stats:
-# Load=91/8192=1%, Rehash=0, Collisions=4/140=3%
-# Finished Make data base on Mon Jun  6 11:38:43 2022
+# Load=93/8192=1%, Rehash=0, Collisions=4/142=3%
+# Finished Make data base on Fri Jun 17 01:13:28 2022
 
  
