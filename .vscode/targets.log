@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat May 28 20:46:15 2022
+# Make data base, printed on Mon Jun  6 11:38:43 2022
 
 # Variables
 
@@ -131,7 +131,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 2601
+GIO_LAUNCHED_DESKTOP_FILE_PID = 71603
 # automatic
 %F = $(notdir $%)
 # environment
@@ -199,7 +199,7 @@ CC = riscv64-unknown-elf-gcc
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-decc2bba-912c-42f1-9ef1-4bec104c8303.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-0ad2b37c-bce8-4ccf-8d31-e20adf2c6c74.sock
 # default
 MAKE_VERSION := 4.2.1
 # makefile (from 'Makefile', line 2)
@@ -228,7 +228,6 @@ MAKE_COMMAND := make
 LANGUAGE = zh_CN:zh
 # environment
 VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.67.2-main.sock
- 
 # environment
 BAMF_DESKTOP_FILE_HINT = /var/lib/snapd/desktop/applications/code_code.desktop
 # makefile
@@ -268,7 +267,7 @@ OBJCOPY = riscv64-unknown-elf-objcopy
 # default
 SUFFIXES := 
 # makefile (from 'Makefile', line 108)
-UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test $(USER)/_fifo_test1 $(USER)/_fifo_test2 $(USER)/_pipe_test $(USER)/_uthreadtest $(USER)/_msgtest1 $(USER)/_msgtest2 $(USER)/_shmtest1 $(USER)/_shmtest2
+UPROGS = $(USER)/_init $(USER)/_sh $(USER)/_echo $(USER)/_ls $(USER)/_mkdir $(USER)/_touch $(USER)/_cat $(USER)/_rm $(USER)/_wc $(USER)/_forktest $(USER)/_stressfs $(USER)/_sem_test1 $(USER)/_sem_test2 $(USER)/_thread_test $(USER)/_malloc_test $(USER)/_fork_test $(USER)/_fifo_test1 $(USER)/_fifo_test2 $(USER)/_pipe_test $(USER)/_uthreadtest $(USER)/_msgtest1 $(USER)/_msgtest2 $(USER)/_shmtest1 $(USER)/_shmtest2 
 # environment
 SNAP_REEXEC = 
 # environment
@@ -279,14 +278,15 @@ WINDOWPATH = 2
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
 GJS_DEBUG_OUTPUT = stderr
+ 
 # default
 .RECIPEPREFIX := 
 # environment
 LANG = C
 # environment
-VSCODE_PID = 2645
+VSCODE_PID = 71647
 # variable set hash-table stats:
-# Load=136/1024=13%, Rehash=0, Collisions=24/254=9%
+# Load=136/1024=13%, Rehash=0, Collisions=24/255=9%
 
 # Pattern-specific Variable Values
 
@@ -294,8 +294,8 @@ VSCODE_PID = 2645
 
 # Directories
 
-# user (device 2053, inode 955528): 9 files, no impossibilities.
-# . (device 2053, inode 677081): 23 files, no impossibilities.
+# user (device 2053, inode 303738): 9 files, no impossibilities.
+# . (device 2053, inode 303342): 23 files, no impossibilities.
 
 # 32 files, no impossibilities in 2 directories.
 
@@ -313,6 +313,12 @@ _%: %.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6
 
 # Not a target:
 xv6-user/_malloc_test:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+xv6-user/_wc:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -432,7 +438,7 @@ kernel/target/riscv64gc-unknown-none-elf/debug/kernel:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-28 20:45:43.935035161
+#  Last modified 2022-06-06 11:38:03.195113361
 #  File has been updated.
 #  Successfully updated.
 
@@ -504,12 +510,11 @@ xv6-user/uthread/setcontext.S:
 #  Modification time never checked.
 #  File has not been updated.
 
-fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test xv6-user/_fifo_test1 xv6-user/_fifo_test2 xv6-user/_pipe_test xv6-user/_uthreadtest xv6-user/_msgtest1 xv6-user/_msgtest2 xv6-user/_shmtest1 xv6-user/_shmtest2
+fs.img: xv6-mkfs/mkfs README.md xv6-user/_init xv6-user/_sh xv6-user/_echo xv6-user/_ls xv6-user/_mkdir xv6-user/_touch xv6-user/_cat xv6-user/_rm xv6-user/_wc xv6-user/_forktest xv6-user/_stressfs xv6-user/_sem_test1 xv6-user/_sem_test2 xv6-user/_thread_test xv6-user/_malloc_test xv6-user/_fork_test xv6-user/_fifo_test1 xv6-user/_fifo_test2 xv6-user/_pipe_test xv6-user/_uthreadtest xv6-user/_msgtest1 xv6-user/_msgtest2 xv6-user/_shmtest1 xv6-user/_shmtest2
 #  Implicit rule search has not been done.
- 
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 135):
+#  recipe to execute (from 'Makefile', line 136):
 	xv6-mkfs/mkfs fs.img README.md $(UPROGS)
 
 # Not a target:
@@ -554,6 +559,7 @@ xv6-user/_forktest: xv6-user/forktest.o xv6-user/ulib.o xv6-user/usys.o xv6-user
 #  File has not been updated.
 
 # Not a target:
+ 
 xv6-user/uthread/uthread.c:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -709,19 +715,19 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
 
 # files hash-table stats:
-# Load=62/1024=6%, Rehash=0, Collisions=6/122=5%
+# Load=63/1024=6%, Rehash=0, Collisions=6/124=5%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 90 / storage = 1345 B / avg = 14 B
-# current buf: size = 8162 B / used = 1345 B / count = 90 / avg = 14 B
+# strcache buffers: 1 (0) / strings = 91 / storage = 1358 B / avg = 14 B
+# current buf: size = 8162 B / used = 1358 B / count = 91 / avg = 14 B
 
-# strcache performance: lookups = 139 / hit rate = 35%
+# strcache performance: lookups = 140 / hit rate = 35%
 # hash-table stats:
-# Load=90/8192=1%, Rehash=0, Collisions=4/139=3%
-# Finished Make data base on Sat May 28 20:46:15 2022
+# Load=91/8192=1%, Rehash=0, Collisions=4/140=3%
+# Finished Make data base on Mon Jun  6 11:38:43 2022
 
  

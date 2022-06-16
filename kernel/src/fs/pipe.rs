@@ -56,6 +56,7 @@ impl Pipe {
         //     pipe: PipeData::alloc(),
         //     pipe_lock: Spinlock::new((), "pipe")
         // };
+
         let pipe = &mut *pipe_ptr;
         pipe.read_open = true;
         pipe.write_open = true;
@@ -113,6 +114,8 @@ impl Pipe {
         //     // pipe_guard.read_number += 1;
 
         // }
+
+
         let mut i = 0;
         while i < len {
             if self.nread == self.nwrite {
@@ -143,19 +146,13 @@ impl Pipe {
         let mut guard = self.pipe_lock.acquire();
         // let pipe = unsafe { &mut *self.pipe };
         let mut i = 0;
-
-        // pipe.write_open;
-
-        // println!("$$$");
-        
-        // println!("@{} {}", pipe.write_number, pipe.read_number);
         
         while i < len {
             // println!("#{}", i);
-            // if !pipe.read_open || my_proc.killed() {
-            //     drop(guard);
-            //     return Err("pipe write: pipe read close or current process has been killed")
-            // }
+            if !self.read_open || my_proc.killed() {
+                drop(guard);
+                return Err("pipe write: pipe read close or current process has been killed")
+            }
             // println!("HEHE");
            
             if self.nwrite == self.nread + PIPE_SIZE {
@@ -167,7 +164,7 @@ impl Pipe {
                 my_proc.sleep(&self.nwrite as *const _ as usize, guard);
                 guard = self.pipe_lock.acquire();
             } else {
-                // println!("HAHA");
+           
                 let mut char: u8 = 0;
                 let pgt = unsafe { &mut *my_proc.pagetable };
                 if pgt.copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
@@ -175,7 +172,6 @@ impl Pipe {
                 }
                 let write_cursor = self.nwrite % PIPE_SIZE;
                 self.data[write_cursor] = char;
-                // println!("+{}", char);
                 
                 self.nwrite += 1;
                 i += 1;

@@ -10,10 +10,8 @@ use array_macro::array;
 pub const SHARE_MEM_AREA_SIZE: usize = 4*1024*1024;
 
 
-
 pub const SHARE_MEM_MAP_PAGES: usize = SHARE_MEM_AREA_SIZE/(PGSIZE);
 pub const SHARE_MEM_BIT_MAP_SIZE: usize = SHARE_MEM_MAP_PAGES/8+1;
-
 
 
 pub struct BitMap{

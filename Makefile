@@ -114,6 +114,7 @@ UPROGS=\
 	$(USER)/_touch \
 	$(USER)/_cat \
 	$(USER)/_rm \
+	$(USER)/_wc \
 	$(USER)/_forktest \
 	$(USER)/_stressfs \
 	$(USER)/_sem_test1 \
@@ -128,7 +129,7 @@ UPROGS=\
 	$(USER)/_msgtest1 \
 	$(USER)/_msgtest2 \
 	$(USER)/_shmtest1 \
-	$(USER)/_shmtest2
+	$(USER)/_shmtest2 
 
 
 fs.img: xv6-mkfs/mkfs README.md $(UPROGS)
