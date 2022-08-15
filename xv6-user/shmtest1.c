@@ -25,7 +25,7 @@ int main(){
     if(shmaddr == 0){
         printf("In shmat, shmaddr is NULL\n");
     }
-    printf("PID0, the shmaddr is %x\n", (long)shmaddr);
+    printf("Process 1, the shmaddr is %x, and write abcdefg\n", (long)shmaddr);
     strcpy(shmaddr, "abcdefg");
     
 
@@ -35,7 +35,7 @@ int main(){
     int i = 0;
     for(int i = 0; i < 1000000; i++);
     // sleep(1000);
-    printf("FINISH\n");
+    printf("Process 1, FINISH\n");
 
     shm_unmap(shmid);
     // shm_put(shmid);

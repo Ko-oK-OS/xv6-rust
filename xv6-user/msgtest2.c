@@ -10,7 +10,7 @@ int main(){
     msg_recv(id, (void*)buf, 12);
 
 
-    printf("%s\n", buf);
+    printf("Process 2 receive msg: %s\n", buf);
 
     printf("msg test OK!\n");
 

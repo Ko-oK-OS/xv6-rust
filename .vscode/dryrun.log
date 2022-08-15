@@ -3,15 +3,14 @@ make: Entering directory '/home/rand/xv6-rust'
 gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
  
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/init.o xv6-user/init.c
+ 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/ulib.o xv6-user/ulib.c
 perl xv6-user/usys.pl > xv6-user/usys.S
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/usys.o xv6-user/usys.S
  
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/printf.o xv6-user/printf.c
  
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/umalloc.o xv6-user/umalloc.c
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/thread.o xv6-user/thread.c
  
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/start.o xv6-user/start.S

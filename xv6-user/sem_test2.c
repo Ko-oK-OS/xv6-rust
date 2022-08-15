@@ -10,6 +10,6 @@ int main(){
 
 
     
-    fprintf(1, "[sem_test2 exit]\n");
+    fprintf(1, "[sem_test2 succeed and exit]\n");
     exit(0);
 }

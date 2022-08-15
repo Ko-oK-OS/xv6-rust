@@ -17,13 +17,13 @@ impl task_struct {
 
         // check page table copy
 
-        unsafe { (*self.pagetable).print_pagetable() };
-        println!("-----------------------");
-        unsafe { (*thread.pagetable).print_pagetable() };
-        println!("++++++++++++++++++++++");
-        while (true){
+        // unsafe { (*self.pagetable).print_pagetable() };
+        // println!("-----------------------");
+        // unsafe { (*thread.pagetable).print_pagetable() };
+        // println!("++++++++++++++++++++++");
+        // while (true){
 
-        }
+        // }
         // println!("In threadclone pid is {} the child is {} func is {} ustack is {}", self.pid, thread.pid, func, ustack);
         thread.size = self.size;
         thread.name = self.name;    //to do

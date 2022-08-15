@@ -12,7 +12,7 @@ int main(){
 
     int i = 0;
     for(; i < 1000; i++){};
-    fprintf(1, "[sem_test1 exit]\n");
+    fprintf(1, "[sem_test1 succeed and exit]\n");
     for(; i < 1000; i++){};
     exit(0);
 }

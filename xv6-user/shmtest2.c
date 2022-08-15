@@ -33,12 +33,11 @@ int main(){
 
 
     
-    printf("###########\n");
+    // printf("###########\n");
     shmaddr = (char*)shm_map(shmid, (long)0, 0);
-    printf("$$$$$$ %s $$$$$\n", shmaddr);
+    printf("Process 2, the shm addr is %x, and the content is %s\n", (long)shmaddr, shmaddr);
     
-
-    printf("\n%s\n\n", shmaddr);
+    printf("Process 2, FINISH\n");
     shm_unmap(shmaddr);
     shm_put(shmid);
     

@@ -6,6 +6,7 @@
 int main(){
     int id = msg_alloc("MSG");
 
+    printf("Process 1, send msg: Hello World\n");
     msg_send(id, "Hello World", 12);
 
 
