@@ -1,7 +1,0 @@
-# target files
-target/
-*.S
-
-# editor
-.vscode
-.idea

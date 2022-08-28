@@ -1,2 +1,0 @@
-run:
-	@python gen.py

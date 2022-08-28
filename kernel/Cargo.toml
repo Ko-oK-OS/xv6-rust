@@ -17,7 +17,6 @@ xmas-elf = "0.8.0"
 
 
 allocator = { path = "../allocator" }
-fs-lib = { path = "../fs-lib" }
 
 [features]
 
