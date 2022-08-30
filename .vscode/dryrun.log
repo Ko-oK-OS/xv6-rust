@@ -3,25 +3,19 @@ make: Entering directory '/home/rand/xv6-rust'
 gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
  
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/init.o xv6-user/init.c
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/ulib.o xv6-user/ulib.c
 perl xv6-user/usys.pl > xv6-user/usys.S
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/usys.o xv6-user/usys.S
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/printf.o xv6-user/printf.c
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/umalloc.o xv6-user/umalloc.c
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/thread.o xv6-user/thread.c
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/start.o xv6-user/start.S
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/uthread/getcontext.o xv6-user/uthread/getcontext.S
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/uthread/setcontext.o xv6-user/uthread/setcontext.S
  
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.c -o xv6-user/uthread/ucontext.o
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c -o xv6-user/uthread/uswtch.o xv6-user/uthread/uswtch.S
+ 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie -c xv6-user/uthread/uthread.c -o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-ld -z max-page-size=4096 -N -Ttext 0 -o xv6-user/_init xv6-user/init.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/start.o xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.o xv6-user/uthread/uswtch.o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-objdump -S xv6-user/_init > xv6-user/init.asm
@@ -31,7 +25,6 @@ riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=meda
 riscv64-unknown-elf-ld -z max-page-size=4096 -N -Ttext 0 -o xv6-user/_sh xv6-user/sh.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/start.o xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.o xv6-user/uthread/uswtch.o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-objdump -S xv6-user/_sh > xv6-user/sh.asm
 riscv64-unknown-elf-objdump -t xv6-user/_sh | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > xv6-user/sh.sym
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/echo.o xv6-user/echo.c
 riscv64-unknown-elf-ld -z max-page-size=4096 -N -Ttext 0 -o xv6-user/_echo xv6-user/echo.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/start.o xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.o xv6-user/uthread/uswtch.o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-objdump -S xv6-user/_echo > xv6-user/echo.asm
@@ -46,7 +39,6 @@ riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=meda
 riscv64-unknown-elf-ld -z max-page-size=4096 -N -Ttext 0 -o xv6-user/_mkdir xv6-user/mkdir.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/start.o xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.o xv6-user/uthread/uswtch.o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-objdump -S xv6-user/_mkdir > xv6-user/mkdir.asm
 riscv64-unknown-elf-objdump -t xv6-user/_mkdir | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > xv6-user/mkdir.sym
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/touch.o xv6-user/touch.c
 riscv64-unknown-elf-ld -z max-page-size=4096 -N -Ttext 0 -o xv6-user/_touch xv6-user/touch.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/start.o xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.o xv6-user/uthread/uswtch.o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-objdump -S xv6-user/_touch > xv6-user/touch.asm
@@ -66,7 +58,6 @@ riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=meda
 riscv64-unknown-elf-ld -z max-page-size=4096 -N -Ttext 0 -o xv6-user/_wc xv6-user/wc.o xv6-user/ulib.o xv6-user/usys.o xv6-user/printf.o xv6-user/umalloc.o xv6-user/thread.o xv6-user/start.o xv6-user/uthread/getcontext.o xv6-user/uthread/setcontext.o xv6-user/uthread/ucontext.o xv6-user/uthread/uswtch.o xv6-user/uthread/uthread.o
 riscv64-unknown-elf-objdump -S xv6-user/_wc > xv6-user/wc.asm
 riscv64-unknown-elf-objdump -t xv6-user/_wc | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > xv6-user/wc.sym
- 
 riscv64-unknown-elf-gcc -Wall -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I./xv6-user -fno-stack-protector -fno-pie -no-pie   -c -o xv6-user/forktest.o xv6-user/forktest.c
 # forktest has less library code linked in - needs to be small
 # in order to be able to max out the proc table.

@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Aug 14 23:34:10 2022
+# Make data base, printed on Wed Aug 31 00:58:01 2022
 
 # Variables
 
@@ -28,8 +28,6 @@ XDG_SESSION_CLASS = user
 SNAP_COMMON = /var/snap/code/common
 # environment
 XDG_SESSION_TYPE = x11
-# environment
-VSCODE_LOG_NATIVE = false
 # automatic
 ?D = $(patsubst %/,%,$(dir $?))
 # environment
@@ -47,7 +45,7 @@ CURDIR := /home/rand/xv6-rust
 # makefile
 SHELL = /bin/sh
 # environment
-SNAP_DATA = /var/snap/code/99
+SNAP_DATA = /var/snap/code/104
 # environment
 VSCODE_NLS_CONFIG = {"locale":"zh-cn","availableLanguages":{},"_languagePackSupport":true}
 # environment
@@ -75,9 +73,7 @@ XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/d
 # environment
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
-VSCODE_VERBOSE_LOGGING = true
-# environment
-_ = /snap/code/99/usr/share/code/code
+_ = /snap/code/104/usr/share/code/code
 # environment
 MANAGERPID = 1098
 # environment
@@ -85,7 +81,7 @@ LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 VSCODE_CWD = /home/rand
 # environment
-GSETTINGS_SCHEMA_DIR = /snap/code/99/usr/share/glib-2.0/schemas
+GSETTINGS_SCHEMA_DIR = /snap/code/104/usr/share/glib-2.0/schemas
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
@@ -101,15 +97,13 @@ XDG_RUNTIME_DIR = /run/user/1000
 # environment
 GDK_PIXBUF_MODULE_FILE = /home/rand/snap/code/common/.cache/gdk-pixbuf-loaders.cache
 # environment
-SNAP = /snap/code/99
+SNAP = /snap/code/104
 # makefile (from 'Makefile', line 5)
 CPUS = 1
 # environment
-SNAP_VERSION = 30d9c6cd
+SNAP_VERSION = 6d9b74a7
 # environment
 XDG_MENU_PREFIX = gnome-
-# environment
-VSCODE_LOG_STACK = false
 # environment
 DISABLE_WAYLAND = 1
 # environment
@@ -119,7 +113,7 @@ INVOCATION_ID = 24cf22dc8e2c421db73cc3dde1abd88c
 # makefile (from 'Makefile', line 27)
 LDFLAGS = -z max-page-size=4096
 # environment
-GDK_PIXBUF_MODULEDIR = /snap/code/99/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders
+GDK_PIXBUF_MODULEDIR = /snap/code/104/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders
 # makefile (from 'Makefile', line 55)
 ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
 # default
@@ -131,15 +125,13 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 2502
+GIO_LAUNCHED_DESKTOP_FILE_PID = 32728
 # automatic
 %F = $(notdir $%)
 # environment
 DISPLAY = :0
 # makefile (from 'Makefile', line 4)
 UTHREAD = xv6-user/uthread
-# environment
-VSCODE_PIPE_LOGGING = true
 # environment
 SNAP_INSTANCE_KEY = 
 # environment
@@ -161,7 +153,7 @@ LESSCLOSE = /usr/bin/lesspipe %s %s
 # environment
 VSCODE_CLI = 1
 # environment
-VSCODE_CODE_CACHE_PATH = /home/rand/.config/Code/CachedData/30d9c6cd9483b2cc586687151bcbcd635f373630
+VSCODE_CODE_CACHE_PATH = /home/rand/.config/Code/CachedData/6d9b74a70ca9c7733b29f0456fd8195364076dda
 # environment
 LOGNAME = rand
 # environment
@@ -191,21 +183,19 @@ MAKECMDGOALS := all
 # environment
 QT_IM_MODULE = ibus
 # environment
-SNAP_USER_DATA = /home/rand/snap/code/99
+SNAP_USER_DATA = /home/rand/snap/code/104
 # environment
 SHLVL = 0
 # makefile (from 'Makefile', line 7)
 CC = riscv64-unknown-elf-gcc
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
-# environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-e7dbf1f0-5ae3-4a4a-8e43-21700c16e0ea.sock
 # default
 MAKE_VERSION := 4.2.1
 # makefile (from 'Makefile', line 2)
 USER = xv6-user
 # environment
-SNAP_REVISION = 99
+SNAP_REVISION = 104
 # makefile
 .DEFAULT_GOAL := run
 # makefile (from 'Makefile', line 3)
@@ -227,7 +217,7 @@ MAKE_COMMAND := make
 # environment
 LANGUAGE = zh_CN:zh
 # environment
-VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.68.1-main.sock
+VSCODE_IPC_HOOK = /run/user/1000/vscode-f2998c1d-1.70.1-main.sock
 # environment
 BAMF_DESKTOP_FILE_HINT = /var/lib/snapd/desktop/applications/code_code.desktop
 # makefile
@@ -278,17 +268,17 @@ WINDOWPATH = 2
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
 GJS_DEBUG_OUTPUT = stderr
- 
 # default
 .RECIPEPREFIX := 
 # environment
 LANG = C
 # environment
-VSCODE_PID = 2546
+VSCODE_PID = 32773
 # variable set hash-table stats:
-# Load=136/1024=13%, Rehash=0, Collisions=24/255=9%
+# Load=131/1024=13%, Rehash=0, Collisions=23/250=9%
 
 # Pattern-specific Variable Values
+ 
 
 # No pattern-specific variable values.
 
@@ -405,7 +395,6 @@ xv6-user/uthread/setcontext.o: xv6-user/uthread/setcontext.S
 #  recipe to execute (from 'Makefile', line 71):
 	$(CC) $(CFLAGS) -c -o $@ $^
 
- 
 xv6-user/initcode: xv6-user/initcode.S
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -727,9 +716,8 @@ xv6-mkfs/mkfs: xv6-mkfs/mkfs.c xv6-user/include/fs.h xv6-user/include/param.h
 # current buf: size = 8162 B / used = 1372 B / count = 92 / avg = 14 B
 
 # strcache performance: lookups = 141 / hit rate = 34%
- 
 # hash-table stats:
 # Load=92/8192=1%, Rehash=0, Collisions=4/141=3%
-# Finished Make data base on Sun Aug 14 23:34:10 2022
+# Finished Make data base on Wed Aug 31 00:58:01 2022
 
  
