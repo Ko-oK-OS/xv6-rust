@@ -184,10 +184,8 @@ pub fn kernel_env_call(
     let mut ret;
     unsafe {
         core::arch::asm!("ecall"
-            : "={x10}" (ret)
-            : "{x10}" (arg0), "{x11}" (arg1), "{x12}" (arg2), "{x17}" (which)
-            : "memory"
-            : "volatile"
+            , inlateout("x10") arg0 => ret,
+             in("x11") arg1, in("x12") arg2, in("x17") which,
         );
     }
     ret

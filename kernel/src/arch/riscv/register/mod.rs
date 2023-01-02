@@ -27,6 +27,6 @@ pub mod clint;
 // flush the TLB.
 pub unsafe fn sfence_vma(){
     println!("flush the TLB");
-    core::arch::asm!("sfence.vma zero, zero"::::"volatile");
+    core::arch::asm!("sfence.vma zero, zero");
     println!("finish sfence vma");
 }

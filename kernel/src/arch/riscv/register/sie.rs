@@ -8,13 +8,13 @@ pub enum SIE {
 #[inline]
 pub unsafe fn read() -> usize {
     let ret:usize;
-    core::arch::asm!("csrr $0, sie":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr {}, sie", out(reg)ret);
     ret
 }
 
 #[inline]
 pub unsafe fn write(x:usize) {
-    core::arch::asm!("csrw sie, $0"::"r"(x)::"volatile");
+    core::arch::asm!("csrw sie, {}", in(reg)x);
 }
 
 /// enable all software interrupts

@@ -8,11 +8,11 @@ pub enum MIE {
 #[inline]
 pub unsafe fn read() -> usize {
     let ret:usize;
-    core::arch::asm!("csrr $0, mie":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr {}, mie", out(reg)ret);
     ret
 }
 
 #[inline]
 pub unsafe fn write(x:usize){
-    core::arch::asm!("csrw mie, $0"::"r"(x)::"volatile");
+    core::arch::asm!("csrw mie, {}",in(reg)x);
 }
