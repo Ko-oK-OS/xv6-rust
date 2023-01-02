@@ -6,11 +6,11 @@ pub const SATP_SV39:usize =  8 << 60;
 #[inline]
 pub unsafe fn read() -> usize {
     let ret:usize;
-    llvm_asm!("csrr $0, satp":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr $0, satp":"=r"(ret):::"volatile");
     ret
 }
 
 pub unsafe fn write(x: usize){
     // println!("write satp");
-    llvm_asm!("csrw satp, $0"::"r"(x)::"volatile");
+    core::arch::asm!("csrw satp, $0"::"r"(x)::"volatile");
 }

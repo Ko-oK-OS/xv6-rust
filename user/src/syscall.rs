@@ -25,7 +25,7 @@ pub type SysRet = isize;
 fn syscall(id: usize, args:[usize; 3]) -> SysRet {
     let ret:isize;
     unsafe{
-        llvm_asm!("ecall"
+        core::arch::asm!("ecall"
             : "={x10}" (ret)
             : "{x10}" (args[0]), "{x11}" (args[1]), "{x12}" (args[2]), "{x17}" (id)
             : "memory"

@@ -183,7 +183,7 @@ pub fn kernel_env_call(
 ) -> usize {
     let mut ret;
     unsafe {
-        llvm_asm!("ecall"
+        core::arch::asm!("ecall"
             : "={x10}" (ret)
             : "{x10}" (arg0), "{x11}" (arg1), "{x12}" (arg2), "{x17}" (which)
             : "memory"

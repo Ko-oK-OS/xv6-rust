@@ -15,13 +15,13 @@ pub enum SSTATUS {
 #[inline]
 pub unsafe fn read() -> usize {
     let sstatus: usize;
-    llvm_asm!("csrr $0, sstatus":"=r"(sstatus):::"volatile");
+    core::arch::asm!("csrr $0, sstatus":"=r"(sstatus):::"volatile");
     sstatus
 }
 
 #[inline]
 pub unsafe fn write(sstatus: usize) {
-    llvm_asm!("csrw sstatus, $0"::"r"(sstatus)::"volatile");
+    core::arch::asm!("csrw sstatus, $0"::"r"(sstatus)::"volatile");
 }
 
 #[inline]

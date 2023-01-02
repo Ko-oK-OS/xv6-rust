@@ -11,14 +11,14 @@ use bit_field::BitField;
 #[inline]
 unsafe fn read() -> usize {
     let ret:usize;
-    llvm_asm!("csrr $0, mstatus":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr $0, mstatus":"=r"(ret):::"volatile");
     ret
 }
 
 // Write into register in M mode
 #[inline]
 unsafe fn write(x: usize) {
-    llvm_asm!("csrw mstatus, $0"::"r"(x)::"volatile");
+    core::arch::asm!("csrw mstatus, $0"::"r"(x)::"volatile");
 }
 
 // set M Previous Privilege mode to Supervisor, for mret.
