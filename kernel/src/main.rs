@@ -25,7 +25,6 @@ extern crate lazy_static;
 
 // use buddy system allocator
 extern crate alloc;
-extern crate fs_lib;
 
 core::arch::global_asm!(include_str!("asm/entry.S"));
 core::arch::global_asm!(include_str!("asm/kernelvec.S"));
