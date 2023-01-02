@@ -1,11 +1,11 @@
 #[inline]
 pub unsafe fn read() -> usize {
     let ret: usize;
-    llvm_asm!("csrr $0, mideleg":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr {}, mideleg", out(reg)ret);
     ret
 }
 
 #[inline]
 pub unsafe fn write(mideleg: usize) {
-    llvm_asm!("csrw mideleg, $0"::"r"(mideleg)::"volatile");
+    core::arch::asm!("csrw mideleg, {}", in(reg)mideleg);
 }

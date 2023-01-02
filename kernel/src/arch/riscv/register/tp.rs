@@ -3,11 +3,11 @@
 #[inline]
 pub unsafe fn read() -> usize {
     let ret:usize;
-    llvm_asm!("mv $0, tp":"=r"(ret):::"volatile");
+    core::arch::asm!("mv {}, tp",out(reg)ret);
     ret
 }
 
 #[inline]
 pub unsafe fn write(x:usize){
-    llvm_asm!("mv tp, $0"::"r"(x)::"volatile");
+    core::arch::asm!("mv tp, {}", in(reg)x);
 }

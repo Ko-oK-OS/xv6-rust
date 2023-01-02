@@ -5,13 +5,13 @@ use core::mem::size_of;
 #[inline]
 pub unsafe fn read() -> usize {
     let ret:usize;
-    llvm_asm!("csrr $0, scause":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr {}, scause", out(reg)ret);
     ret
 }
 
 #[inline]
 pub unsafe fn write(x:usize){
-    llvm_asm!("csrw scause, $0"::"r"(x)::"volatile");
+    core::arch::asm!("csrw scause, {}",in(reg)x);
 }
 
 // scause register

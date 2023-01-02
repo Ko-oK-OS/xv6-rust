@@ -1,9 +1,9 @@
 #![no_std]
 #![no_main]
 
-#![feature(llvm_asm)]
-#![feature(const_fn)]
-#![feature(global_asm)]
+//#![feature(llvm_asm)]
+//#![feature(const_fn)]
+//#![feature(global_asm)]
 #![feature(ptr_internals)]
 #![allow(dead_code)]
 #![feature(panic_info_message)]
@@ -27,10 +27,10 @@ extern crate lazy_static;
 extern crate alloc;
 extern crate fs_lib;
 
-global_asm!(include_str!("asm/entry.S"));
-global_asm!(include_str!("asm/kernelvec.S"));
-global_asm!(include_str!("asm/trampoline.S"));
-global_asm!(include_str!("asm/switch.S"));
+core::arch::global_asm!(include_str!("asm/entry.S"));
+core::arch::global_asm!(include_str!("asm/kernelvec.S"));
+core::arch::global_asm!(include_str!("asm/trampoline.S"));
+core::arch::global_asm!(include_str!("asm/switch.S"));
 
 
 #[macro_use]
@@ -100,7 +100,7 @@ pub unsafe fn start() -> !{
     tp::write(id);
 
     // switch to supervisor mode and jump to main().
-    llvm_asm!("mret"::::"volatile");
+    core::arch::asm!("mret");
 
     loop{}
     

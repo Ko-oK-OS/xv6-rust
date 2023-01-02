@@ -144,7 +144,7 @@ pub unsafe fn start() -> !{
     tp::write(id);
 
     // switch to supervisor mode and jump to main().
-    llvm_asm!("mret"::::"volatile");
+    core::arch::asm!("mret"::::"volatile");
 
     loop{}
     

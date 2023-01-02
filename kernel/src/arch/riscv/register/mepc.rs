@@ -3,5 +3,5 @@
 // exception will go.
 #[inline]
 pub unsafe fn write(mepc: usize) {
-    llvm_asm!("csrw mepc, $0" :: "r"(mepc)::"volatile");
+    core::arch::asm!("csrw mepc, {}", in(reg)mepc);
 }

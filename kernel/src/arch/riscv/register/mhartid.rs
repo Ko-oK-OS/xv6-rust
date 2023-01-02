@@ -2,6 +2,6 @@
 #[inline]
 pub unsafe fn read() -> usize{
     let ret:usize;
-    llvm_asm!("csrr $0, mhartid":"=r"(ret):::"volatile");
+    core::arch::asm!("csrr {}, mhartid",out(reg)ret);
     ret
 }
