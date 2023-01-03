@@ -66,7 +66,7 @@ use crate::fs::*;
 use crate::driver::virtio_disk::DISK;
 use crate::arch::riscv::{
     mstatus, mepc, satp, medeleg, mideleg, sie, mhartid, tp, clint, 
-    mscratch, mtvec, mie, sstatus
+    mscratch, mtvec, mie, sstatus, pmp,
 };
 use crate::arch::riscv::qemu::param::NCPU;
 
@@ -90,6 +90,10 @@ pub unsafe fn start() -> !{
     medeleg::write(0xffff);
     mideleg::write(0xffff);
     sie::intr_on();
+
+    // configure Physical Memory Protection to give supervisor mode access to all of physical memory.
+    pmp::pmpaddr0::write(0x3fffffffffffff);
+    pmp::pmpcfg0::set_pmp(0, pmp::pmpcfg0::Range::TOR, pmp::pmpcfg0::Permission::RWX, false);
 
     // ask for clock interrupts.
     timer_init();
