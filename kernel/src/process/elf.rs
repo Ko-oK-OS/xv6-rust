@@ -164,8 +164,8 @@ pub unsafe fn exec(
         
         let ph_size = size_of::<ProgHeader>() as u32;
         // Load program into memeory. 
-        let mut off = elf.phoff;
-        for _ in 0..elf.phnum {
+        for index in 0..elf.phnum as usize {
+            let off = elf.phoff + index * elf.phentsize as usize;
             if inode_guard.read(
                 false, 
                 &*ph as *const ProgHeader as usize, 
@@ -232,7 +232,6 @@ pub unsafe fn exec(
                 LOG.end_op();
                 return Err("exec: Fail to read from inode")
             }
-            off += size_of::<ProgHeader>();
         }
         // println!("[Debug] 完成加载程序");
 

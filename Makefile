@@ -3,10 +3,18 @@ USER = xv6-user
 INCLUDE = xv6-user/include
 CPUS = 3
 
-CC = riscv64-unknown-elf-gcc
-LD = riscv64-unknown-elf-ld
-OBJCOPY = riscv64-unknown-elf-objcopy
-OBJDUMP = riscv64-unknown-elf-objdump
+TOOLPREFIX = $(shell if command -v riscv64-unknown-elf-gcc >/dev/null 2>&1; then \
+		echo riscv64-unknown-elf-; \
+	elif command -v riscv64-elf-gcc >/dev/null 2>&1; then \
+		echo riscv64-elf-; \
+	else \
+		echo riscv64-unknown-elf-; \
+	fi)
+
+CC = $(TOOLPREFIX)gcc
+LD = $(TOOLPREFIX)ld
+OBJCOPY = $(TOOLPREFIX)objcopy
+OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
@@ -14,6 +22,7 @@ CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I./xv6-user
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+CFLAGS += $(shell $(CC) -Werror -Wno-error=infinite-recursion -E -x c /dev/null >/dev/null 2>&1 && echo -Wno-error=infinite-recursion)
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)

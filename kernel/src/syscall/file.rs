@@ -135,7 +135,6 @@ impl Syscall<'_> {
             },
             _ => {
                 file.ftype = FileType::Inode;
-                file.offset = 0;
                 file.readable = true;
                 file.writeable = true;
             }
@@ -539,7 +538,6 @@ impl Syscall<'_> {
     }
 
 }
-
 
 
 
