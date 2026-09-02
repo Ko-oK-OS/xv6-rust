@@ -1,2 +1,7 @@
 fs.img
 *.S
+/_badfd
+/tests/*.asm
+/tests/*.d
+/tests/*.o
+/tests/*.sym

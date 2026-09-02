@@ -314,15 +314,15 @@ fn skip_path(
         cur += 1;
     }
 
-    let mut count = cur - start; 
-    if count >= name.len() {
-        debug_assert!(false);
-        count = name.len() - 1;
-    }
+    // On-disk directory names are fixed-width. A full DIRSIZ component has no
+    // trailing NUL, so clamp the copy instead of panicking or indexing past it.
+    let count = min(cur - start, name.len());
     unsafe{
         ptr::copy(path.as_ptr().offset(start as isize), name.as_mut_ptr(), count);
     }
-    name[count] = 0;
+    if count < name.len() {
+        name[count] = 0;
+    }
 
     // skip succeeding b'/'
     while path[cur] == b'/' {
@@ -482,11 +482,12 @@ impl InodeData {
         count: u32
     ) -> Result<usize, &'static str> { 
         // Check the reading content is in range.
-        let end = offset.checked_add(count).ok_or("Fail to add count.")?;
-        if end > self.dinode.size {
-            // println!("[Kernel] read: end: {}, dinode.size: {}", end, self.dinode.size);
-            return Err("inode read: end is more than diskinode's size.")
+        if offset > self.dinode.size {
+            return Err("inode read: offset is more than diskinode's size.")
         }
+        // User reads may legally straddle EOF. Returning the remaining bytes
+        // lets programs such as cat consume the final partial buffer normally.
+        let count = min(count, self.dinode.size - offset);
 
         let mut total: usize = 0;
         let mut offset = offset as usize;
@@ -583,6 +584,12 @@ impl InodeData {
     /// Look for an inode entry in this directory according the name. 
     /// Panics if this is not a directory. 
     pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
+        self.dir_lookup_with_offset(name).map(|(inode, _)| inode)
+    }
+
+    /// Look for a directory entry and return both its inode and byte offset.
+    /// The offset lets unlink clear the entry before its inode can be recycled.
+    pub fn dir_lookup_with_offset(&mut self, name: &[u8]) -> Option<(Inode, u32)> {
         // assert!(name.len() == DIRSIZ);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
@@ -601,13 +608,13 @@ impl InodeData {
                 continue;
             }
             // println!("dir_entry_name: {}, name: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap(), String::from_utf8(name.to_vec()).unwrap());
-            for i in 0..DIRSIZ {
-                if dir_entry.name[i] != name[i] {
-                    break;
-                }
-                if dir_entry.name[i] == 0 {
-                    return Some(ICACHE.get(self.dev, dir_entry.inum as u32))
-                }
+            // A name of exactly DIRSIZ bytes has no NUL terminator. Treat a
+            // shorter input as zero-padded so both on-disk forms compare safely.
+            let matches = (0..DIRSIZ).all(|i| {
+                dir_entry.name[i] == name.get(i).copied().unwrap_or(0)
+            });
+            if matches {
+                return Some((ICACHE.get(self.dev, dir_entry.inum as u32), offset))
             }
         }
         None
