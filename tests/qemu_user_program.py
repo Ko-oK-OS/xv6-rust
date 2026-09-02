@@ -7,8 +7,10 @@ import argparse
 import os
 import select
 import signal
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 
@@ -46,7 +48,7 @@ def read_until(process: subprocess.Popen[bytes], marker: bytes, timeout: float) 
     return bytes(output)
 
 
-def run_command(command: str, timeout: float = 15.0) -> bytes:
+def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
     build = subprocess.run(
         ["make", "-C", "kernel", "build"],
         stdout=subprocess.PIPE,
@@ -54,45 +56,56 @@ def run_command(command: str, timeout: float = 15.0) -> bytes:
     )
     if build.returncode != 0:
         raise RuntimeError("kernel build failed\n" + build.stdout.decode(errors="replace"))
-    process = subprocess.Popen(
-        [
-            "qemu-system-riscv64",
-            "-machine",
-            "virt",
-            "-bios",
-            "none",
-            "-kernel",
-            "kernel/target/riscv64gc-unknown-none-elf/debug/kernel",
-            "-m",
-            "3G",
-            "-smp",
-            "3",
-            "-nographic",
-            "-drive",
-            "file=fs.img,if=none,format=raw,id=x0",
-            "-device",
-            "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0",
-        ],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
 
-    try:
-        read_until(process, PROMPT, timeout)
-        assert process.stdin is not None
-        process.stdin.write(command.encode() + b"\n")
-        process.stdin.flush()
-        return read_until(process, PROMPT, timeout)
-    finally:
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                process.wait(timeout=2)
+    with tempfile.TemporaryDirectory(prefix="xv6-user-test-") as temp_dir:
+        test_image = os.path.join(temp_dir, "fs.img")
+        shutil.copyfile("fs.img", test_image)
+        process = subprocess.Popen(
+            [
+                "qemu-system-riscv64",
+                "-machine",
+                "virt",
+                "-bios",
+                "none",
+                "-kernel",
+                "kernel/target/riscv64gc-unknown-none-elf/debug/kernel",
+                "-m",
+                "3G",
+                "-smp",
+                "3",
+                "-nographic",
+                "-drive",
+                f"file={test_image},if=none,format=raw,id=x0",
+                "-device",
+                "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+        try:
+            read_until(process, PROMPT, timeout)
+            assert process.stdin is not None
+            outputs = []
+            for command in commands:
+                process.stdin.write(command.encode() + b"\n")
+                process.stdin.flush()
+                outputs.append(read_until(process, PROMPT, timeout))
+            return outputs
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGTERM)
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=2)
+
+
+def run_command(command: str, timeout: float = 15.0) -> bytes:
+    return run_commands([command], timeout)[0]
 
 
 def test_cat_eof() -> None:
@@ -112,7 +125,18 @@ def test_cat_eof() -> None:
         raise AssertionError("; ".join(failures) + "\n\n" + decoded)
 
 
-TESTS = {"cat-eof": test_cat_eof}
+def test_repeated_exec_failure() -> None:
+    outputs = run_commands(["badcmd", "noexec"], timeout=5.0)
+    combined = b"".join(outputs)
+    for marker in PANIC_MARKERS:
+        if marker in combined:
+            raise AssertionError(f"kernel output contained {marker!r}")
+
+
+TESTS = {
+    "cat-eof": test_cat_eof,
+    "repeated-exec-failure": test_repeated_exec_failure,
+}
 
 
 def main() -> int:
