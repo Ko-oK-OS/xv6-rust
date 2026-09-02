@@ -16,7 +16,7 @@ use alloc::sync::Arc;
 type SyscallFn = fn() -> SysResult;
 pub type SysResult = Result<usize, ()>;
 
-pub const SYSCALL_NUM:usize = 21;
+pub const SYSCALL_NUM:usize = 22;
 pub const SHUTDOWN: usize = 8;
 pub const REBOOT: usize = 9;
 
@@ -61,6 +61,7 @@ pub enum SysCallID {
     SysLink = 19,
     SysMkdir = 20,
     SysClose = 21,
+    SysShutdown = 22,
     Unknown
 }
 
@@ -87,7 +88,8 @@ impl SysCallID {
             18 => { Self::SysUnlink },
             19 => { Self::SysLink },
             20 => { Self::SysMkdir },
-            21 => { Self::SysClose }
+            21 => { Self::SysClose },
+            22 => { Self::SysShutdown }
             _ => { Self::Unknown }
         }
     }
@@ -124,6 +126,7 @@ impl Syscall<'_> {
             SysCallID::SysUnlink => { self.sys_unlink() },
             SysCallID::SysLink => { self.sys_link() },
             SysCallID::SysMkdir => { self.sys_mkdir() },
+            SysCallID::SysShutdown => { self.sys_shutdown() },
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }
     }

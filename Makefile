@@ -101,6 +101,7 @@ UPROGS=\
 	$(USER)/_touch \
 	$(USER)/_cat \
 	$(USER)/_rm \
+	$(USER)/_quit \
 	_badfd \
 	$(USER)/_forktest \
 	$(USER)/_stressfs
