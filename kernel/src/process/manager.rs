@@ -91,7 +91,6 @@ impl ProcManager{
         pdata.pagetable.as_mut().unwrap().uvm_init(
             &INITCODE,
         );
-
         pdata.size = PGSIZE;
 
         // prepare for the very first "return" from kernel to user. 
@@ -104,12 +103,50 @@ impl ProcManager{
         // Set init process's directory
         pdata.cwd = Some(ICACHE.namei(&ROOTIPATH).expect("cannot find root inode"));
         
-        let mut guard = p.meta.acquire();
-        guard.set_state(ProcState::RUNNABLE);
-        drop(guard);
-
-        // Set init process
+        // Keep init allocated but not runnable until the fs-init system thread
+        // has recovered the log and made the root filesystem safe to use.
         self.init_proc = p as *mut Process;
+    }
+
+    /// Make the first user process runnable after asynchronous kernel setup.
+    pub unsafe fn start_init_process(&mut self) {
+        let init_proc = self.init_proc.as_mut().expect("init process is not allocated");
+        let mut guard = init_proc.meta.acquire();
+        debug_assert_eq!(guard.state, ProcState::ALLOCATED);
+        guard.set_state(ProcState::RUNNABLE);
+    }
+
+    /// Create a scheduler-managed thread that runs entirely in supervisor mode.
+    pub fn spawn_system_thread(
+        &mut self,
+        name: &[u8],
+        entry: SystemThreadEntry,
+    ) -> Result<usize, &'static str> {
+        let pid = self.alloc_pid();
+
+        for proc in self.proc.iter_mut() {
+            let mut guard = proc.meta.acquire();
+            if guard.state != ProcState::UNUSED {
+                continue;
+            }
+
+            let pdata = proc.data.get_mut();
+            debug_assert!(pdata.trapframe.is_null());
+            debug_assert!(pdata.pagetable.is_none());
+
+            guard.pid = pid;
+            guard.channel = 0;
+            guard.killed = false;
+            guard.xstate = 0;
+            guard.set_state(ProcState::ALLOCATED);
+
+            pdata.set_name(name);
+            pdata.init_system_thread_context(entry);
+            guard.set_state(ProcState::RUNNABLE);
+            return Ok(pid)
+        }
+
+        Err("process table is full")
     }
 
 

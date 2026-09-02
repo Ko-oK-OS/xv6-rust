@@ -16,6 +16,8 @@ import time
 
 PROMPT = b"xv6 Rust >>> "
 PANIC_MARKERS = (b"panicked at", b"Kernel panic")
+KERNEL = "kernel/target/riscv64gc-unknown-none-elf/debug/kernel"
+QEMU_CPUS = os.environ.get("XV6_TEST_CPUS", "3")
 
 
 def read_until(process: subprocess.Popen[bytes], marker: bytes, timeout: float) -> bytes:
@@ -48,16 +50,21 @@ def read_until(process: subprocess.Popen[bytes], marker: bytes, timeout: float) 
     return bytes(output)
 
 
-def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
+def run_commands(
+    commands: list[str],
+    timeout: float = 15.0,
+    boot_output: list[bytes] | None = None,
+) -> list[bytes]:
     # Rebuild fs.img as well as the kernel so regression-only user programs,
     # such as badfd, are always present in the image under test.
-    build = subprocess.run(
-        ["make", "fs.img"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    if build.returncode != 0:
-        raise RuntimeError("kernel build failed\n" + build.stdout.decode(errors="replace"))
+    for build_command in (["make", "-C", "kernel", "build"], ["make", "fs.img"]):
+        build = subprocess.run(
+            build_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        if build.returncode != 0:
+            raise RuntimeError("build failed\n" + build.stdout.decode(errors="replace"))
 
     with tempfile.TemporaryDirectory(prefix="xv6-user-test-") as temp_dir:
         test_image = os.path.join(temp_dir, "fs.img")
@@ -72,11 +79,11 @@ def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
                 "-bios",
                 "none",
                 "-kernel",
-                "kernel/target/riscv64gc-unknown-none-elf/debug/kernel",
+                KERNEL,
                 "-m",
                 "3G",
                 "-smp",
-                "3",
+                QEMU_CPUS,
                 "-nographic",
                 "-drive",
                 f"file={test_image},if=none,format=raw,id=x0",
@@ -92,7 +99,9 @@ def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
         )
 
         try:
-            read_until(process, PROMPT, timeout)
+            boot = read_until(process, PROMPT, timeout)
+            if boot_output is not None:
+                boot_output.append(boot)
             assert process.stdin is not None
             outputs = []
             for command in commands:
@@ -250,6 +259,15 @@ def test_quit() -> None:
         raise AssertionError("kernel did not report a clean shutdown")
 
 
+def test_system_thread() -> None:
+    boot_output: list[bytes] = []
+    command_output = run_commands(["echo system-thread-ready"], boot_output=boot_output)
+    if b"file system: initialized by system thread" not in boot_output[0]:
+        raise AssertionError("fs-init system thread did not report completion")
+    if b"system-thread-ready" not in command_output[0]:
+        raise AssertionError("userspace did not start after fs-init system thread")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
     "create-remove": test_create_remove,
@@ -259,6 +277,7 @@ TESTS = {
     "quit": test_quit,
     "repeated-exec-failure": test_repeated_exec_failure,
     "stressfs": test_stressfs,
+    "system-thread": test_system_thread,
 }
 
 

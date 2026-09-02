@@ -23,6 +23,8 @@ use crate::fs::{FileType, Inode, VFile};
 
 use alloc::boxed::Box;
 
+pub type SystemThreadEntry = fn();
+
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ProcState{
     UNUSED,
@@ -77,7 +79,9 @@ pub struct ProcData {
     // proc_tree_lock must be held when using this:
     pub parent: Option<*mut Process>,   
     pub open_files: [Option<Arc<VFile>>; NFILE],
-    pub cwd: Option<Inode>
+    pub cwd: Option<Inode>,
+    /// Present only for a scheduler-managed thread that never enters user mode.
+    pub system_thread_entry: Option<SystemThreadEntry>,
 
 }
 
@@ -92,7 +96,8 @@ impl ProcData {
             name: [0u8; 16],
             parent: None,
             open_files: array![_ => None; NFILE],
-            cwd: None
+            cwd: None,
+            system_thread_entry: None,
         }
     }
 
@@ -101,11 +106,15 @@ impl ProcData {
     }
 
     pub fn set_name(&mut self, name: &[u8]) {
+        // Keep one trailing NUL and clamp caller-provided names so a long
+        // system-thread name cannot overwrite adjacent process metadata.
+        self.name = [0; 16];
+        let len = core::cmp::min(name.len(), self.name.len() - 1);
         unsafe {
             copy_nonoverlapping(
                 name.as_ptr(), 
                 self.name.as_mut_ptr(),
-                name.len()
+                len
             );
         }
     }
@@ -140,6 +149,16 @@ impl ProcData {
         self.context.write_zero();
         self.context.write_ra(fork_ret as usize);
         self.context.write_sp(kstack + PGSIZE);
+    }
+
+    /// Prepare a fresh context that starts at the system-thread bootstrap.
+    pub fn init_system_thread_context(&mut self, entry: SystemThreadEntry) {
+        self.context.write_zero();
+        self.context.write_ra(system_thread_bootstrap as usize);
+        // System threads may use the complete four-page kernel stack because
+        // they never need a user trapframe at its top.
+        self.context.write_sp(self.kstack + PGSIZE * 4);
+        self.system_thread_entry = Some(entry);
     }
 
     /// Find an unallocated file desprictor in proc
@@ -281,6 +300,10 @@ impl Process{
         from_utf8(&pdata.name).unwrap()
     }
 
+    pub fn is_system_thread(&self) -> bool {
+        unsafe { (&*self.data.get()).system_thread_entry.is_some() }
+    }
+
     pub fn modify_kill(&self, killed: bool) {
         let mut proc_data = self.meta.acquire();
         proc_data.killed = killed;
@@ -351,6 +374,7 @@ impl Process{
 
             pdata.set_pagetable(None);
             pdata.set_parent(None);
+            pdata.system_thread_entry = None;
             pdata.size = 0;
 
             guard.pid = 0;
@@ -362,6 +386,35 @@ impl Process{
             drop(guard);
             
         }
+    }
+
+    /// Recycle a returned system thread after the scheduler regains control.
+    pub fn free_system_thread(&mut self) {
+        let pdata = self.data.get_mut();
+        debug_assert!(pdata.system_thread_entry.is_some());
+        debug_assert!(pdata.trapframe.is_null());
+        debug_assert!(pdata.pagetable.is_none());
+
+        pdata.system_thread_entry = None;
+        pdata.context.write_zero();
+        pdata.name = [0; 16];
+        pdata.parent = None;
+        // Reclaim descriptors one at a time: constructing a 100-entry
+        // replacement array here overflowed the small per-hart scheduler stack
+        // during system-thread teardown and corrupted a concurrently starting
+        // user process.
+        for file in pdata.open_files.iter_mut() {
+            file.take();
+        }
+        pdata.cwd = None;
+        pdata.size = 0;
+
+        let mut guard = self.meta.acquire();
+        guard.pid = 0;
+        guard.channel = 0;
+        guard.killed = false;
+        guard.xstate = 0;
+        guard.set_state(ProcState::UNUSED);
     }
 
     
@@ -492,8 +545,3 @@ impl Process{
 extern "C" {
     fn trampoline();
 }
-
-
-
-
-

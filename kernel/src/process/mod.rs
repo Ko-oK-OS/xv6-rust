@@ -4,9 +4,10 @@ use alloc::sync::Arc;
 use alloc::vec;
 use array_macro::array;
 
-use crate::arch::riscv::qemu::fs::{NFILE, ROOTDEV};
+use crate::arch::riscv::qemu::fs::NFILE;
+use crate::arch::riscv::register::sstatus;
 use crate::trap::user_trap_ret;
-use crate::fs::{ LOG, ICACHE, init };
+use crate::fs::{ LOG, ICACHE };
 use crate::syscall::SysResult;
 
 
@@ -82,18 +83,38 @@ pub unsafe fn exit(status: i32) {
 /// 
 /// Need to be handled carefully, because CPU use ra to jump here
 unsafe fn fork_ret() -> ! {
-    static mut FIRST: bool = true;
-    
     // Still holding p->lock from scheduler
     CPU_MANAGER.myproc().unwrap().meta.release();
-    
-    if FIRST {
-        // File system initialization
-        FIRST = false;
-        init(ROOTDEV);
-    }
     // println!("user trap return");
     user_trap_ret();
 }
 
+/// First instruction executed by a newly scheduled system thread.
+unsafe fn system_thread_bootstrap() -> ! {
+    let entry = {
+        let proc = CPU_MANAGER.myproc().expect("system thread has no process");
+        let entry = (&*proc.data.get())
+            .system_thread_entry
+            .expect("system thread has no entry");
+        // scheduler() switched with this lock held. Release it before the
+        // entry can sleep, yield, or acquire other process locks.
+        proc.meta.release();
+        entry
+    };
+
+    sstatus::intr_on();
+    entry();
+    system_thread_exit();
+}
+
+/// Return control to the scheduler; it owns final slot reclamation.
+unsafe fn system_thread_exit() -> ! {
+    let proc = CPU_MANAGER.myproc().expect("system thread has no process");
+    let context = (&mut *proc.data.get()).get_context_mut();
+    let mut guard = proc.meta.acquire();
+    guard.set_state(ProcState::ZOMBIE);
+    guard = CPU_MANAGER.mycpu().sched(guard, context);
+    drop(guard);
+    panic!("a completed system thread was scheduled again");
+}
 
