@@ -1,14 +1,5 @@
-use core::ptr::{ copy_nonoverlapping, NonNull };
-use core::mem::size_of;
-use alloc::sync::Arc;
-use alloc::vec;
-use array_macro::array;
-
-use crate::arch::riscv::qemu::fs::NFILE;
 use crate::arch::riscv::register::sstatus;
 use crate::trap::user_trap_ret;
-use crate::fs::{ LOG, ICACHE };
-use crate::syscall::SysResult;
 
 
 pub mod cpu;
@@ -34,48 +25,17 @@ static INITCODE: [u8; 51] = [
 /// Exit the current process. Does not return. 
 /// An exited process remains in the zombie state
 /// until its parent calls wait()
-pub unsafe fn exit(status: i32) {
+pub unsafe fn exit(status: i32) -> ! {
     let my_proc = CPU_MANAGER.myproc().unwrap();
 
-    // TODO: initproc
-
-    // Get extern data in current process. 
-    let pdata = my_proc.data.get_mut();
-
-    // Close all open files
-    for f in pdata.open_files.iter_mut() {
-        f.take();
+    // Faults and kill checks arrive through this path rather than sys_exit.
+    // Route both leaders and secondary threads through the shared manager
+    // implementation so killed leaders also stop and reap their thread group.
+    if my_proc.is_user_thread() {
+        PROC_MANAGER.thread_exit(status as usize)
+    } else {
+        PROC_MANAGER.exit(status as usize)
     }
-    pdata.open_files = array![_ => None; NFILE];
-
-    LOG.begin_op();
-    // extern_data.cwd.as_ref().unwrap().put();
-    // ICACHE.put(extern_data.cwd.as_ref());
-    drop(pdata.cwd.as_mut());
-    LOG.end_op();
-    pdata.cwd = None;
-
-    let wait_guard = PROC_MANAGER.wait_lock.acquire();
-    // TODO: Give any children to init
-    
-    // Parent might be sleeping in wait(). 
-    PROC_MANAGER.wake_up(pdata.parent.unwrap() as usize);
-
-    let mut guard = my_proc.meta.acquire();
-
-    guard.set_state(ProcState::ZOMBIE);
-    guard.xstate = status as usize;
-    
-    drop(guard);
-
-    drop(wait_guard);
-
-    // Jump into scheduler, never to return. 
-    CPU_MANAGER.scheduler();
-    panic!("zombine exit");
-
-
-
 }
 
 /// A fork child's very first scheduling by scheduler()
@@ -117,4 +77,3 @@ unsafe fn system_thread_exit() -> ! {
     drop(guard);
     panic!("a completed system thread was scheduled again");
 }
-

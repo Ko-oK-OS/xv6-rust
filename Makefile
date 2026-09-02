@@ -57,7 +57,7 @@ $(USER)/initcode: $(USER)/initcode.S
 	$(OBJCOPY) -S -O binary $(USER)/initcode.out $(USER)/initcode
 	$(OBJDUMP) -S $(USER)/initcode.o > $(USER)/initcode.asm
 
-ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o
+ULIB = $(USER)/ulib.o $(USER)/usys.o $(USER)/printf.o $(USER)/umalloc.o $(USER)/thread.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -102,6 +102,7 @@ UPROGS=\
 	$(USER)/_cat \
 	$(USER)/_rm \
 	$(USER)/_quit \
+	$(USER)/_threadtest \
 	_badfd \
 	$(USER)/_forktest \
 	$(USER)/_stressfs

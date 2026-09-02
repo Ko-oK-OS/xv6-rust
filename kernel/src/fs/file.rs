@@ -229,8 +229,12 @@ impl VFile {
                 //     stat.dev, stat.inum, stat.nlink, stat.size, stat.itype
                 // );
                 let pdata = p.data.get_mut();
-                let page_table = pdata.pagetable.as_mut().unwrap();
-                page_table.copy_out(addr, (&stat) as *const Stat as *const u8, size_of::<Stat>())?;
+                let address_space = pdata.address_space.as_ref().unwrap().clone();
+                address_space.acquire().page_table.copy_out(
+                    addr,
+                    (&stat) as *const Stat as *const u8,
+                    size_of::<Stat>()
+                )?;
                 Ok(())
             },  
 
@@ -255,6 +259,5 @@ impl Clone for VFile {
         }
     }
 }
-
 
 

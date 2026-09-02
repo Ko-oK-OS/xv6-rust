@@ -15,6 +15,9 @@ use super::Process;
 
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::sync::Arc;
+use crate::lock::spinlock::Spinlock;
+use super::UserAddressSpace;
 
 const ELF_MAGIC: u32 = 0x464C457F; // elf magic number
 
@@ -128,6 +131,16 @@ pub unsafe fn exec(
     let stack_base: usize;
     let mut user_stack: [usize; MAXARG] = [0;MAXARG];
     let inode: Inode;
+
+    let current = CPU_MANAGER.myproc().unwrap();
+    let current_address_space = (&*current.data.get())
+        .address_space.as_ref().unwrap();
+    // Replacing a page table while sibling threads are executing in it would
+    // invalidate their instruction and stack mappings. Require the caller to
+    // join all threads before exec commits a new image.
+    if Arc::strong_count(current_address_space) != 1 {
+        return Err("exec: active user threads")
+    }
 
     LOG.begin_op();
 
@@ -247,7 +260,8 @@ pub unsafe fn exec(
         LOG.end_op();
 
         p = CPU_MANAGER.myproc().unwrap();
-        let old_size = (&*p.data.get()).size;
+        let old_address_space = (&*p.data.get()).address_space.as_ref().unwrap().clone();
+        let old_size = old_address_space.acquire().size;
 
         // Allocate two pages at the next page boundary
         // Use the second as the user stack. 
@@ -343,11 +357,13 @@ pub unsafe fn exec(
     core::ptr::copy(exec_name.as_ptr(), &mut pdata.name as *mut u8, 16);
 
     // Commit to user image.
-    let old_pgt = pdata.pagetable.as_mut().take().unwrap();
-    old_pgt.proc_free_pagetable(old_size);
+    let old_address_space = pdata.address_space.take().unwrap();
+    old_address_space.acquire().page_table.proc_free_pagetable(old_size);
 
-    pdata.pagetable = Some(page_table);
-    pdata.size = size;
+    pdata.address_space = Some(Arc::new(Spinlock::new(
+        UserAddressSpace::new(page_table, size),
+        "user address space"
+    )));
     // initial program counter = main
     trapframe.epc = elf.entry;
     // initial stack pointer

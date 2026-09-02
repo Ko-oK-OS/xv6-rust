@@ -268,6 +268,17 @@ def test_system_thread() -> None:
         raise AssertionError("userspace did not start after fs-init system thread")
 
 
+def test_user_threads() -> None:
+    output = run_command("threadtest", timeout=15.0)
+    if b"thread test OK" not in output:
+        raise AssertionError(
+            "threadtest did not report success\n\n" + output.decode(errors="replace")
+        )
+    for marker in PANIC_MARKERS:
+        if marker in output:
+            raise AssertionError(f"kernel output contained {marker!r}")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
     "create-remove": test_create_remove,
@@ -278,6 +289,7 @@ TESTS = {
     "repeated-exec-failure": test_repeated_exec_failure,
     "stressfs": test_stressfs,
     "system-thread": test_system_thread,
+    "user-threads": test_user_threads,
 }
 
 

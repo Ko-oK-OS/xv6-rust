@@ -156,7 +156,17 @@ pub unsafe fn user_trap_ret() -> ! {
     sepc::write((*pdata.trapframe).epc);
     
     // tell trampoline.S the user page table to switch to
-    let satp = pdata.pagetable.as_ref().unwrap().as_satp();
+    let trapframe_va = pdata.trapframe_va;
+    // userret never returns to this Rust frame, so an Arc cloned here would
+    // never run Drop and would permanently pin the address space. Borrow the
+    // process-owned Arc just long enough to calculate satp instead.
+    let satp = pdata
+        .address_space
+        .as_ref()
+        .unwrap()
+        .acquire()
+        .page_table
+        .as_satp();
 
     // jump to trampoline.S at the top of memory, which
     // switches to the user page table, restores user registers,
@@ -164,7 +174,7 @@ pub unsafe fn user_trap_ret() -> ! {
     let userret_virt = TRAMPOLINE + (userret as usize - trampoline as usize);
     let userret_virt: extern "C" fn(usize, usize) -> ! = 
     core::mem::transmute(userret_virt as usize);
-    userret_virt(TRAPFRAME, satp);
+    userret_virt(trapframe_va, satp);
 }
 
 /// interrupts and exceptions from kernel code go here via kernelvec,
@@ -292,5 +302,8 @@ pub unsafe fn kernel_trap(
 pub unsafe fn clock_intr(){
     let mut ticks = TICKS_LOCK.acquire();
     *ticks = *ticks + 1;
+    // sys_sleep waits on this address. Without the wakeup, a sleeping user
+    // thread remains blocked forever even though the tick count advances.
+    PROC_MANAGER.wake_up(core::ptr::addr_of!(TICKS_LOCK) as usize);
     drop(ticks);
 }
