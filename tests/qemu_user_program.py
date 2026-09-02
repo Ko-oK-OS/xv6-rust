@@ -114,6 +114,62 @@ def run_command(command: str, timeout: float = 15.0) -> bytes:
     return run_commands([command], timeout)[0]
 
 
+def run_command_until_qemu_exit(command: str, timeout: float = 5.0) -> tuple[int, bytes]:
+    build = subprocess.run(
+        ["make", "fs.img"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if build.returncode != 0:
+        raise RuntimeError("kernel build failed\n" + build.stdout.decode(errors="replace"))
+
+    with tempfile.TemporaryDirectory(prefix="xv6-user-test-") as temp_dir:
+        test_image = os.path.join(temp_dir, "fs.img")
+        shutil.copyfile("fs.img", test_image)
+        process = subprocess.Popen(
+            [
+                "qemu-system-riscv64",
+                "-machine",
+                "virt",
+                "-bios",
+                "none",
+                "-kernel",
+                "kernel/target/riscv64gc-unknown-none-elf/debug/kernel",
+                "-m",
+                "3G",
+                "-smp",
+                "3",
+                "-nographic",
+                "-drive",
+                f"file={test_image},if=none,format=raw,id=x0",
+                "-device",
+                "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+        try:
+            read_until(process, PROMPT, timeout)
+            assert process.stdin is not None
+            process.stdin.write(command.encode() + b"\n")
+            process.stdin.flush()
+
+            try:
+                process.wait(timeout=timeout)
+            except subprocess.TimeoutExpired as error:
+                raise TimeoutError(f"QEMU did not exit after {command!r}") from error
+
+            output = process.stdout.read() if process.stdout else b""
+            return process.returncode, output
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGTERM)
+                process.wait(timeout=2)
+
+
 def test_cat_eof() -> None:
     output = run_command("cat README.md")
     decoded = output.decode(errors="replace")
@@ -186,12 +242,21 @@ def test_invalid_fd_boundary() -> None:
             raise AssertionError(f"invalid fd caused kernel output containing {marker!r}")
 
 
+def test_quit() -> None:
+    returncode, output = run_command_until_qemu_exit("quit")
+    if returncode != 0:
+        raise AssertionError(f"QEMU exited with status {returncode}")
+    if b"Shutdown!" not in output:
+        raise AssertionError("kernel did not report a clean shutdown")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
     "create-remove": test_create_remove,
     "forktest": test_forktest,
     "invalid-fd-boundary": test_invalid_fd_boundary,
     "long-path-component": test_long_path_component,
+    "quit": test_quit,
     "repeated-exec-failure": test_repeated_exec_failure,
     "stressfs": test_stressfs,
 }

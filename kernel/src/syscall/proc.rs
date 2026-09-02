@@ -2,6 +2,14 @@ use crate::trap::TICKS_LOCK;
 use super::*;
 
 impl Syscall<'_> {
+    /// Shut down the emulated machine at the request of a user program.
+    pub fn sys_shutdown(&self) -> SysResult {
+        // Reuse the kernel's existing S-mode environment call so user space
+        // cannot write the QEMU virt-test MMIO device directly.
+        crate::shutdown::shutdown();
+        Ok(0)
+    }
+
     pub fn sys_fork(&mut self) -> SysResult {
         let proc_meta = self.process.meta.acquire();
         drop(proc_meta);
@@ -96,5 +104,4 @@ impl Syscall<'_> {
     }
     
 }
-
 
