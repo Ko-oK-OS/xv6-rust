@@ -69,9 +69,20 @@ use crate::arch::riscv::{
     mscratch, mtvec, mie, sstatus, pmp,
 };
 use crate::arch::riscv::qemu::param::NCPU;
+use crate::arch::riscv::qemu::fs::ROOTDEV;
 
 static mut TIMER_SCRATCH:[[u64; 5]; NCPU] = [[0u64; 5]; NCPU];
 static STARTED:AtomicBool = AtomicBool::new(false);
+
+/// Initialize the filesystem from a schedulable supervisor-mode context.
+/// Disk recovery may sleep, so it cannot run directly on the boot stack.
+fn init_file_system_thread() {
+    unsafe {
+        fs::init(ROOTDEV);
+        println!("file system: initialized by system thread");
+        PROC_MANAGER.start_init_process();
+    }
+}
 
 /// 引导启动程序,进行寄存器的初始化操作
 #[no_mangle]
@@ -162,7 +173,10 @@ pub unsafe extern "C" fn rust_main() {
         plic_init_hart(); // ask PLIC for device interrupts
         BCACHE.binit(); // buffer cache
         DISK.acquire().init(); // emulated hard disk
-        PROC_MANAGER.user_init(); // first user process
+        PROC_MANAGER.user_init(); // allocate the first user process
+        PROC_MANAGER
+            .spawn_system_thread(b"fs-init", init_file_system_thread)
+            .expect("Fail to create fs-init system thread");
         STARTED.store(true, Ordering::SeqCst);
         sstatus::intr_on();
     } else {
@@ -176,5 +190,3 @@ pub unsafe extern "C" fn rust_main() {
     CPU_MANAGER.scheduler();
     
 }
-
-

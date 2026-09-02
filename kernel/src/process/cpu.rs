@@ -88,10 +88,18 @@ impl CPUManager{
                     if c.get_context_mut().is_null() {
                         panic!("context switch back with no process reference.");
                     }
+                    // A returned system thread has no parent to wait() for it,
+                    // so the scheduler must reclaim its slot after switching
+                    // off the thread's stack.
+                    let reap_system_thread =
+                        pmeta.state == ProcState::ZOMBIE && proc.is_system_thread();
                     // Process is done running for now. 
                     // It should have changed it's process state before coming back. 
                     c.set_proc(None);
                     drop(pmeta);
+                    if reap_system_thread {
+                        proc.free_system_thread();
+                    }
                 }
 
                 None => {}
