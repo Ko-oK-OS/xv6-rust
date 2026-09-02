@@ -103,6 +103,19 @@ pub unsafe fn user_trap() {
             my_proc.yielding();
         },
 
+        #[cfg(feature = "sbi")]
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            crate::timer_init();
+            if cpu::cpuid() == 0 {
+                clock_intr();
+                crate::driver::uart::poll_input();
+            }
+            if my_proc.killed() {
+                exit(-1);
+            }
+            my_proc.yielding();
+        },
+
         _ => {
             println!("usertrap: unexpected scacuse: {:?}\n pid: {}", scause.cause(), my_proc.pid());
             println!("sepc: 0x{:x}, stval: 0x{:x}", sepc, stval::read());
@@ -285,6 +298,17 @@ pub unsafe fn kernel_trap(
             sip::clear_ssip();
 
             // give up the cpu. 
+            CPU_MANAGER.mycpu().try_yield_proc();
+        }
+
+
+        #[cfg(feature = "sbi")]
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            crate::timer_init();
+            if cpu::cpuid() == 0 {
+                clock_intr();
+                crate::driver::uart::poll_input();
+            }
             CPU_MANAGER.mycpu().try_yield_proc();
         }
 

@@ -67,6 +67,7 @@ impl Uart {
     } 
 
     /// init uart device
+    #[cfg(not(feature = "sbi"))]
     pub fn init(&mut self) {
         // disable interrupts
         write_reg(UART_BASE_ADDR + IER, 0x00);
@@ -91,12 +92,16 @@ impl Uart {
         write_reg(UART_BASE_ADDR + IER, IER_TX_ENABLE as u8 | IER_RX_ENABLE as u8);
     }
 
+    #[cfg(feature = "sbi")]
+    pub fn init(&mut self) {}
+
     /// Add a chacter to the output buffer and tell the
     /// UART to start sending if it isn't already. 
     /// blocks if the output buffer is full. 
     /// because it may block, it can't be called from interrupts;
     /// it's only suitable for use
     /// by write()
+    #[cfg(not(feature = "sbi"))]
     pub fn put(&mut self, c: u8) {
         let ptr = UART_BASE_ADDR as *mut u8;
         loop {
@@ -111,7 +116,13 @@ impl Uart {
         }
     }
 
+    #[cfg(feature = "sbi")]
+    pub fn put(&mut self, c: u8) {
+        crate::arch::riscv::sbi::console_putchar(c);
+    }
+
     /// get a chacter from uart
+    #[cfg(not(feature = "sbi"))]
     pub fn get(&mut self) -> Option<u8> {
         let ptr = UART_BASE_ADDR as *mut u8;
         unsafe {
@@ -123,6 +134,11 @@ impl Uart {
                 Some(ptr.add(0).read_volatile())
             }
         }
+    }
+
+    #[cfg(feature = "sbi")]
+    pub fn get(&mut self) -> Option<u8> {
+        crate::arch::riscv::sbi::console_getchar()
     }
 
 
@@ -241,22 +257,36 @@ pub fn uart_intr() {
     }
 }
 
+#[cfg(not(feature = "sbi"))]
 fn write_reg(addr: usize, val: u8) {
     unsafe{
         ptr::write(addr as *mut u8, val);
     }
 }
 
+#[cfg(feature = "sbi")]
+fn write_reg(_addr: usize, val: u8) {
+    crate::arch::riscv::sbi::console_putchar(val);
+}
+
+#[cfg(not(feature = "sbi"))]
 fn read_reg(addr: usize) -> u8 {
     unsafe {
         ptr::read(addr as *const u8)
     }
 }
 
+#[cfg(feature = "sbi")]
+fn read_reg(_addr: usize) -> u8 { 0 }
+
 /// Read the LSR to see if it is able to transmit data. 
+#[cfg(not(feature = "sbi"))]
 fn idle() -> bool {
     read_reg(UART_BASE_ADDR + LSR) & (1 << 5) > 0
 }
+
+#[cfg(feature = "sbi")]
+fn idle() -> bool { true }
 
 /// Non-blocking write to uart device. 
 pub(super) fn putc_sync(c: u8) {
@@ -269,9 +299,17 @@ pub(super) fn putc_sync(c: u8) {
     pop_off();
 }
 
-
-
-
-
+/// The SBI payload receives console input without a virtual UART interrupt,
+/// so poll the legacy console service from the periodic timer tick.
+#[cfg(feature = "sbi")]
+pub fn poll_input() {
+    loop {
+        let byte = UART.acquire().get();
+        match byte {
+            Some(byte) => console_intr(byte),
+            None => return,
+        }
+    }
+}
 
 

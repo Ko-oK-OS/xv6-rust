@@ -16,6 +16,7 @@ SECTIONS
     *(trampsec)
   }
 
+  . = ALIGN(0x1000);
   .rodata :
   {
     *(.rodata .rodata.*)

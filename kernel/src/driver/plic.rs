@@ -29,12 +29,17 @@ fn PLIC_SCLAIM(hart_id: usize) -> usize {
     PLIC_BASE + 0x201004 + hart_id * 0x2000
 }
 
+#[cfg(not(feature = "sbi"))]
 pub fn plic_init() {
     // set desired IRQ priorities non-zero (otherwise disable)
     write(PLIC_BASE + (UART0_IRQ * 4) as usize, 1);
     write(PLIC_BASE + (VIRTIO0_IRQ * 4) as usize, 1);
 }
 
+#[cfg(feature = "sbi")]
+pub fn plic_init() {}
+
+#[cfg(not(feature = "sbi"))]
 pub fn plic_init_hart() {
     let hart_id = unsafe{ cpuid() };
 
@@ -44,6 +49,9 @@ pub fn plic_init_hart() {
     // Set this hart's S-mode pirority threshold to 0. 
     write(PLIC_SPRIORITY(hart_id), 0);
 }
+
+#[cfg(feature = "sbi")]
+pub fn plic_init_hart() {}
 
 /// Ask the PLIC what interrupt we should serve. 
 pub fn plic_claim() -> Option<u32> {

@@ -37,6 +37,10 @@ LDFLAGS = -z max-page-size=4096
 run: fs.img $(UPROGS)
 	make -C kernel run
 
+# Build an S-mode payload for a virtual SBI implementation such as Hypocaust.
+sbi:
+	make -C kernel sbi
+
 $(KERNEL):
 	make -C kernel
 
