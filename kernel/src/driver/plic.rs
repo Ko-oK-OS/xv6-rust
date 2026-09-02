@@ -29,18 +29,17 @@ fn PLIC_SCLAIM(hart_id: usize) -> usize {
     PLIC_BASE + 0x201004 + hart_id * 0x2000
 }
 
-#[cfg(not(feature = "sbi"))]
 pub fn plic_init() {
+    // PR #61 (`feature/sbi-virtual-plic`) programs the same architectural
+    // PLIC interface when Hypocaust supplies a VM-local virtual controller.
     // set desired IRQ priorities non-zero (otherwise disable)
     write(PLIC_BASE + (UART0_IRQ * 4) as usize, 1);
     write(PLIC_BASE + (VIRTIO0_IRQ * 4) as usize, 1);
 }
 
-#[cfg(feature = "sbi")]
-pub fn plic_init() {}
-
-#[cfg(not(feature = "sbi"))]
 pub fn plic_init_hart() {
+    // PR #61 enables VirtIO/UART sources for this Guest hart on both native
+    // QEMU and Hypocaust's per-VM virtual PLIC.
     let hart_id = unsafe{ cpuid() };
 
     // Set UART's enable bit for this hart's S-mode. 
@@ -49,9 +48,6 @@ pub fn plic_init_hart() {
     // Set this hart's S-mode pirority threshold to 0. 
     write(PLIC_SPRIORITY(hart_id), 0);
 }
-
-#[cfg(feature = "sbi")]
-pub fn plic_init_hart() {}
 
 /// Ask the PLIC what interrupt we should serve. 
 pub fn plic_claim() -> Option<u32> {
