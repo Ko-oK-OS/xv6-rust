@@ -482,11 +482,10 @@ impl InodeData {
         count: u32
     ) -> Result<usize, &'static str> { 
         // Check the reading content is in range.
-        let end = offset.checked_add(count).ok_or("Fail to add count.")?;
-        if end > self.dinode.size {
-            // println!("[Kernel] read: end: {}, dinode.size: {}", end, self.dinode.size);
-            return Err("inode read: end is more than diskinode's size.")
+        if offset > self.dinode.size {
+            return Err("inode read: offset is more than diskinode's size.")
         }
+        let count = min(count, self.dinode.size - offset);
 
         let mut total: usize = 0;
         let mut offset = offset as usize;
