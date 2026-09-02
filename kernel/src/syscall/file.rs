@@ -398,6 +398,7 @@ impl Syscall<'_> {
         let mut name = [0u8; DIRSIZ];
         let parent: Inode;
         let inode: Inode;
+        let entry_offset: u32;
 
         let addr = self.arg(0);
         self.copy_from_str(addr, &mut path, MAXPATH)?;
@@ -419,9 +420,10 @@ impl Syscall<'_> {
                 LOG.end_op();
                 return Err(())
         }
-        match parent_guard.dir_lookup(&name) {
-            Some(cur) => {
+        match parent_guard.dir_lookup_with_offset(&name) {
+            Some((cur, offset)) => {
                 inode = cur;
+                entry_offset = offset;
             },
             _ => {
                 drop(parent_guard);
@@ -443,6 +445,19 @@ impl Syscall<'_> {
                 return Err(())
             }
 
+        let empty_entry = DirEntry::new();
+        if parent_guard.write(
+            false,
+            &empty_entry as *const DirEntry as usize,
+            entry_offset,
+            size_of::<DirEntry>() as u32
+        ).is_err() {
+            drop(inode_guard);
+            drop(parent_guard);
+            LOG.end_op();
+            return Err(())
+        }
+
         if inode_guard.dinode.itype == InodeType::Directory {
             parent_guard.dinode.nlink -= 1;
             parent_guard.update();
@@ -452,6 +467,9 @@ impl Syscall<'_> {
         inode_guard.dinode.nlink -= 1;
         inode_guard.update();
         drop(inode_guard);
+        // Dropping the final inode reference may truncate and free its blocks,
+        // so it must happen while the unlink transaction is still active.
+        drop(inode);
 
         LOG.end_op();
         Ok(0)
@@ -538,8 +556,6 @@ impl Syscall<'_> {
     }
 
 }
-
-
 
 
 

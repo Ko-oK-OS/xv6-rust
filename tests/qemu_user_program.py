@@ -143,8 +143,19 @@ def test_long_path_component() -> None:
         raise AssertionError("ls did not find the DIRSIZ-truncated file name")
 
 
+def test_create_remove() -> None:
+    outputs = run_commands(["touch tfile", "rm tfile", "ls"], timeout=5.0)
+    combined = b"".join(outputs)
+    for marker in PANIC_MARKERS:
+        if marker in combined:
+            raise AssertionError(f"kernel output contained {marker!r}")
+    if b"tfile" in outputs[2]:
+        raise AssertionError("removed file is still present in ls output")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
+    "create-remove": test_create_remove,
     "long-path-component": test_long_path_component,
     "repeated-exec-failure": test_repeated_exec_failure,
 }

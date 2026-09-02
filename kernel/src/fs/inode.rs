@@ -580,6 +580,11 @@ impl InodeData {
     /// Look for an inode entry in this directory according the name. 
     /// Panics if this is not a directory. 
     pub fn dir_lookup(&mut self, name: &[u8]) -> Option<Inode> {
+        self.dir_lookup_with_offset(name).map(|(inode, _)| inode)
+    }
+
+    /// Look for a directory entry and return both its inode and byte offset.
+    pub fn dir_lookup_with_offset(&mut self, name: &[u8]) -> Option<(Inode, u32)> {
         // assert!(name.len() == DIRSIZ);
         if self.dinode.itype != InodeType::Directory {
             panic!("inode type is not directory");
@@ -602,7 +607,7 @@ impl InodeData {
                 dir_entry.name[i] == name.get(i).copied().unwrap_or(0)
             });
             if matches {
-                return Some(ICACHE.get(self.dev, dir_entry.inum as u32))
+                return Some((ICACHE.get(self.dev, dir_entry.inum as u32), offset))
             }
         }
         None
