@@ -1,7 +1,6 @@
 use core::char::MAX;
 use core::ptr::drop_in_place;
 use core::str::from_utf8;
-use core::usize;
 use core::{ptr::NonNull, slice::from_raw_parts_mut};
 use core::slice::from_raw_parts;
 use core::cell::RefCell;

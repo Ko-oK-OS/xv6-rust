@@ -34,17 +34,28 @@ Install the following tools and make sure they are available on `PATH`:
 - GNU Make, a host C compiler, Perl, and Python 3
 - a RISC-V bare-metal C toolchain providing either
   `riscv64-unknown-elf-*` or `riscv64-elf-*`
-- `qemu-system-riscv64`
+- `qemu-system-riscv64` (QEMU 11.1.1 is the latest validated release)
 
-The repository selects Rust nightly through `rust-toolchain.toml`. Install the
-target and binary utilities once:
+The root `rust-toolchain.toml` pins `nightly-2026-09-02`, the RISC-V target,
+and `llvm-tools-preview`. Rustup installs that exact snapshot automatically
+when you enter the repository. Install the separately distributed binary-tool
+proxy at its validated version:
 
 ```sh
-rustup toolchain install nightly
-rustup target add --toolchain nightly riscv64gc-unknown-none-elf
-rustup component add --toolchain nightly llvm-tools-preview
-cargo install cargo-binutils
+cargo install cargo-binutils --version 0.4.0 --locked
 ```
+
+The kernel still needs nightly only for the no-std allocation error handler.
+From the repository root, verify the selected compiler with:
+
+```text
+rustc --version
+rustc 1.100.0-nightly (5db7f4be8 2026-09-01)
+```
+
+Cargo dependencies are reproducible through the committed `kernel/Cargo.lock`.
+See [the toolchain policy](docs/toolchain.md) before updating the pinned
+snapshot or dependency lockfile.
 
 Clone all submodules, build the filesystem image and kernel, then start QEMU:
 
@@ -161,6 +172,7 @@ before investing in an implementation.
 - [Locks](docs/lock.md)
 - [Interrupts](docs/interrupt.md)
 - [Filesystem (中文)](docs/xv6%20文件系统.md)
+- [Toolchain and update policy](docs/toolchain.md)
 
 ## Acknowledgements
 
