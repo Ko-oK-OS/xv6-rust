@@ -314,6 +314,8 @@ fn skip_path(
         cur += 1;
     }
 
+    // On-disk directory names are fixed-width. A full DIRSIZ component has no
+    // trailing NUL, so clamp the copy instead of panicking or indexing past it.
     let count = min(cur - start, name.len());
     unsafe{
         ptr::copy(path.as_ptr().offset(start as isize), name.as_mut_ptr(), count);
@@ -483,6 +485,8 @@ impl InodeData {
         if offset > self.dinode.size {
             return Err("inode read: offset is more than diskinode's size.")
         }
+        // User reads may legally straddle EOF. Returning the remaining bytes
+        // lets programs such as cat consume the final partial buffer normally.
         let count = min(count, self.dinode.size - offset);
 
         let mut total: usize = 0;
@@ -584,6 +588,7 @@ impl InodeData {
     }
 
     /// Look for a directory entry and return both its inode and byte offset.
+    /// The offset lets unlink clear the entry before its inode can be recycled.
     pub fn dir_lookup_with_offset(&mut self, name: &[u8]) -> Option<(Inode, u32)> {
         // assert!(name.len() == DIRSIZ);
         if self.dinode.itype != InodeType::Directory {
@@ -603,6 +608,8 @@ impl InodeData {
                 continue;
             }
             // println!("dir_entry_name: {}, name: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap(), String::from_utf8(name.to_vec()).unwrap());
+            // A name of exactly DIRSIZ bytes has no NUL terminator. Treat a
+            // shorter input as zero-padded so both on-disk forms compare safely.
             let matches = (0..DIRSIZ).all(|i| {
                 dir_entry.name[i] == name.get(i).copied().unwrap_or(0)
             });

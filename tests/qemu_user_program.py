@@ -49,6 +49,8 @@ def read_until(process: subprocess.Popen[bytes], marker: bytes, timeout: float) 
 
 
 def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
+    # Rebuild fs.img as well as the kernel so regression-only user programs,
+    # such as badfd, are always present in the image under test.
     build = subprocess.run(
         ["make", "fs.img"],
         stdout=subprocess.PIPE,
@@ -59,6 +61,8 @@ def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
 
     with tempfile.TemporaryDirectory(prefix="xv6-user-test-") as temp_dir:
         test_image = os.path.join(temp_dir, "fs.img")
+        # Filesystem tests write to the disk. Give every case a private image so
+        # a crash or successful mutation cannot affect later tests or the repo.
         shutil.copyfile("fs.img", test_image)
         process = subprocess.Popen(
             [
@@ -79,6 +83,8 @@ def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
                 "-device",
                 "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0",
             ],
+            # The harness does not attach networking: avoiding host forwarding
+            # keeps repeated/parallel runs independent of host UDP port state.
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

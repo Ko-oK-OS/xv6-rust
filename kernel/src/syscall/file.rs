@@ -24,6 +24,8 @@ impl Syscall<'_> {
     pub fn sys_dup(&self) -> SysResult {
         let old_fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        // File descriptors are controlled by user space; -1 reaches us as
+        // usize::MAX, so indexing directly would panic the kernel.
         let file = pdata.open_files.get(old_fd).and_then(Option::as_ref).ok_or(())?;
         // 使用 Arc 来代替 refs
         let new_fd = unsafe{ CPU_MANAGER.alloc_fd(file) }.map_err(|_| ())?;
@@ -38,6 +40,8 @@ impl Syscall<'_> {
         // Get file
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        // Reject out-of-range and already-closed descriptors as syscall errors
+        // instead of allowing untrusted input to index or unwrap the fd table.
         let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
         // 两个参数分别是读取存储的地址和读取的最大字节数
         // Get user read address
@@ -64,6 +68,8 @@ impl Syscall<'_> {
         let size;
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        // stressfs exposed write(-1, ...); a bad descriptor must never turn
+        // into a kernel bounds panic.
         let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
         let ptr = self.arg(1);
         let len = self.arg(2);
@@ -91,6 +97,8 @@ impl Syscall<'_> {
         let open_mode = self.arg(1);
         // Start write log
         LOG.begin_op();
+        // Open modes are bit flags, not mutually-exclusive enum values.
+        // Masking keeps combinations such as O_CREATE | O_RDWR on create path.
         if open_mode & OpenMode::CREATE as usize != 0 {
                 match ICACHE.create(&path, crate::fs::InodeType::File, 0, 0) {
                     Ok(cur_inode) => {
@@ -136,6 +144,7 @@ impl Syscall<'_> {
             }
         }
     
+        // Test the 0x400 mask directly; the old bit-11 check missed O_TRUNC.
         if open_mode & OpenMode::TRUNC as usize != 0 && inode_guard.dinode.itype == InodeType::File {
             inode_guard.truncate(&inode);
         }
@@ -261,6 +270,7 @@ impl Syscall<'_> {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
         // 使用 take() 夺取所有权来将引用数减 1
+        // An invalid or already-closed fd is a user error, not a kernel panic.
         pdata.open_files.get_mut(fd).and_then(Option::take).ok_or(())?;
         Ok(0)
     }
@@ -273,6 +283,7 @@ impl Syscall<'_> {
         println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
 
         let pdata = unsafe{ &mut *self.process.data.get() };
+        // Keep the same user-input boundary as read/write/close.
         let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
 
         #[cfg(feature = "kernel_debug")]
@@ -441,6 +452,8 @@ impl Syscall<'_> {
                 return Err(())
             }
 
+        // Remove the parent directory reference before nlink reaches zero;
+        // otherwise a later ls follows the stale entry into a recycled inode.
         let empty_entry = DirEntry::new();
         if parent_guard.write(
             false,

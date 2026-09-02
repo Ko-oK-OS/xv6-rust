@@ -135,6 +135,8 @@ pub unsafe fn exec(
     inode = match ICACHE.namei(path.as_bytes()) {
         Some(inode) => inode,
         None => {
+            // namei can fail after begin_op(). Balance the transaction here;
+            // leaking it made the second failed exec hang during process exit.
             LOG.end_op();
             return Err("Fail to find executable file")
         }

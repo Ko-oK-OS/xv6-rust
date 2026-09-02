@@ -76,6 +76,8 @@ $(USER)/_forktest: $(USER)/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $(USER)/_forktest $(USER)/forktest.o $(USER)/ulib.o $(USER)/usys.o
 	$(OBJDUMP) -S $(USER)/_forktest > $(USER)/forktest.asm
 
+# Link the regression helper as a real xv6 user program so invalid descriptors
+# cross the user/kernel boundary instead of being simulated by a host-side test.
 _badfd: tests/badfd.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > tests/badfd.asm
