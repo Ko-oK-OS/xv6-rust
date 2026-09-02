@@ -1,7 +1,7 @@
 
 [submodule "allocator"]
 	path = allocator
-	url = https://github.com/Ko-oK-OS/allocator.git
+	url = https://github.com/Ko-oK-OS/buddy-allocator.git
 [submodule "xv6-mkfs"]
 	path = xv6-mkfs
 	url = git@github.com:Ko-oK-OS/xv6-mkfs.git

@@ -4,6 +4,10 @@ KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 CPUS		:= 3
 
+# Reproducible builds must fail instead of silently resolving dependency
+# versions that differ from the reviewed kernel/Cargo.lock.
+CARGO_FLAGS := --locked
+
 FS_IMG		:= ../fs.img
 KERNEL_ASM	:= kernel.S
 
@@ -34,11 +38,11 @@ build: $(BIN_FILE)
 
 # 通过 Rust 文件中的注释生成 os 的文档
 doc:
-	@cargo doc --document-private-items
+	@cargo doc $(CARGO_FLAGS) --document-private-items
 
 # 编译 kernel
 kernel:
-	@cargo build
+	@cargo build $(CARGO_FLAGS)
 
 # 生成 kernel 的二进制文件
 $(BIN_FILE): kernel
@@ -46,7 +50,7 @@ $(BIN_FILE): kernel
 
 # 查看反汇编结果
 asm:
-	@cargo build
+	@cargo build $(CARGO_FLAGS)
 	@$(OBJDUMP) -d $(KERNEL_FILE) > $(KERNEL_ASM)
 
 # 清理编译出的文件
@@ -58,7 +62,7 @@ qemu: build
 	$(QEMU) $(QEMUOPTS)
 
 qemu-gdb:
-	@cargo build
+	@cargo build $(CARGO_FLAGS)
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
@@ -66,7 +70,7 @@ qemu-gdb:
 run: build qemu
 
 test: build
-	@cargo test
+	@cargo test $(CARGO_FLAGS)
 
 
 debug: build

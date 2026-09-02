@@ -1,27 +1,17 @@
 #![no_std]
 #![no_main]
 
-//#![feature(llvm_asm)]
-//#![feature(const_fn)]
-//#![feature(global_asm)]
-#![feature(ptr_internals)]
 #![allow(dead_code)]
-#![feature(panic_info_message)]
 #![allow(non_snake_case)]
 #![allow(const_item_mutation)]
 #![allow(unused_imports)]
-#![feature(const_option)]
-#![feature(const_fn_union)]
+// A no_std binary that uses alloc still needs the unstable allocation-error
+// hook. This is the only remaining reason the kernel pins a nightly compiler.
 #![feature(alloc_error_handler)]
-#![feature(new_uninit)]
-#![feature(fn_traits)]
-#![feature(const_fn_fn_ptr_basics)]
-#![feature(const_mut_refs)]
 
 
 #[macro_use]
 extern crate bitflags;
-extern crate lazy_static;
 
 // use buddy system allocator
 extern crate alloc;

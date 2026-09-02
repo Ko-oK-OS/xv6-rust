@@ -1,2 +1,5 @@
 [toolchain]
-channel = "nightly" 
+channel = "nightly-2026-09-02"
+profile = "minimal"
+components = ["llvm-tools-preview"]
+targets = ["riscv64gc-unknown-none-elf"]

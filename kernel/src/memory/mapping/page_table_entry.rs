@@ -15,6 +15,7 @@ pub struct PageTableEntry(pub usize);
 
 
 bitflags!{
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct PteFlags:usize {
         const V = PTE_V;
         const R = PTE_R;
@@ -27,9 +28,9 @@ bitflags!{
 
 impl PteFlags {
     pub fn new(x: usize) -> Self {
-        Self{
-            bits: x
-        }
+        // Page-table entries may contain architecture-defined bits unknown to
+        // this type. bitflags 2.x keeps those bits via from_bits_retain.
+        Self::from_bits_retain(x)
     }
 }
 
@@ -150,6 +151,5 @@ impl PageTableEntry{
 //         self.write_zero();
 //     }
 // }
-
 
 
