@@ -1,5 +1,5 @@
 use array_macro::array;
-use alloc::sync::Arc;
+use alloc::{collections::VecDeque, sync::Arc};
 use core::cell::RefCell;
 use core::str::{from_utf8, from_utf8_unchecked};
 use core::{mem::size_of_val, ptr::{copy_nonoverlapping, NonNull}};
@@ -16,7 +16,11 @@ use crate::arch::riscv::register::sstatus::intr_on;
 use crate::memory::*;
 
 pub struct ProcManager {
+    /// Stable storage for process slots. Pointers, kernel-stack addresses, and
+    /// user-thread trapframe VAs all depend on an entry never moving.
     proc: [Process; NPROC],
+    /// FIFO of stable process-slot indices, not Process values or references.
+    run_queue: Spinlock<VecDeque<usize>>,
     init_proc: *mut Process,
     pid_lock: Spinlock<usize>,
     /// helps ensure that wakeups of wait()ing
@@ -33,6 +37,7 @@ impl ProcManager{
     pub const fn new() -> Self {
         Self{
             proc: array![_ => Process::new(); NPROC],
+            run_queue: Spinlock::new(VecDeque::new(), "run queue"),
             init_proc: 0 as *mut Process,
             pid_lock: Spinlock::new(0, "pid_lock"),
             wait_lock: Spinlock::new((), "wait_lock"),
@@ -56,9 +61,65 @@ impl ProcManager{
     /// Only used in boot.
     pub unsafe fn init(&mut self){
         println!("process init......");
+        // Reserve one entry per process slot after the heap is initialized.
+        // Since queued prevents duplicates, scheduler/interrupt paths will not
+        // need to grow the VecDeque while handling a wakeup.
+        *self.run_queue.acquire() = VecDeque::with_capacity(NPROC);
         for (pos, proc) in self.proc.iter_mut().enumerate() {
             proc.init(kernel_stack(pos));
         }
+    }
+
+    fn slot_index(&self, process: *const Process) -> Option<usize> {
+        let base = self.proc.as_ptr() as usize;
+        let address = process as usize;
+        let process_size = core::mem::size_of::<Process>();
+        let table_size = process_size * self.proc.len();
+        if address < base || address >= base + table_size {
+            return None
+        }
+        let offset = address - base;
+        if offset % process_size != 0 {
+            return None
+        }
+        Some(offset / process_size)
+    }
+
+    fn publish_runnable(
+        run_queue: &Spinlock<VecDeque<usize>>,
+        slot: usize,
+        meta: &mut ProcMeta,
+    ) {
+        // The process lock protects state and queued as one invariant. A
+        // duplicate would let two harts run the same saved context, so fail
+        // immediately instead of silently accepting scheduler corruption.
+        if meta.queued {
+            panic!("process {} is already on the run queue", meta.pid);
+        }
+        match meta.state {
+            ProcState::ALLOCATED | ProcState::RUNNING | ProcState::SLEEPING => {}
+            _ => panic!(
+                "cannot enqueue process {} from state {:?}",
+                meta.pid,
+                meta.state,
+            ),
+        }
+        meta.set_state(ProcState::RUNNABLE);
+        meta.queued = true;
+
+        let mut queue = run_queue.acquire();
+        if queue.len() >= NPROC {
+            panic!("run queue exceeds process table capacity");
+        }
+        queue.push_back(slot);
+    }
+
+    /// Make a stable process slot runnable. Callers must hold process.meta.
+    pub fn make_runnable(&self, process: &Process, meta: &mut ProcMeta) {
+        let slot = self
+            .slot_index(process as *const Process)
+            .expect("runnable process is outside the process table");
+        Self::publish_runnable(&self.run_queue, slot, meta);
     }
 
     /// Allocate 4 page for each process's kernel stack.
@@ -116,10 +177,12 @@ impl ProcManager{
 
     /// Make the first user process runnable after asynchronous kernel setup.
     pub unsafe fn start_init_process(&mut self) {
-        let init_proc = self.init_proc.as_mut().expect("init process is not allocated");
+        let init_ptr = self.init_proc;
+        let slot = self.slot_index(init_ptr).expect("init process is outside process table");
+        let init_proc = init_ptr.as_mut().expect("init process is not allocated");
         let mut guard = init_proc.meta.acquire();
         debug_assert_eq!(guard.state, ProcState::ALLOCATED);
-        guard.set_state(ProcState::RUNNABLE);
+        Self::publish_runnable(&self.run_queue, slot, &mut guard);
     }
 
     /// Create a scheduler-managed thread that runs entirely in supervisor mode.
@@ -130,11 +193,13 @@ impl ProcManager{
     ) -> Result<usize, &'static str> {
         let pid = self.alloc_pid();
 
-        for proc in self.proc.iter_mut() {
+        let run_queue = &self.run_queue;
+        for (slot, proc) in self.proc.iter_mut().enumerate() {
             let mut guard = proc.meta.acquire();
             if guard.state != ProcState::UNUSED {
                 continue;
             }
+            debug_assert!(!guard.queued);
 
             let pdata = proc.data.get_mut();
             debug_assert!(pdata.trapframe.is_null());
@@ -148,7 +213,7 @@ impl ProcManager{
 
             pdata.set_name(name);
             pdata.init_system_thread_context(entry);
-            guard.set_state(ProcState::RUNNABLE);
+            Self::publish_runnable(run_queue, slot, &mut guard);
             return Ok(pid)
         }
 
@@ -169,6 +234,7 @@ impl ProcManager{
             let mut pmeta = proc.meta.acquire();
             match pmeta.state {
                 ProcState::UNUSED => {
+                    debug_assert!(!pmeta.queued);
                     pmeta.pid = alloc_pid;
                     pmeta.set_state(ProcState::ALLOCATED);
                     let pdata = proc.data.get_mut();
@@ -313,7 +379,7 @@ impl ProcManager{
         };
         let mut thread_meta = thread.meta.acquire();
         let tid = thread_meta.pid;
-        thread_meta.set_state(ProcState::RUNNABLE);
+        Self::publish_runnable(&self.run_queue, slot, &mut thread_meta);
         drop(thread_meta);
         drop(wait_guard);
         Ok(tid)
@@ -419,32 +485,41 @@ impl ProcManager{
     /// Wake up all processes sleeping on chan.
     /// Must be called without any p->lock.
     pub fn wake_up(&self, channel: usize) {
-        for p in self.proc.iter() {
+        for (slot, p) in self.proc.iter().enumerate() {
             let mut guard = p.meta.acquire();
             if guard.state == ProcState::SLEEPING && guard.channel == channel {
                 // println!("[Debug] Wake up process {}", guard.pid);
-                guard.state = ProcState::RUNNABLE;
+                Self::publish_runnable(&self.run_queue, slot, &mut guard);
             }
             drop(guard);
         }
     }
 
-    /// Find a runnable and set status to allocated
-    pub fn seek_runnable(&mut self) -> Option<&mut Process> {
-        for p in self.proc.iter_mut() {
-            let mut guard = p.meta.acquire();
-            match guard.state {
-                ProcState::RUNNABLE => {
-                    guard.state = ProcState::ALLOCATED;
-                    drop(guard);
-                    return Some(p)
-                },
-                _ => {
-                    drop(guard);
-                },
+    /// Remove the oldest runnable slot in O(1), preserving FIFO fairness.
+    pub fn dequeue_runnable(&mut self) -> Option<&mut Process> {
+        loop {
+            // Never acquire a process lock while holding the global queue lock:
+            // wakeup/yield use the opposite order (process, then queue).
+            let slot = self.run_queue.acquire().pop_front()?;
+            let process = &mut self.proc[slot];
+            let mut guard = process.meta.acquire();
+            if !guard.queued {
+                // Continuing here would silently strand or double-run a
+                // recycled slot, so surface a broken queue invariant early.
+                panic!("run queue entry {} is not marked queued", slot);
             }
+            guard.queued = false;
+            if guard.state != ProcState::RUNNABLE {
+                panic!(
+                    "queued process {} has state {:?}",
+                    guard.pid,
+                    guard.state,
+                );
+            }
+            guard.set_state(ProcState::ALLOCATED);
+            drop(guard);
+            return Some(process)
         }
-        None
     }
 
     /// Pass p's abandonded children to init. 
@@ -479,7 +554,8 @@ impl ProcManager{
             let mut target = None;
             let mut reaped = false;
 
-            for thread in self.proc.iter_mut() {
+            let run_queue = &self.run_queue;
+            for (slot, thread) in self.proc.iter_mut().enumerate() {
                 let thread_data = unsafe { &*thread.data.get() };
                 let same_group = thread_data.user_thread
                     && thread_data
@@ -503,7 +579,7 @@ impl ProcManager{
                 // killed at the next trap boundary and take thread_exit.
                 thread_meta.killed = true;
                 if thread_meta.state == ProcState::SLEEPING {
-                    thread_meta.set_state(ProcState::RUNNABLE);
+                    Self::publish_runnable(run_queue, slot, &mut thread_meta);
                 }
                 target = Some(thread as *const Process as usize);
                 drop(thread_meta);
@@ -648,14 +724,18 @@ impl ProcManager{
     /// The victim won't exit until it tries to return. 
     /// to user space (user_trap)
     pub fn kill(&mut self, pid: usize) -> Result<usize, ()> {
-        for proc in self.proc.iter_mut() {
-            if proc.pid() == pid {
-                proc.set_killed(true);
-                if proc.state() == ProcState::SLEEPING {
+        let run_queue = &self.run_queue;
+        for (slot, proc) in self.proc.iter_mut().enumerate() {
+            let mut meta = proc.meta.acquire();
+            if meta.pid == pid && meta.state != ProcState::UNUSED {
+                meta.killed = true;
+                if meta.state == ProcState::SLEEPING {
                     // Wake process from sleep. 
-                    proc.set_state(ProcState::RUNNABLE);
-                    return Ok(0)
+                    Self::publish_runnable(run_queue, slot, &mut meta);
                 }
+                // kill succeeds for running and runnable processes too; they
+                // observe killed at their next user trap boundary.
+                return Ok(0)
             }
         }
         Err(())

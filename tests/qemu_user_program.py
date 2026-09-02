@@ -279,6 +279,26 @@ def test_user_threads() -> None:
             raise AssertionError(f"kernel output contained {marker!r}")
 
 
+def test_scheduler_queue() -> None:
+    # Keep one QEMU instance alive while the process table fills, drains, and
+    # reuses slots. This catches stale or duplicate run-queue entries that
+    # isolated one-command boots can hide.
+    outputs = run_commands(
+        ["forktest", "threadtest", "forktest", "echo scheduler-queue-ready"],
+        timeout=30.0,
+    )
+    combined = b"".join(outputs)
+    if combined.count(b"fork test OK") != 2:
+        raise AssertionError("forktest did not survive process-slot reuse")
+    if b"thread test OK" not in outputs[1]:
+        raise AssertionError("threadtest did not complete on the FIFO run queue")
+    if b"scheduler-queue-ready" not in outputs[3]:
+        raise AssertionError("shell did not remain schedulable after queue stress")
+    for marker in PANIC_MARKERS:
+        if marker in combined:
+            raise AssertionError(f"kernel output contained {marker!r}")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
     "create-remove": test_create_remove,
@@ -287,6 +307,7 @@ TESTS = {
     "long-path-component": test_long_path_component,
     "quit": test_quit,
     "repeated-exec-failure": test_repeated_exec_failure,
+    "scheduler-queue": test_scheduler_queue,
     "stressfs": test_stressfs,
     "system-thread": test_system_thread,
     "user-threads": test_user_threads,
