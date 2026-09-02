@@ -109,6 +109,9 @@ pub unsafe fn user_trap() {
             if cpu::cpuid() == 0 {
                 clock_intr();
                 crate::driver::uart::poll_input();
+                // PR fix-bug/sbi-virtio-completion: the timer is the SBI
+                // payload's polling source for console and disk completions.
+                crate::driver::virtio_disk::poll_completion();
             }
             if my_proc.killed() {
                 exit(-1);
@@ -308,6 +311,9 @@ pub unsafe fn kernel_trap(
             if cpu::cpuid() == 0 {
                 clock_intr();
                 crate::driver::uart::poll_input();
+                // PR fix-bug/sbi-virtio-completion: kernel-mode waits need the
+                // same completion polling as user-mode timer traps.
+                crate::driver::virtio_disk::poll_completion();
             }
             CPU_MANAGER.mycpu().try_yield_proc();
         }

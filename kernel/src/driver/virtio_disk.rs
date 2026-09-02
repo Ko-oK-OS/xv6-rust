@@ -24,6 +24,17 @@ use crate::process::{PROC_MANAGER, CPU_MANAGER};
 
 pub static DISK: Spinlock<Disk> = Spinlock::new(Disk::new(), "virtio_disk");
 
+/// Poll and acknowledge completed requests when the SBI payload has no PLIC.
+///
+/// PR fix-bug/sbi-virtio-completion: Hypocaust currently exposes the VirtIO
+/// MMIO transport but not a guest-programmable interrupt controller. Reusing
+/// the normal completion handler preserves the driver's wakeup and descriptor
+/// reclamation semantics without changing the native QEMU interrupt path.
+#[cfg(feature = "sbi")]
+pub fn poll_completion() {
+    DISK.acquire().intr();
+}
+
 #[repr(C, align(4096))]
 pub struct Disk {
     // a page
