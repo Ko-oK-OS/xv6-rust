@@ -153,11 +153,39 @@ def test_create_remove() -> None:
         raise AssertionError("removed file is still present in ls output")
 
 
+def test_forktest() -> None:
+    output = run_command("forktest", timeout=15.0)
+    if b"fork test OK" not in output:
+        raise AssertionError("forktest did not report success")
+    for marker in PANIC_MARKERS:
+        if marker in output:
+            raise AssertionError(f"kernel output contained {marker!r}")
+
+
+def test_stressfs() -> None:
+    output = run_command("stressfs", timeout=20.0)
+    if b"fd: -1" in output:
+        raise AssertionError("stressfs could not open a worker file\n\n" + output.decode(errors="replace"))
+    for marker in PANIC_MARKERS:
+        if marker in output:
+            raise AssertionError(f"kernel output contained {marker!r}")
+
+
+def test_invalid_fd_boundary() -> None:
+    output = run_command("stressfs", timeout=20.0)
+    for marker in PANIC_MARKERS:
+        if marker in output:
+            raise AssertionError(f"invalid fd caused kernel output containing {marker!r}")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
     "create-remove": test_create_remove,
+    "forktest": test_forktest,
+    "invalid-fd-boundary": test_invalid_fd_boundary,
     "long-path-component": test_long_path_component,
     "repeated-exec-failure": test_repeated_exec_failure,
+    "stressfs": test_stressfs,
 }
 
 

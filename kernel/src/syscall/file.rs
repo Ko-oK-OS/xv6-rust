@@ -24,9 +24,9 @@ impl Syscall<'_> {
     pub fn sys_dup(&self) -> SysResult {
         let old_fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[old_fd].as_ref().unwrap();
+        let file = pdata.open_files.get(old_fd).and_then(Option::as_ref).ok_or(())?;
         // 使用 Arc 来代替 refs
-        let new_fd = unsafe{ CPU_MANAGER.alloc_fd(&file) }.unwrap();
+        let new_fd = unsafe{ CPU_MANAGER.alloc_fd(file) }.map_err(|_| ())?;
         let new_file = Arc::clone(&file);
         pdata.open_files[new_fd].replace(new_file);
         Ok(new_fd)
@@ -38,7 +38,7 @@ impl Syscall<'_> {
         // Get file
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
+        let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
         // 两个参数分别是读取存储的地址和读取的最大字节数
         // Get user read address
         let ptr = self.arg(1);
@@ -64,7 +64,7 @@ impl Syscall<'_> {
         let size;
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
+        let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
         let ptr = self.arg(1);
         let len = self.arg(2);
         match file.write(ptr, len) {
@@ -265,7 +265,7 @@ impl Syscall<'_> {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
         // 使用 take() 夺取所有权来将引用数减 1
-        pdata.open_files[fd].take();
+        pdata.open_files.get_mut(fd).and_then(Option::take).ok_or(())?;
         Ok(0)
     }
 
@@ -277,7 +277,7 @@ impl Syscall<'_> {
         println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
 
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let file = pdata.open_files[fd].as_ref().unwrap();
+        let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
 
         #[cfg(feature = "kernel_debug")]
         println!("[Kernel] sys_fstat: File Type: {:?}", file.ftype);
@@ -556,6 +556,3 @@ impl Syscall<'_> {
     }
 
 }
-
-
-
