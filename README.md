@@ -129,6 +129,21 @@ make asm               # write the kernel disassembly to kernel.S
 make clean              # remove generated build artifacts
 ```
 
+### SBI payload
+
+For a monitor that presents xv6 as a single-hart S-mode payload, build the
+separate SBI entry path with:
+
+```sh
+make sbi
+```
+
+This keeps the normal QEMU M-mode entry unchanged. The SBI build takes the
+hart ID from `a0`, uses legacy SBI calls for the console and timer, and expects
+to be loaded at `0x80000000`. It is intended for a virtual SBI implementation
+such as Hypocaust rather than for direct loading alongside OpenSBI, whose
+firmware occupies the beginning of RAM.
+
 `make -C kernel debug` starts QEMU and GDB in a tmux session. The GDB executable
 is currently configured by `GDB` in `kernel/Makefile`; override that variable
 for your local RISC-V toolchain when necessary.

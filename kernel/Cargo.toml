@@ -14,6 +14,7 @@ allocator = { path = "../allocator" }
 
 [features]
 default = []
+sbi = []
 debug = []
 kernel_debug = []
 kernel_warning = []

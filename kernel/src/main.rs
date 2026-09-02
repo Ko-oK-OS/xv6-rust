@@ -16,7 +16,10 @@ extern crate bitflags;
 // use buddy system allocator
 extern crate alloc;
 
+#[cfg(not(feature = "sbi"))]
 core::arch::global_asm!(include_str!("asm/entry.S"));
+#[cfg(feature = "sbi")]
+core::arch::global_asm!(include_str!("asm/entry_sbi.S"));
 core::arch::global_asm!(include_str!("asm/kernelvec.S"));
 core::arch::global_asm!(include_str!("asm/trampoline.S"));
 core::arch::global_asm!(include_str!("asm/switch.S"));
@@ -61,6 +64,7 @@ use crate::arch::riscv::{
 use crate::arch::riscv::qemu::param::NCPU;
 use crate::arch::riscv::qemu::fs::ROOTDEV;
 
+#[cfg(not(feature = "sbi"))]
 static mut TIMER_SCRATCH:[[u64; 5]; NCPU] = [[0u64; 5]; NCPU];
 static STARTED:AtomicBool = AtomicBool::new(false);
 
@@ -75,6 +79,7 @@ fn init_file_system_thread() {
 }
 
 /// 引导启动程序,进行寄存器的初始化操作
+#[cfg(not(feature = "sbi"))]
 #[no_mangle]
 pub unsafe fn start() -> !{
     // Set M Previlege mode to Supervisor, for mret
@@ -115,7 +120,8 @@ pub unsafe fn start() -> !{
 /// which turns them into software interrupts for
 /// devintr() in trap.rs.
 /// 启动时钟中断
-unsafe fn timer_init(){
+#[cfg(not(feature = "sbi"))]
+pub(crate) unsafe fn timer_init(){
     // each CPU has a separate source of timer interrupts.
     let id = mhartid::read();
 
@@ -147,6 +153,12 @@ unsafe fn timer_init(){
 
 }
 
+#[cfg(feature = "sbi")]
+pub(crate) unsafe fn timer_init() {
+    const INTERVAL: usize = 1_000_000;
+    crate::arch::riscv::sbi::set_timer(crate::arch::riscv::time::read() + INTERVAL);
+}
+
 /// 进入内核初始化
 #[no_mangle]
 pub unsafe extern "C" fn rust_main() {
@@ -159,6 +171,11 @@ pub unsafe extern "C" fn rust_main() {
         kvm_init_hart(); // turn on paging
         PROC_MANAGER.init(); // process table
         trap_init_hart(); // trap vectors
+        #[cfg(feature = "sbi")]
+        {
+            sie::intr_on();
+            timer_init(); // request virtual S-mode timer interrupts through SBI
+        }
         plic_init(); // set up interrupt controller
         plic_init_hart(); // ask PLIC for device interrupts
         BCACHE.binit(); // buffer cache

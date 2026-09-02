@@ -31,7 +31,7 @@ QEMUGDB 	:= -gdb tcp::26000
 
 GDB         := ~/riscv/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gdb
 
-.PHONY: doc kernel build clean qemu run test
+.PHONY: doc kernel build clean qemu run sbi test
 
 # 默认 build 为输出二进制文件
 build: $(BIN_FILE) 
@@ -68,6 +68,10 @@ qemu-gdb:
 
 # 一键运行
 run: build qemu
+
+# Build an ELF that enters directly in S-mode and uses legacy SBI services.
+sbi:
+	@cargo build $(CARGO_FLAGS) --features sbi
 
 test: build
 	@cargo test $(CARGO_FLAGS)
