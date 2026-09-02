@@ -49,7 +49,7 @@ clean:
 	rm -f $(USER)/*.o $(USER)/*.d $(USER)/*.asm $(USER)/*.sym \
 	$(USER)/initcode $(USER)/initcode.out fs.img \
 	xv6-mkfs/mkfs $(USER)/usys.S \
-	$(UPROGS)
+	$(UPROGS) tests/badfd.o tests/badfd.d tests/badfd.asm tests/badfd.sym
 
 $(USER)/initcode: $(USER)/initcode.S
 	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Iinclude -c $(USER)/initcode.S -o $(USER)/initcode.o
@@ -76,6 +76,11 @@ $(USER)/_forktest: $(USER)/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $(USER)/_forktest $(USER)/forktest.o $(USER)/ulib.o $(USER)/usys.o
 	$(OBJDUMP) -S $(USER)/_forktest > $(USER)/forktest.asm
 
+_badfd: tests/badfd.o $(ULIB)
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+	$(OBJDUMP) -S $@ > tests/badfd.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > tests/badfd.sym
+
 xv6-mkfs/mkfs: xv6-mkfs/mkfs.c $(INCLUDE)/fs.h $(INCLUDE)/param.h
 	gcc -Werror -Wall -I./xv6-user -o xv6-mkfs/mkfs xv6-mkfs/mkfs.c
 
@@ -94,6 +99,7 @@ UPROGS=\
 	$(USER)/_touch \
 	$(USER)/_cat \
 	$(USER)/_rm \
+	_badfd \
 	$(USER)/_forktest \
 	$(USER)/_stressfs
 

@@ -50,7 +50,7 @@ def read_until(process: subprocess.Popen[bytes], marker: bytes, timeout: float) 
 
 def run_commands(commands: list[str], timeout: float = 15.0) -> list[bytes]:
     build = subprocess.run(
-        ["make", "-C", "kernel", "build"],
+        ["make", "fs.img"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
@@ -172,7 +172,9 @@ def test_stressfs() -> None:
 
 
 def test_invalid_fd_boundary() -> None:
-    output = run_command("stressfs", timeout=20.0)
+    output = run_command("badfd", timeout=5.0)
+    if b"bad fd test OK" not in output:
+        raise AssertionError("badfd did not report success")
     for marker in PANIC_MARKERS:
         if marker in output:
             raise AssertionError(f"invalid fd caused kernel output containing {marker!r}")
