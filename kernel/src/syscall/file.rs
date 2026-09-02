@@ -91,8 +91,7 @@ impl Syscall<'_> {
         let open_mode = self.arg(1);
         // Start write log
         LOG.begin_op();
-        match OpenMode::mode(open_mode) {
-            OpenMode::CREATE => {
+        if open_mode & OpenMode::CREATE as usize != 0 {
                 match ICACHE.create(&path, crate::fs::InodeType::File, 0, 0) {
                     Ok(cur_inode) => {
                         inode = cur_inode;
@@ -104,9 +103,7 @@ impl Syscall<'_> {
                         return Err(())
                     }
                 }
-            },
-    
-            _ => {
+        } else {
                 match ICACHE.namei(&path) {
                     Some(cur_inode) => {
                         inode = cur_inode;
@@ -123,7 +120,6 @@ impl Syscall<'_> {
                         return Err(())
                     }
                 }
-            }
         }
         file = VFile::init();
         match inode_guard.dinode.itype {
@@ -140,7 +136,7 @@ impl Syscall<'_> {
             }
         }
     
-        if open_mode.get_bit(11) && inode_guard.dinode.itype == InodeType::File {
+        if open_mode & OpenMode::TRUNC as usize != 0 && inode_guard.dinode.itype == InodeType::File {
             inode_guard.truncate(&inode);
         }
     
