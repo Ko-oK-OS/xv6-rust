@@ -133,8 +133,19 @@ def test_repeated_exec_failure() -> None:
             raise AssertionError(f"kernel output contained {marker!r}")
 
 
+def test_long_path_component() -> None:
+    outputs = run_commands(["touch filename123456789", "ls"], timeout=5.0)
+    output = b"".join(outputs)
+    for marker in PANIC_MARKERS:
+        if marker in output:
+            raise AssertionError(f"kernel output contained {marker!r}")
+    if b"filename123456" not in outputs[1]:
+        raise AssertionError("ls did not find the DIRSIZ-truncated file name")
+
+
 TESTS = {
     "cat-eof": test_cat_eof,
+    "long-path-component": test_long_path_component,
     "repeated-exec-failure": test_repeated_exec_failure,
 }
 

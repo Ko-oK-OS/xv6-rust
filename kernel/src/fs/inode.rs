@@ -314,15 +314,13 @@ fn skip_path(
         cur += 1;
     }
 
-    let mut count = cur - start; 
-    if count >= name.len() {
-        debug_assert!(false);
-        count = name.len() - 1;
-    }
+    let count = min(cur - start, name.len());
     unsafe{
         ptr::copy(path.as_ptr().offset(start as isize), name.as_mut_ptr(), count);
     }
-    name[count] = 0;
+    if count < name.len() {
+        name[count] = 0;
+    }
 
     // skip succeeding b'/'
     while path[cur] == b'/' {
@@ -600,13 +598,11 @@ impl InodeData {
                 continue;
             }
             // println!("dir_entry_name: {}, name: {}", String::from_utf8(dir_entry.name.to_vec()).unwrap(), String::from_utf8(name.to_vec()).unwrap());
-            for i in 0..DIRSIZ {
-                if dir_entry.name[i] != name[i] {
-                    break;
-                }
-                if dir_entry.name[i] == 0 {
-                    return Some(ICACHE.get(self.dev, dir_entry.inum as u32))
-                }
+            let matches = (0..DIRSIZ).all(|i| {
+                dir_entry.name[i] == name.get(i).copied().unwrap_or(0)
+            });
+            if matches {
+                return Some(ICACHE.get(self.dev, dir_entry.inum as u32))
             }
         }
         None
