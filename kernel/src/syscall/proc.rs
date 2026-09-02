@@ -23,8 +23,37 @@ impl Syscall<'_> {
     pub fn sys_exit(&self) -> SysResult {
         let status = self.arg(0);
         unsafe {
-            PROC_MANAGER.exit(status)
+            // exit() from a secondary thread must not close the descriptor
+            // table or turn the complete process into a zombie.
+            if self.process.is_user_thread() {
+                PROC_MANAGER.thread_exit(status)
+            } else {
+                PROC_MANAGER.exit(status)
+            }
         }
+    }
+
+    pub fn sys_thread_clone(&mut self) -> SysResult {
+        let entry = self.arg(0);
+        let arg = self.arg(1);
+        let stack = self.arg(2);
+        let return_pc = self.arg(3);
+        unsafe {
+            PROC_MANAGER
+                .create_user_thread(self.process, entry, arg, stack, return_pc)
+                .map_err(|_| ())
+        }
+    }
+
+    pub fn sys_thread_join(&self) -> SysResult {
+        let tid = self.arg(0);
+        let status_addr = self.arg(1);
+        unsafe { PROC_MANAGER.join_user_thread(tid, status_addr).ok_or(()) }
+    }
+
+    pub fn sys_thread_exit(&self) -> SysResult {
+        let status = self.arg(0);
+        unsafe { PROC_MANAGER.thread_exit(status) }
     }
 
     pub fn sys_wait(&self) -> SysResult {
@@ -52,9 +81,9 @@ impl Syscall<'_> {
     
     pub fn sys_sbrk(&mut self) -> SysResult {
         let size = self.arg(0);
-        let pdata = unsafe{ &*self.process.data.get() };
-        let addr = pdata.size;
-        drop(pdata);
+        let address_space = unsafe { (&*self.process.data.get())
+            .address_space.as_ref().unwrap().clone() };
+        let addr = address_space.acquire().size;
         match self.process.grow_proc(size as isize) {
             Ok(()) => {
                 return Ok(addr)
@@ -84,7 +113,12 @@ impl Syscall<'_> {
                 drop(ticks_guard);           
                 return Err(())
             } else {
-                my_proc.sleep(0, ticks_guard);
+                // Sleep on the ticks object itself so clock_intr can wake only
+                // timer waiters instead of using the ambiguous channel zero.
+                my_proc.sleep(
+                    core::ptr::addr_of!(TICKS_LOCK) as usize,
+                    ticks_guard
+                );
                 ticks_guard = unsafe {
                     TICKS_LOCK.acquire()
                 }
@@ -104,4 +138,3 @@ impl Syscall<'_> {
     }
     
 }
-

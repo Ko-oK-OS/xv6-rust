@@ -24,13 +24,15 @@ impl Syscall<'_> {
     pub fn sys_dup(&self) -> SysResult {
         let old_fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        let resources = pdata.resources.as_ref().unwrap().clone();
+        let mut resources = resources.acquire();
         // File descriptors are controlled by user space; -1 reaches us as
         // usize::MAX, so indexing directly would panic the kernel.
-        let file = pdata.open_files.get(old_fd).and_then(Option::as_ref).ok_or(())?;
-        // 使用 Arc 来代替 refs
-        let new_fd = unsafe{ CPU_MANAGER.alloc_fd(file) }.map_err(|_| ())?;
-        let new_file = Arc::clone(&file);
-        pdata.open_files[new_fd].replace(new_file);
+        let file = resources.open_files.get(old_fd)
+            .and_then(Option::as_ref).cloned().ok_or(())?;
+        let new_fd = resources.open_files.iter()
+            .position(Option::is_none).ok_or(())?;
+        resources.open_files[new_fd].replace(file);
         Ok(new_fd)
     }
 
@@ -40,9 +42,11 @@ impl Syscall<'_> {
         // Get file
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        let resources = pdata.resources.as_ref().unwrap().clone();
         // Reject out-of-range and already-closed descriptors as syscall errors
         // instead of allowing untrusted input to index or unwrap the fd table.
-        let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
+        let file = resources.acquire().open_files.get(fd)
+            .and_then(Option::as_ref).cloned().ok_or(())?;
         // 两个参数分别是读取存储的地址和读取的最大字节数
         // Get user read address
         let ptr = self.arg(1);
@@ -68,9 +72,11 @@ impl Syscall<'_> {
         let size;
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        let resources = pdata.resources.as_ref().unwrap().clone();
         // stressfs exposed write(-1, ...); a bad descriptor must never turn
         // into a kernel bounds panic.
-        let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
+        let file = resources.acquire().open_files.get(fd)
+            .and_then(Option::as_ref).cloned().ok_or(())?;
         let ptr = self.arg(1);
         let len = self.arg(2);
         match file.write(ptr, len) {
@@ -223,9 +229,7 @@ impl Syscall<'_> {
             ) 
         };
         let ret = unsafe {
-            exec(path, &argv).map_err(
-                |_|(())
-            )?
+            exec(path, &argv).map_err(|_| ())?
         };
     
         for i in 0..MAXARG {
@@ -269,9 +273,11 @@ impl Syscall<'_> {
     pub fn sys_close(&self) -> SysResult {
         let fd = self.arg(0);
         let pdata = unsafe{ &mut *self.process.data.get() };
+        let resources = pdata.resources.as_ref().unwrap().clone();
         // 使用 take() 夺取所有权来将引用数减 1
         // An invalid or already-closed fd is a user error, not a kernel panic.
-        pdata.open_files.get_mut(fd).and_then(Option::take).ok_or(())?;
+        resources.acquire().open_files.get_mut(fd)
+            .and_then(Option::take).ok_or(())?;
         Ok(0)
     }
 
@@ -283,8 +289,10 @@ impl Syscall<'_> {
         println!("[Kernel] sys_fstat: fd: {}, stat:0x{:x}", fd, stat);
 
         let pdata = unsafe{ &mut *self.process.data.get() };
+        let resources = pdata.resources.as_ref().unwrap().clone();
         // Keep the same user-input boundary as read/write/close.
-        let file = pdata.open_files.get(fd).and_then(Option::as_ref).ok_or(())?;
+        let file = resources.acquire().open_files.get(fd)
+            .and_then(Option::as_ref).cloned().ok_or(())?;
 
         #[cfg(feature = "kernel_debug")]
         println!("[Kernel] sys_fstat: File Type: {:?}", file.ftype);
@@ -312,7 +320,10 @@ impl Syscall<'_> {
                 match inode_guard.dinode.itype {
                     InodeType::Directory => {
                         drop(inode_guard);
-                        let old_cwd = unsafe{ (&mut *self.process.data.get()).cwd.replace(inode) };
+                        let resources = unsafe {
+                            (&*self.process.data.get()).resources.as_ref().unwrap().clone()
+                        };
+                        let old_cwd = resources.acquire().cwd.replace(inode);
                         drop(old_cwd);
                         LOG.end_op();
                         return Ok(0)
@@ -375,24 +386,31 @@ impl Syscall<'_> {
             }
         }
 
-        let pgt = p.page_table();
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let open_files = &mut pdata.open_files;
-        if pgt.copy_out(fd_array, rf as *const _ as *const u8, size_of::<usize>()).is_err() {
-            open_files[rfd].take();
-            open_files[wfd].take();
+        let address_space = pdata.address_space.as_ref().unwrap().clone();
+        if address_space.acquire().page_table.copy_out(
+            fd_array,
+            rf as *const _ as *const u8,
+            size_of::<usize>()
+        ).is_err() {
+            let resources = pdata.resources.as_ref().unwrap().clone();
+            let mut resources = resources.acquire();
+            resources.open_files[rfd].take();
+            resources.open_files[wfd].take();
             // rf.close();
             // wf.close();
             return Err(())
         }
 
-        if pgt.copy_out(
+        if address_space.acquire().page_table.copy_out(
             fd_array + size_of::<usize>(), 
             wf as *const _ as *const u8, 
             size_of::<usize>()
         ).is_err() {
-            open_files[rfd].take();
-            open_files[wfd].take();
+            let resources = pdata.resources.as_ref().unwrap().clone();
+            let mut resources = resources.acquire();
+            resources.open_files[rfd].take();
+            resources.open_files[wfd].take();
             // rf.close();
             // wf.close();
             return Err(())

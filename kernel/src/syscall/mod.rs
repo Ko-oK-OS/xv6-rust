@@ -16,7 +16,7 @@ use alloc::sync::Arc;
 type SyscallFn = fn() -> SysResult;
 pub type SysResult = Result<usize, ()>;
 
-pub const SYSCALL_NUM:usize = 22;
+pub const SYSCALL_NUM:usize = 25;
 pub const SHUTDOWN: usize = 8;
 pub const REBOOT: usize = 9;
 
@@ -62,6 +62,9 @@ pub enum SysCallID {
     SysMkdir = 20,
     SysClose = 21,
     SysShutdown = 22,
+    SysThreadClone = 23,
+    SysThreadJoin = 24,
+    SysThreadExit = 25,
     Unknown
 }
 
@@ -89,7 +92,10 @@ impl SysCallID {
             19 => { Self::SysLink },
             20 => { Self::SysMkdir },
             21 => { Self::SysClose },
-            22 => { Self::SysShutdown }
+            22 => { Self::SysShutdown },
+            23 => { Self::SysThreadClone },
+            24 => { Self::SysThreadJoin },
+            25 => { Self::SysThreadExit },
             _ => { Self::Unknown }
         }
     }
@@ -111,6 +117,12 @@ impl Syscall<'_> {
             SysCallID::SysFork => { self.sys_fork() },
             SysCallID::SysExit => { self.sys_exit() },
             SysCallID::SysWait => { self.sys_wait() },
+            // These process syscalls existed but were never dispatched. The
+            // thread regression uses sleep(), and keeping all declared IDs
+            // reachable also prevents valid user calls from panicking here.
+            SysCallID::SysKill => { self.sys_kill() },
+            SysCallID::SysGetPid => { self.sys_getpid() },
+            SysCallID::SysSleep => { self.sys_sleep() },
             SysCallID::SysRead => { self.sys_read() },
             SysCallID::SysWrite => { self.sys_write() },
             SysCallID::SysOpen => { self.sys_open() },
@@ -127,6 +139,9 @@ impl Syscall<'_> {
             SysCallID::SysLink => { self.sys_link() },
             SysCallID::SysMkdir => { self.sys_mkdir() },
             SysCallID::SysShutdown => { self.sys_shutdown() },
+            SysCallID::SysThreadClone => { self.sys_thread_clone() },
+            SysCallID::SysThreadJoin => { self.sys_thread_join() },
+            SysCallID::SysThreadExit => { self.sys_thread_exit() },
             _ => { panic!("Invalid syscall id: {:?}", sys_id) }
         }
     }
@@ -149,8 +164,9 @@ impl Syscall<'_> {
     /// 通过地址获取str并将其填入到缓冲区中
     pub fn copy_from_str(&self, addr: usize, buf: &mut [u8], max_len: usize) -> Result<(), ()> {
         let pdata = unsafe{ &mut *self.process.data.get() };
-        let pgt = pdata.pagetable.as_mut().unwrap();
-        if pgt.copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
+        let address_space = pdata.address_space.as_ref().unwrap().clone();
+        if address_space.acquire().page_table
+            .copy_in_str(buf.as_mut_ptr(), addr, max_len).is_err() {
             println!("Fail to copy in str");
             return Err(())
         }
@@ -159,15 +175,16 @@ impl Syscall<'_> {
 
     pub fn copy_form_addr(&self, addr: usize, buf: &mut [u8], len: usize) -> Result<(), ()> {
         let pdata = unsafe{ &mut *self.process.data.get() };
-    
-        if addr > pdata.size || addr + size_of::<usize>() > pdata.size {
+        let address_space = pdata.address_space.as_ref().unwrap().clone();
+        let mut memory = address_space.acquire();
+
+        if addr > memory.size || addr + size_of::<usize>() > memory.size {
             println!("[Debug] addr: 0x{:x}", addr);
-            println!("[Debug] pdata size: 0x{:x}", pdata.size);
+            println!("[Debug] address space size: 0x{:x}", memory.size);
             panic!("拷贝的地址值超出了进程")
         }
     
-        let pgt = pdata.pagetable.as_mut().unwrap();
-        if pgt.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
+        if memory.page_table.copy_in(buf.as_mut_ptr(), addr, len).is_err() {
             println!("Fail copy data from pagetable!");
             return Err(())
         }

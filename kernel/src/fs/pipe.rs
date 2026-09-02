@@ -71,8 +71,10 @@ impl Pipe {
             let read_cursor = pipe_guard.read_number % PIPE_SIZE;
             let ch = pipe_guard.data[read_cursor % PIPE_SIZE];
             pipe_guard.read_number += 1;
-            let pgt = my_proc.page_table();
-            if pgt.copy_out(addr + index, &ch as *const u8, 1).is_err() {
+            let address_space = my_proc.data.get_mut()
+                .address_space.as_ref().unwrap().clone();
+            if address_space.acquire().page_table
+                .copy_out(addr + index, &ch as *const u8, 1).is_err() {
                 break;
             }
             i = index;
@@ -104,8 +106,10 @@ impl Pipe {
                 pipe_guard = self.guard.acquire();
             } else {
                 let mut char: u8 = 0;
-                let pgt = my_proc.page_table();
-                if pgt.copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
+                let address_space = my_proc.data.get_mut()
+                    .address_space.as_ref().unwrap().clone();
+                if address_space.acquire().page_table
+                    .copy_in(&mut char as *mut u8, addr + i, 1).is_err() {
                     break;
                 }
                 let write_cursor = pipe_guard.write_number % PIPE_SIZE;

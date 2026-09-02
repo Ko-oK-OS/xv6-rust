@@ -117,7 +117,8 @@ impl CPUManager{
             self.myproc().unwrap()
         };
         let pdata = unsafe{ &mut *proc.data.get() };
-        pdata.open_files[fd].take();
+        let resources = pdata.resources.as_ref().unwrap().clone();
+        resources.acquire().open_files[fd].take();
     }
 }
 

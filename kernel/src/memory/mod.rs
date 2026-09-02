@@ -51,12 +51,13 @@ pub fn copy_to_kernel(
         
         if is_user {
             let pdata = &mut *(my_proc.data.get());
-            let page_table = pdata.pagetable.as_mut().unwrap();
-            page_table.copy_in(
+            let address_space = pdata.address_space.as_ref().unwrap().clone();
+            let result = address_space.acquire().page_table.copy_in(
                 dst,
                 src,
                 len
-            )
+            );
+            result
         } else {
             ptr::copy(
                 src as *const u8, 
@@ -82,13 +83,14 @@ pub fn copy_from_kernel(
         let p = CPU_MANAGER.myproc().unwrap();
         if is_user {
             let pdata = p.data.get_mut();
-            let page_table = pdata.pagetable.as_mut().unwrap();
-            page_table
+            let address_space = pdata.address_space.as_ref().unwrap().clone();
+            let result = address_space.acquire().page_table
                 .copy_out(
                     dst,
                     src,
                     len
-                )
+                );
+            result
         } else {
             let mut buf = vec![0u8;len];
             ptr::copy(src as *const u8, buf.as_mut_ptr(), len);

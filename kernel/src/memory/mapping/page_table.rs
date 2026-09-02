@@ -359,9 +359,15 @@ impl PageTable{
                     if pte.as_flags() == PteFlags::V.bits() {
                         panic!("uvm_unmap: not a leaf");
                     }
+                    let pa = pte.as_pagetable();
+                    // A stale valid PTE makes a later thread that reuses this
+                    // trapframe VA fail with "remap". Clear it before the
+                    // backing page can be reused by the allocator.
+                    pte.0 = 0;
                     if free {
-                        let pa = pte.as_pagetable();
-                        unsafe{ drop_in_place(pa) };
+                        // Preserve the allocator's existing release path; the
+                        // thread fix here is specifically the missing PTE clear.
+                        unsafe { drop_in_place(pa); }
                     }
                 },
 
@@ -603,6 +609,17 @@ impl PageTable{
             false
         );
 
+        self.uvm_free(size);
+    }
+
+    /// Free the mappings shared by a complete userspace thread group after
+    /// each member's private trapframe mapping has already been removed.
+    pub fn free_shared_user_pagetable(&mut self, size: usize) {
+        self.uvm_unmap(
+            VirtualAddress::new(TRAMPOLINE),
+            1,
+            false
+        );
         self.uvm_free(size);
     }
 
