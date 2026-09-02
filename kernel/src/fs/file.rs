@@ -1,6 +1,5 @@
 use crate::arch::riscv::qemu::fs::{ BSIZE, MAXOPBLOCKS };
 use crate::arch::riscv::qemu::param::NDEV;
-use crate::lock::spinlock::Spinlock;
 use crate::lock::sleeplock::SleepLock;
 use crate::process::CPU_MANAGER;
 use super::pipe::Pipe;
@@ -43,14 +42,13 @@ pub enum FileInner {
 
 /// Virtual File, which can abstract struct to dispatch 
 /// syscall to specific file.
-#[derive(Clone, Debug)]
 pub struct VFile {
     pub(crate) ftype: FileType,
     pub(crate) readable: bool,
     pub(crate) writeable: bool,
     pub(crate) pipe: Option<*mut Pipe>,
     pub(crate) inode: Option<Inode>,
-    pub(crate) offset: u32,
+    pub(crate) offset: SleepLock<u32>,
     pub(crate) major: i16
     // inner: FileInner
 }
@@ -63,7 +61,7 @@ impl VFile {
             writeable: false,
             pipe: None,
             inode: None,
-            offset: 0,
+            offset: SleepLock::new(0, "vfile offset"),
             major: 0
         }
     }
@@ -99,12 +97,12 @@ impl VFile {
             },
 
             FileType::Inode => {
+                let mut offset = self.offset.lock();
                 let inode = self.inode.as_ref().unwrap();
                 let mut inode_guard = inode.lock();
-                match inode_guard.read(true, addr, self.offset, len as u32) {
+                match inode_guard.read(true, addr, *offset, len as u32) {
                     Ok(size) => {
                         ret = size;
-                        let offset = unsafe { &mut *(&self.offset as *const _ as *mut u32)};
                         *offset += ret as u32;
                         drop(inode_guard);
                         Ok(ret)
@@ -163,6 +161,7 @@ impl VFile {
                 // might be writing a device like console. 
                 let max = ((MAXOPBLOCKS -1 -1 -2) / 2) * BSIZE;
                 let mut count  = 0;
+                let mut offset = self.offset.lock();
                 while count < len {
                     let mut write_bytes = len - count;
                     if write_bytes > max { write_bytes = max; }
@@ -176,7 +175,7 @@ impl VFile {
                     inode_guard.write(
                         true, 
                         addr + count, 
-                        self.offset, 
+                        *offset,
                         write_bytes as u32
                     )?;
 
@@ -186,8 +185,6 @@ impl VFile {
                     LOG.end_op();
 
                     // update loop data
-                    // self.offset += write_bytes as u32;
-                    let offset = unsafe{ &mut *(&self.offset as *const _ as *mut u32) };
                     *offset += write_bytes as u32;
                     count += write_bytes;
                     
@@ -244,7 +241,20 @@ impl VFile {
     }
 }
 
-
+impl Clone for VFile {
+    fn clone(&self) -> Self {
+        let offset = *self.offset.lock();
+        Self {
+            ftype: self.ftype,
+            readable: self.readable,
+            writeable: self.writeable,
+            pipe: self.pipe,
+            inode: self.inode.clone(),
+            offset: SleepLock::new(offset, "vfile offset"),
+            major: self.major,
+        }
+    }
+}
 
 
 

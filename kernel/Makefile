@@ -12,7 +12,9 @@ OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
 QEMU 		:= qemu-system-riscv64
 
-FWDPORT = $(shell expr `id -u` % 5000 + 25999)
+# Pick a free UDP port instead of deriving a fixed one from the user ID. The
+# latter collides when more than one checkout or QEMU instance is running.
+FWDPORT := $(shell python3 -c 'import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(("", 0)); print(s.getsockname()[1])' 2>/dev/null || expr `id -u` % 5000 + 25999)
 
 QEMUOPTS     = -machine virt -bios none -kernel $(KERNEL_FILE) -m 3G -smp $(CPUS) -nographic
 QEMUOPTS    += -drive file=${FS_IMG},if=none,format=raw,id=x0 
