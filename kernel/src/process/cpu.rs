@@ -73,7 +73,7 @@ impl CPUManager{
         loop {
             // Avoid deadlock by ensuring that devices can interrupt.
             sstatus::intr_on();
-            match PROC_MANAGER.seek_runnable() {
+            match PROC_MANAGER.dequeue_runnable() {
                 Some(proc) => {
                     // Switch to chosen process. It is the process's job
                     // to release it's lock and then reacquire it 

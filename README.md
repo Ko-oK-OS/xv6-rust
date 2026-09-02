@@ -1,168 +1,174 @@
 # xv6-rust
-## Introduction
 
-![](run.png)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-This is a try to implement xv6 OS in pure Rust. 
+An xv6-inspired teaching operating system written in Rust for 64-bit RISC-V.
+It boots on QEMU's `virt` machine and explores how Rust ownership and shared
+types can be applied to a small, multi-core kernel.
 
-What's more, we are desired to add something new features into our OS, like network and GUI.  
+![xv6-rust shell running in QEMU](run.png)
 
-The further goal of this project is to support multiple architecture and multiple boards, finally making our OS running in our own CPU.   
+> [!IMPORTANT]
+> xv6-rust is an experimental learning project, not a production operating
+> system. Kernel interfaces and on-disk formats may change without notice.
 
-For the purpose of supporting the feature of Rust language, I also intend to use `async/await` feature to implement kernel thread scheduler renewedly.  
+## Highlights
 
-Due to the complexity of the project and the busy course-work, I think it's hard to complete above work independently, so I'm sincerely hope others can interest on this project and join our teams.
+- Multi-core RV64 kernel running on QEMU `virt`
+- Virtual memory, traps, timer interrupts, and system calls
+- Buddy-system kernel allocator
+- xv6-style filesystem backed by a VirtIO block device
+- UART console plus PCI/E1000 initialization
+- Scheduler-managed system threads
+- User threads with shared address spaces and process resources
+- FIFO scheduler run queue backed by `VecDeque`
+- Userspace `quit` command for cleanly leaving QEMU
 
-## Start  
-### QEMU
-**Linux**:  
-```
-wget https://download.qemu.org/qemu-5.0.0.tar.x  
-tar xvJf qemu-5.0.0.tar.xz  
-cd qemu-5.0.0  
-./configure --target-list=riscv32-softmmu,riscv64-softmmu   
-make -j$(nproc)  
-sudo make install  
-```
-If you find some errors when building, you can slove by following hints:  
-- `ERROR: pkg-config binary 'pkg-config' not found` : `sudo apt-get install pkg-config`           
-- `ERROR: glib-2.48 gthread-2.0 is required to compile QEMU`: `sudo apt-get install libglib2.0-dev`       
-- `ERROR: pixman >= 0.21.8 not present`: `sudo apt-get install libpixman-1-dev` 
+## Quick start
 
-### Rust
-You need download rust to start our environment. We suggest you to use official shell:  
-```
-curl https://sh.rustup.rs -sSf | sh
-```
-If you fail because of slow network speed. You can try this to speed up:   
-```
-export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static
-export RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
-curl https://sh.rustup.rs -sSf | sh
-```
+### Prerequisites
 
-If you have finished these, you can test your environment by following commands:  
-```
-source $HOME/.cargo/env  
-rustc --version
-```
-In addition,  we'd better change the package mirror address crates.io used by the package manager cargo to the mirror server of the University of Science and Technology of China to speed up the download of the tripartite library. We open (create a new file if it doesn't exist) ~/.cargo/config and modify the content to:  
-```
-[source.crates-io]
-registry = "https://github.com/rust-lang/crates.io-index"
-replace-with = 'ustc'
-[source.ustc]
-registry = "git://mirrors.ustc.edu.cn/crates.io-index"
-```
-Besides,  you also update some tools in rust:
+Install the following tools and make sure they are available on `PATH`:
 
-```
-rustup target add riscv64gc-unknown-none-elf
+- Rust through [rustup](https://rustup.rs/)
+- GNU Make, a host C compiler, Perl, and Python 3
+- a RISC-V bare-metal C toolchain providing either
+  `riscv64-unknown-elf-*` or `riscv64-elf-*`
+- `qemu-system-riscv64`
+
+The repository selects Rust nightly through `rust-toolchain.toml`. Install the
+target and binary utilities once:
+
+```sh
+rustup toolchain install nightly
+rustup target add --toolchain nightly riscv64gc-unknown-none-elf
+rustup component add --toolchain nightly llvm-tools-preview
 cargo install cargo-binutils
-rustup component add llvm-tools-preview
 ```
 
-Finally, you run this OS on your machine by excuteing following commands:  
+Clone all submodules, build the filesystem image and kernel, then start QEMU:
 
-```
-git clone https://github.com/Ko-oK-OS/xv6-rust.git
+```sh
+git clone --recurse-submodules https://github.com/Ko-oK-OS/xv6-rust.git
 cd xv6-rust
-git submodule update --init --recursive
 make run
 ```
 
-## GDB Usage
-To use gdb to debug, we need to download `riscv64-unkonown-elf-gdb` and `tmux`.
+At the `xv6 Rust >>>` prompt, try `ls`, `cat README.md`, `threadtest`, or
+`forktest`. Run `quit` to shut down the guest and exit QEMU.
 
-### GDB Download
-- [Ubuntu](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-ubuntu14.tar.gz)
-- [CentOS](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-linux-centos6.tar.gz)
-- [macOS](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-apple-darwin.tar.gz)
-- [Windows](https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2020.04.1-x86_64-w64-mingw32.zip)
+If the repository was cloned without `--recurse-submodules`, initialize the
+userspace, allocator, and filesystem-builder repositories with:
 
-We support gdb in OS kernel, you can exectue this command in `xv6-rust/kernel` directory:   
-```shell
-make debug
+```sh
+git submodule update --init --recursive
 ```
-And then you can debug this programe step by step. 
 
-## Schedule
+## Testing
 
-- Virtual Memory and Management   
-    - [x] Virtulal Memory Map
-    - [x] Kernel Allocator(Buddy System Allocator)  
-    - [x] Load ELF Files From Memory
-- Traps,Interrupts, and drivers
-    - [x] Kernel Trap
-    - [x] Users Trap
-    - [x] UART Drivers
-    - [x] Machine-Mode Timer Interrupt
-    - [x] Virtio Disk Drivers
-    - [x] PCI and E1000 Drivers
-- Locking
-    - [x] Spinlock
-    - [x] Sleeplock
-- Process and Scheduing
-    - [x] Process
-    - [x] Scheduing
-    - [x] Muti-Core Support
-    - [x] Syscall
-- File System
-    - [x] Mkfs
-    - [x] Buffer Layer
-    - [x] Log Layer
-    - [x] SuperBlock Layer
-    - [x] Inode Layer
-    - [x] Bitmap Layer
-    - [x] File Descriptor Layer
-    - [x] File Path
-    - [x] Pipe 
-    - [x] Syscall
-- NetWork
-    - [x] PCI and E1000 Initialize
-    - [x] Protocol Headers
-    - [ ] Network Card Driver
-    - [ ] Syscall
-- Device Driver
-    - [x] Virtio Disk
-    - [x] Uart/Console
-    - [x] PCI
+The integration harness rebuilds the guest, copies `fs.img` to a temporary
+directory, and exercises a user program in a fresh QEMU instance. For example:
 
-## Differences
-### Fs
-- [x] Remove `FILE_TABLE`
-- [x] Use `Arc` instead of `refs`, `Arc::clone()` will plat the same role of `refs++`
-- [ ] User `enum FileInner` to separate files of various file types
+```sh
+python3 tests/qemu_user_program.py scheduler-queue
+python3 tests/qemu_user_program.py user-threads
+python3 tests/qemu_user_program.py stressfs
+```
 
-### Scheduler
-- [ ] Use `VecDeque` instead of raw array.
+Available cases are listed by:
 
-### Process
-- [ ] Use `BTreeMap` to maintain open files in `Process`
-- [ ] Add `Thread` in Kernel Process
+```sh
+python3 tests/qemu_user_program.py --help
+```
 
-## Expected Future
-- [ ] More Clear Memory Model
-- [ ] Better Scheduler
-- [ ] SD Card Driver Support
-- [ ] Network Support(Use `smoltcp` to simplify design)
-- [ ] Async IO Support
+The `scheduler-queue` case deliberately fills, drains, and reuses process slots
+within one boot. It protects the run-queue invariants across `fork`, user-thread
+creation, `yield`, sleep, and wakeup.
 
-## Docs
+## Architecture
 
-[项目设计文档](docs/项目设计文档.pdf)
+Process objects live in a fixed-size table because kernel stacks, raw parent
+pointers, CPU-local process references, and user-thread trapframe addresses all
+depend on stable slot addresses. Scheduling does not scan that table: a locked
+`VecDeque<usize>` stores runnable slot indices in FIFO order. A per-process
+`queued` bit makes the state transition and queue membership one invariant and
+prevents two harts from selecting the same saved context.
 
-## References
+See [the scheduler design](docs/scheduler.md) for the state transitions and
+lock-order rules.
 
-- [Building a stupid Mutex in the Rust](https://medium.com/@Mnwa/building-a-stupid-mutex-in-the-rust-d55886538889)  
-- [Rust源码分析：std::sync::Mutex](https://zhuanlan.zhihu.com/p/50006335)   
-- [buddy_system_allocator](https://github.com/rcore-os/buddy_system_allocator)  
-- [Write a OS in Rust](https://os.phil-opp.com)  
-- [rCore-Tutorial-v3](https://rcore-os.github.io/rCore-Tutorial-Book-v3/index.html)
-- [rCore-Tutorial](https://rcore-os.github.io/rCore-Tutorial-deploy/)  
-- [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
-- [xv6-riscv-rust](https://github.com/Jaic1/xv6-riscv-rust)
-- [rCore](https://github.com/rcore-os/rCore)
+| Path | Purpose |
+| --- | --- |
+| `kernel/` | Rust kernel and RISC-V platform code |
+| `xv6-user/` | C userspace and syscall wrappers (submodule) |
+| `allocator/` | Buddy allocator (submodule) |
+| `xv6-mkfs/` | Host-side filesystem image builder (submodule) |
+| `tests/` | QEMU-driven regression programs and harness |
+| `docs/` | Design notes and project documentation |
+
+## Development
+
+Useful commands from the repository root:
+
+```sh
+make -C kernel build   # build the kernel binary
+make fs.img            # build userspace and the filesystem image
+make run               # build and boot a three-hart QEMU guest
+make asm               # write the kernel disassembly to kernel.S
+make clean              # remove generated build artifacts
+```
+
+`make -C kernel debug` starts QEMU and GDB in a tmux session. The GDB executable
+is currently configured by `GDB` in `kernel/Makefile`; override that variable
+for your local RISC-V toolchain when necessary.
+
+## Project status and roadmap
+
+The core educational path—boot, memory management, processes, system calls,
+locking, filesystem access, multi-core scheduling, system threads, and user
+threads—is implemented. Current areas for further work include:
+
+- completing the E1000 data path and adding a network stack
+- documenting and simplifying the kernel memory model
+- expanding scheduler policy and observability
+- adding asynchronous I/O
+- supporting more boards and architectures
+
+Open bugs and proposed work are tracked in
+[GitHub Issues](https://github.com/Ko-oK-OS/xv6-rust/issues).
+
+## Contributing
+
+Issues, documentation fixes, tests, and focused pull requests are welcome.
+
+1. Open or select an issue so the expected behavior is clear.
+2. Create a descriptive branch such as `feature/fifo-scheduler` or
+   `fix-bugs/exec-cleanup`.
+3. Keep commits focused and explain non-obvious kernel invariants in code.
+4. Run the relevant QEMU regression cases and include the results in the PR.
+5. Describe user-visible behavior, design tradeoffs, and follow-up work.
+
+For substantial architecture changes, please start with an issue or discussion
+before investing in an implementation.
+
+## Documentation
+
+- [Project design document (中文)](docs/项目设计文档.md)
+- [Boot sequence](docs/boot.md)
+- [Virtual memory](docs/vm.md)
+- [Process model](docs/process.md)
+- [Scheduler](docs/scheduler.md)
+- [Locks](docs/lock.md)
+- [Interrupts](docs/interrupt.md)
+- [Filesystem (中文)](docs/xv6%20文件系统.md)
+
+## Acknowledgements
+
+This project builds on ideas and teaching material from
+[xv6-riscv](https://github.com/mit-pdos/xv6-riscv),
+[rCore](https://github.com/rcore-os/rCore), and
+[Writing an OS in Rust](https://os.phil-opp.com/).
 
 ## License
-MIT License
+
+xv6-rust is available under the [MIT License](LICENSE).

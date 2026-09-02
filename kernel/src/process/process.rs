@@ -84,6 +84,9 @@ pub struct ProcMeta {
     pub killed: bool, // If non-zero, have been killed
     pub xstate: usize, // Exit status to be returned to parent's wait
     pub pid: usize,   // Process ID
+    /// True while this slot has one entry in the scheduler run queue.
+    /// Keeping the bit under the process lock prevents duplicate queue entries.
+    pub queued: bool,
 }
 
 impl ProcMeta {
@@ -94,6 +97,7 @@ impl ProcMeta {
             killed: false,
             xstate: 0,
             pid: 0,
+            queued: false,
 
         }
     }
@@ -419,6 +423,10 @@ impl Process{
 
             let mut guard = self.meta.acquire();
 
+            // A zombie is never runnable. If this fires, clearing queued would
+            // hide a stale entry that could later schedule a recycled slot.
+            debug_assert!(!guard.queued);
+
             pdata.set_parent(None);
             pdata.resources = None;
             pdata.system_thread_entry = None;
@@ -431,6 +439,7 @@ impl Process{
             guard.channel = 0;
             guard.killed = false;
             guard.xstate = 0;
+            guard.queued = false;
             guard.set_state(ProcState::UNUSED);
 
             drop(guard);
@@ -457,10 +466,14 @@ impl Process{
         pdata.user_thread = false;
 
         let mut guard = self.meta.acquire();
+        // System threads are reaped only after returning as zombies, so they
+        // must no longer have a runnable queue entry at this point.
+        debug_assert!(!guard.queued);
         guard.pid = 0;
         guard.channel = 0;
         guard.killed = false;
         guard.xstate = 0;
+        guard.queued = false;
         guard.set_state(ProcState::UNUSED);
     }
 
@@ -504,7 +517,10 @@ impl Process{
         // println!("[Debug] 让出 CPU");
         let mut pmeta = self.meta.acquire();
         let ctx = self.data.get_mut().get_context_mut();
-        pmeta.set_state(ProcState::RUNNABLE);
+        // Enqueue before switching away. The queue lock is released while the
+        // process lock remains held, so another hart cannot run this context
+        // until the original scheduler has completed the switch.
+        unsafe { PROC_MANAGER.make_runnable(self, &mut pmeta); }
 
         unsafe {
             let my_cpu = CPU_MANAGER.mycpu();
@@ -611,7 +627,9 @@ impl Process{
             drop(resources);
             drop(child_resources);
             let mut child_meta = child_proc.meta.acquire();
-            child_meta.state = ProcState::RUNNABLE;
+            // Publishing through one helper keeps the state and queue entry in
+            // sync; a direct RUNNABLE assignment would strand the child.
+            unsafe { PROC_MANAGER.make_runnable(child_proc, &mut child_meta); }
             drop(child_meta);
             Some(child_proc)
         }else {
